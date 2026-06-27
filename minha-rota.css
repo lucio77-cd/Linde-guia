@@ -184,8 +184,16 @@
   margin-bottom: var(--espaco-4);
 }
 
-.card-parada-atual__navegar {
-  display: inline-block;
+.card-parada-atual__navegacao {
+  display: flex;
+  gap: var(--espaco-2);
+  flex-wrap: wrap;
+}
+
+.card-parada-atual__navegacao .botao {
+  flex: 1;
+  min-width: 140px;
+  text-align: center;
 }
 
 .vista-em-rota__acoes {
