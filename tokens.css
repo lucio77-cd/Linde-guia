@@ -1,0 +1,87 @@
+/* tokens.css
+   Linde Guia — Treze Tílias
+   Só variáveis. Nenhuma regra de layout aqui — quem usa é global.css e as
+   páginas. Valores vêm do documento de identidade visual já fechado:
+   charme alpino/europeu autêntico, sem clichê bávaro de Oktoberfest.
+*/
+
+:root {
+  /* ===== Cor ===== */
+  --cor-lodengrun: #3C4A3E;       /* verde-loden — base/âncora, header, ícones */
+  --cor-madeira: #6B4226;          /* madeira entalhada — acentos, bordas, Frieder */
+  --cor-pedra-clara: #EDE6D6;      /* fundo principal — pedra/argamassa de enxaimel */
+  --cor-vermelho-tirol: #9E2B25;   /* CTA principal, destaque, alerta positivo */
+  --cor-dourado-velho: #B8924A;    /* detalhes, ícones institucionais */
+  --cor-tinta-carvao: #262321;     /* texto principal — mais quente que preto puro */
+
+  /* Variações derivadas, pra estado de hover/disabled/superfícies */
+  --cor-lodengrun-escuro: #2A3429;
+  --cor-madeira-clara: #8A5A35;
+  --cor-pedra-mais-clara: #F7F3EA;
+  --cor-vermelho-tirol-escuro: #7A211C;
+  --cor-borda-sutil: #D9CFBC;
+  --cor-texto-secundario: #58524A;
+
+  /* Semânticas — usar estas no resto do CSS, não as cores brutas acima */
+  --cor-fundo: var(--cor-pedra-clara);
+  --cor-fundo-card: var(--cor-pedra-mais-clara);
+  --cor-texto: var(--cor-tinta-carvao);
+  --cor-texto-suave: var(--cor-texto-secundario);
+  --cor-acao-principal: var(--cor-vermelho-tirol);
+  --cor-acao-principal-hover: var(--cor-vermelho-tirol-escuro);
+  --cor-marca: var(--cor-lodengrun);
+  --cor-destaque: var(--cor-dourado-velho);
+  --cor-borda: var(--cor-borda-sutil);
+
+  /* ===== Tipografia ===== */
+  /* Display/títulos: serifada com leve caráter entalhado.
+     Fallback empilhado pra não depender só de fonte carregada via CDN. */
+  --fonte-titulo: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  /* Corpo: sans humanista, alta legibilidade ao ar livre / luz variável */
+  --fonte-corpo: "Inter", "Segoe UI", Roboto, -apple-system, sans-serif;
+  /* Dados (horário, preço, distância): condensada, discreta */
+  --fonte-dado: "Roboto Mono", "SFMono-Regular", Consolas, monospace;
+
+  --peso-regular: 400;
+  --peso-medio: 500;
+  --peso-negrito: 700;
+
+  --escala-xs: 0.75rem;
+  --escala-sm: 0.875rem;
+  --escala-base: 1rem;
+  --escala-md: 1.125rem;
+  --escala-lg: 1.375rem;
+  --escala-xl: 1.75rem;
+  --escala-2xl: 2.25rem;
+
+  /* ===== Espaçamento (escala de 4px) ===== */
+  --espaco-1: 0.25rem;
+  --espaco-2: 0.5rem;
+  --espaco-3: 0.75rem;
+  --espaco-4: 1rem;
+  --espaco-5: 1.5rem;
+  --espaco-6: 2rem;
+  --espaco-8: 3rem;
+  --espaco-10: 4rem;
+
+  /* ===== Forma ===== */
+  --raio-pequeno: 4px;
+  --raio-medio: 10px;
+  --raio-grande: 18px;
+
+  /* ===== Sombra (discreta, nunca "card flutuante" genérico) ===== */
+  --sombra-card: 0 1px 2px rgba(38, 35, 33, 0.06), 0 4px 12px rgba(38, 35, 33, 0.08);
+  --sombra-card-hover: 0 2px 4px rgba(38, 35, 33, 0.08), 0 8px 20px rgba(38, 35, 33, 0.12);
+
+  /* ===== Movimento ===== */
+  --transicao-rapida: 150ms ease;
+  --transicao-base: 250ms ease;
+}
+
+/* Respeita preferência de movimento reduzido em todo o app */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transicao-rapida: 0ms;
+    --transicao-base: 0ms;
+  }
+}
