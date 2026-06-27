@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Criar Roteiro — Linde Guia</title>
+  <meta name="description" content="Diz quanto tempo você tem, de onde está partindo e quanto quer gastar. A gente monta o passeio por Treze Tílias." />
+
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="global.css" />
+  <link rel="stylesheet" href="roteiro.css" />
+</head>
+<body>
+
+  <header class="topo">
+    <div class="topo__marca">
+      <a href="index.html" class="topo__nome">Linde Guia</a>
+      <span class="topo__selo">Treze Tílias</span>
+    </div>
+    <nav class="topo__nav" aria-label="Navegação principal">
+      <a href="explorar.html">Explorar</a>
+      <a href="eventos.html">Eventos</a>
+      <a href="perfil.html">Perfil</a>
+    </nav>
+  </header>
+
+  <main class="pagina-roteiro">
+    <div class="pagina-roteiro__cabecalho">
+      <h1>Vamos montar seu passeio</h1>
+      <p>Quanto mais você contar, melhor a gente acerta a rota.</p>
+    </div>
+
+    <form id="form-roteiro" class="form-roteiro" novalidate>
+
+      <!-- ===== Tempo disponível ===== -->
+      <fieldset class="campo">
+        <legend class="campo__rotulo">Quanto tempo você tem na cidade?</legend>
+        <div class="chips" role="radiogroup" aria-label="Tempo disponível">
+          <button type="button" class="chip" data-campo="tempoDisponivelMin" data-valor="120">2 horas</button>
+          <button type="button" class="chip" data-campo="tempoDisponivelMin" data-valor="240" aria-pressed="true">Meio dia</button>
+          <button type="button" class="chip" data-campo="tempoDisponivelMin" data-valor="540">1 dia</button>
+          <button type="button" class="chip" data-campo="tempoDisponivelMin" data-valor="1080">2 dias</button>
+          <button type="button" class="chip" data-campo="tempoDisponivelMin" data-valor="1620">3+ dias</button>
+        </div>
+      </fieldset>
+
+      <!-- ===== Horário de início ===== -->
+      <div class="campo">
+        <label class="campo__rotulo" for="input-horario">A que horas você começa o passeio?</label>
+        <input
+          type="time"
+          id="input-horario"
+          name="horarioInicio"
+          class="campo__input"
+          required
+        />
+        <p class="campo__ajuda">Vamos só te mostrar lugares que já estarão abertos nesse horário.</p>
+      </div>
+
+      <!-- ===== Localização ===== -->
+      <div class="campo">
+        <span class="campo__rotulo">De onde você está partindo?</span>
+        <div class="localizacao">
+          <button type="button" id="btn-usar-localizacao" class="botao botao--secundario botao--pequeno">
+            Usar minha localização atual
+          </button>
+          <span id="localizacao-status" class="localizacao__status" aria-live="polite"></span>
+        </div>
+        <input
+          type="text"
+          id="input-endereco"
+          name="enderecoManual"
+          class="campo__input"
+          placeholder="ou digite um endereço, hotel ou ponto conhecido"
+        />
+      </div>
+
+      <!-- ===== Orçamento ===== -->
+      <fieldset class="campo">
+        <legend class="campo__rotulo">Quanto você quer gastar?</legend>
+        <div class="chips" role="radiogroup" aria-label="Faixa de orçamento">
+          <button type="button" class="chip" data-campo="orcamentoFaixa" data-valor="economico">Econômico</button>
+          <button type="button" class="chip" data-campo="orcamentoFaixa" data-valor="moderado" aria-pressed="true">Moderado</button>
+          <button type="button" class="chip" data-campo="orcamentoFaixa" data-valor="sem_limite">Sem limite</button>
+        </div>
+      </fieldset>
+
+      <!-- ===== Grupo (opcional) ===== -->
+      <fieldset class="campo campo--opcional">
+        <legend class="campo__rotulo">
+          Quem vai com você? <span class="campo__opcional-marca">opcional</span>
+        </legend>
+        <div class="chips" role="radiogroup" aria-label="Composição do grupo">
+          <button type="button" class="chip" data-campo="composicaoGrupo" data-valor="sozinho">Sozinho</button>
+          <button type="button" class="chip" data-campo="composicaoGrupo" data-valor="casal">Casal</button>
+          <button type="button" class="chip" data-campo="composicaoGrupo" data-valor="familia">Família com crianças</button>
+          <button type="button" class="chip" data-campo="composicaoGrupo" data-valor="amigos">Grupo de amigos</button>
+        </div>
+      </fieldset>
+
+      <!-- ===== Interesses (opcional, múltipla escolha) ===== -->
+      <fieldset class="campo campo--opcional">
+        <legend class="campo__rotulo">
+          O que você mais gosta? <span class="campo__opcional-marca">opcional, pode marcar mais de um</span>
+        </legend>
+        <div class="chips" role="group" aria-label="Interesses">
+          <button type="button" class="chip chip--multipla" data-campo="interesses" data-valor="historia">História</button>
+          <button type="button" class="chip chip--multipla" data-campo="interesses" data-valor="natureza">Natureza</button>
+          <button type="button" class="chip chip--multipla" data-campo="interesses" data-valor="gastronomia">Gastronomia</button>
+          <button type="button" class="chip chip--multipla" data-campo="interesses" data-valor="compras">Compras</button>
+          <button type="button" class="chip chip--multipla" data-campo="interesses" data-valor="familia">Família</button>
+          <button type="button" class="chip chip--multipla" data-campo="interesses" data-valor="cultura">Cultura austríaca</button>
+        </div>
+      </fieldset>
+
+      <p id="form-roteiro__erro" class="form-roteiro__erro" role="alert" hidden></p>
+
+      <button type="submit" class="botao botao--principal botao--grande">
+        Montar minha rota
+      </button>
+    </form>
+  </main>
+
+  <footer class="rodape">
+    <p>Linde Guia · um projeto a serviço de quem visita Treze Tílias.</p>
+  </footer>
+
+  <script type="module" src="firebase-config.js"></script>
+  <script type="module" src="formulario-roteiro.js"></script>
+</body>
+</html>
