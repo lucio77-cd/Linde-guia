@@ -34,7 +34,7 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
-} from "firebase/firestore";
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const NOME_COLECAO = "pois";
 
@@ -235,3 +235,4 @@ export {
   removerPoi,
   invalidarCache,
 };
+
