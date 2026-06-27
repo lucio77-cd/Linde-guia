@@ -157,3 +157,115 @@
     padding: var(--espaco-6) var(--espaco-4) var(--espaco-8);
   }
 }
+
+/* ============================================================
+   OVERLAY DE CARREGAMENTO — Frieder correndo, sensação de progresso
+   ============================================================ */
+.overlay-carregando {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(
+    circle at 50% 45%,
+    var(--cor-pedra-mais-clara) 0%,
+    var(--cor-pedra-clara) 45%,
+    var(--cor-lodengrun-escuro) 130%
+  );
+  overflow: hidden;
+}
+
+.overlay-carregando[hidden] {
+  display: none;
+}
+
+.overlay-carregando__cena {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espaco-6);
+}
+
+/* Círculo girando devagar — sugere "trabalho em andamento", não travado */
+.overlay-carregando__circulo {
+  position: relative;
+  width: 9rem;
+  height: 9rem;
+  border-radius: 50%;
+  border: 3px solid var(--cor-borda);
+  border-top-color: var(--cor-vermelho-tirol);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: overlay-girar 2.4s linear infinite;
+}
+
+/* Linha de "chão" infinito atrás da figura, deslizando — sugere distância percorrida */
+.overlay-carregando__circulo::before {
+  content: "";
+  position: absolute;
+  bottom: 28%;
+  left: -10%;
+  right: -10%;
+  height: 1.5px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--cor-madeira) 0 10px,
+    transparent 10px 22px
+  );
+  animation: overlay-deslizar 0.6s linear infinite;
+  opacity: 0.5;
+}
+
+.overlay-carregando__figura {
+  width: 4.5rem;
+  height: 4.5rem;
+  fill: var(--cor-madeira);
+  stroke: var(--cor-madeira);
+  stroke-width: 4;
+  animation: overlay-correr 0.5s ease-in-out infinite;
+  transform-origin: 60px 70px;
+}
+
+.overlay-carregando__texto {
+  font-family: var(--fonte-titulo);
+  font-size: var(--escala-md);
+  color: var(--cor-marca);
+  text-align: center;
+  max-width: 18rem;
+}
+
+@keyframes overlay-girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes overlay-deslizar {
+  from {
+    background-position-x: 0;
+  }
+  to {
+    background-position-x: -32px;
+  }
+}
+
+/* Passada de corrida: alterna leve inclinação e "salto" vertical */
+@keyframes overlay-correr {
+  0%, 100% {
+    transform: translateY(0) rotate(-4deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(4deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay-carregando__circulo,
+  .overlay-carregando__circulo::before,
+  .overlay-carregando__figura {
+    animation: none;
+  }
+}
