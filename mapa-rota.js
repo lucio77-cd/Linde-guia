@@ -26,9 +26,19 @@ function desenharMapaCompleto(elementoId, paradas, pontoPartida) {
     maxZoom: 19,
   }).addTo(mapa);
 
-  const pontos = [];
+  const pontosParadas = paradas
+    .filter((parada) => parada.localizacao)
+    .map((parada) => [parada.localizacao.lat, parada.localizacao.lng]);
 
-  if (pontoPartida) {
+  // Defesa em profundidade: mesmo que um ponto de partida impreciso chegue
+  // até aqui (GPS errado, cache de versão antiga, etc.), o mapa nunca deixa
+  // ele distorcer o zoom. Se a "partida" estiver muito mais longe das
+  // paradas do que as paradas estão entre si, ela é ignorada no enquadramento.
+  const pontoPartidaEhRazoavel = pontoPartida && partidaEstaProximaDasParadas(pontoPartida, pontosParadas);
+
+  const pontos = [...pontosParadas];
+
+  if (pontoPartidaEhRazoavel) {
     L.circleMarker([pontoPartida.lat, pontoPartida.lng], {
       radius: 7,
       color: COR_USUARIO,
@@ -37,7 +47,7 @@ function desenharMapaCompleto(elementoId, paradas, pontoPartida) {
     })
       .addTo(mapa)
       .bindPopup("Você está aqui");
-    pontos.push([pontoPartida.lat, pontoPartida.lng]);
+    pontos.unshift([pontoPartida.lat, pontoPartida.lng]);
   }
 
   paradas.forEach((parada, indice) => {
@@ -45,7 +55,6 @@ function desenharMapaCompleto(elementoId, paradas, pontoPartida) {
 
     const marcador = criarMarcadorNumerado(parada.localizacao, indice + 1);
     marcador.addTo(mapa).bindPopup(`<strong>${indice + 1}. ${parada.nome}</strong>`);
-    pontos.push([parada.localizacao.lat, parada.localizacao.lng]);
   });
 
   if (pontos.length > 1) {
@@ -135,6 +144,35 @@ function ajustarVisualizacao(mapa, pontos) {
   } else {
     mapa.fitBounds(pontos, { padding: [30, 30] });
   }
+}
+
+// Checa se o ponto de partida está numa distância razoável das paradas —
+// usa o "raio" das próprias paradas (distância entre a mais afastada do
+// centro do grupo) como referência, com uma margem generosa. Isso evita
+// hardcodar "Treze Tílias" aqui, já que este módulo é genérico.
+function partidaEstaProximaDasParadas(pontoPartida, pontosParadas) {
+  if (pontosParadas.length === 0) return true;
+
+  const MARGEM_KM = 10; // folga generosa: GPS dentro da própria cidade nunca passa disso
+
+  const distancias = pontosParadas.map(([lat, lng]) =>
+    calcularDistanciaKm({ lat: pontoPartida.lat, lng: pontoPartida.lng }, { lat, lng })
+  );
+
+  return Math.min(...distancias) <= MARGEM_KM;
+}
+
+function calcularDistanciaKm(a, b) {
+  const R = 6371;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLon = ((b.lng - a.lng) * Math.PI) / 180;
+  const lat1 = (a.lat * Math.PI) / 180;
+  const lat2 = (b.lat * Math.PI) / 180;
+  const sinDLat = Math.sin(dLat / 2);
+  const sinDLon = Math.sin(dLon / 2);
+  const aH = sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon;
+  const c = 2 * Math.atan2(Math.sqrt(aH), Math.sqrt(1 - aH));
+  return R * c;
 }
 
 export { desenharMapaCompleto, criarMapaFocado };
