@@ -186,7 +186,7 @@ function configurarSubmit() {
 
     const botaoSubmit = form.querySelector("button[type=submit]");
     botaoSubmit.disabled = true;
-    botaoSubmit.textContent = "Montando sua rota...";
+    mostrarOverlayCarregando();
 
     try {
       const perfilBusca = montarPerfilBusca();
@@ -204,7 +204,7 @@ function configurarSubmit() {
       console.error("[formulario-roteiro] Erro ao gerar rota:", erro);
       mostrarErro(erroEl, "Algo deu errado ao montar sua rota. Tenta de novo?");
       botaoSubmit.disabled = false;
-      botaoSubmit.textContent = "Montar minha rota";
+      esconderOverlayCarregando();
     }
   });
 }
@@ -243,4 +243,14 @@ function mostrarErro(elemento, texto) {
 
 function ocultarErro(elemento) {
   elemento.hidden = true;
+}
+
+function mostrarOverlayCarregando() {
+  const overlay = document.getElementById("overlay-carregando");
+  if (overlay) overlay.hidden = false;
+}
+
+function esconderOverlayCarregando() {
+  const overlay = document.getElementById("overlay-carregando");
+  if (overlay) overlay.hidden = true;
 }
