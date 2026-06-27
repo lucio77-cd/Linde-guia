@@ -200,11 +200,18 @@ function desenharParadaAtual(rota, indice) {
       <span>${parada.duracaoMediaVisitaMin} min de visita</span>
       <span>${parada.precoEstimado > 0 ? "R$" + parada.precoEstimado : "Grátis"}</span>
     </div>
-    <a class="botao botao--secundario card-parada-atual__navegar"
-       href="https://www.google.com/maps/search/?api=1&query=${parada.localizacao?.lat},${parada.localizacao?.lng}"
-       target="_blank" rel="noopener">
-      Abrir navegação
-    </a>
+    <div class="card-parada-atual__navegacao">
+      <a class="botao botao--secundario"
+         href="${montarLinkGoogleMaps(parada.localizacao)}"
+         target="_blank" rel="noopener">
+        Navegar (Google Maps)
+      </a>
+      <a class="botao botao--secundario"
+         href="${montarLinkWaze(parada.localizacao)}"
+         target="_blank" rel="noopener">
+        Navegar (Waze)
+      </a>
+    </div>
   `;
 
   if (mapaFocado) {
@@ -213,6 +220,19 @@ function desenharParadaAtual(rota, indice) {
 
   esconderAvisoRecalculo();
   avisarSeRiscoDeFechar(parada);
+}
+
+function montarLinkGoogleMaps(localizacao) {
+  if (!localizacao) return "#";
+  // "dir" (direções) abre navegação turn-by-turn de verdade, diferente de
+  // "search" (que só mostra o ponto no mapa). travelmode=walking porque o
+  // passeio em Treze Tílias é pensado a pé no centro histórico.
+  return `https://www.google.com/maps/dir/?api=1&destination=${localizacao.lat},${localizacao.lng}&travelmode=walking`;
+}
+
+function montarLinkWaze(localizacao) {
+  if (!localizacao) return "#";
+  return `https://waze.com/ul?ll=${localizacao.lat},${localizacao.lng}&navigate=yes`;
 }
 
 function atualizarMapaComPosicao(posicaoAtual) {
