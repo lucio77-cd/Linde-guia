@@ -6,12 +6,18 @@
     "descricaoCurta": "Praça principal da cidade, em desnível, com riacho artificial descendo as escadarias.",
     "descricaoLonga": "Coração simbólico de Treze Tílias. Ponto de partida natural de qualquer passeio a pé pelo centro histórico.",
     "fotos": [],
-    "localizacao": { "lat": -27.2856, "lng": -51.9622 },
+    "localizacao": {
+      "lat": -27.0026,
+      "lng": -51.4084
+    },
     "horarioFuncionamento": null,
     "precoEstimado": 0,
     "duracaoMediaVisitaMin": 20,
     "avaliacao": 4.6,
-    "tagsDeInteresse": ["historia", "familia"],
+    "tagsDeInteresse": [
+      "historia",
+      "familia"
+    ],
     "statusOperacional": "ativo",
     "pesoInstitucional": 0.6
   },
@@ -22,12 +28,17 @@
     "descricaoCurta": "Marco de entrada da cidade, ladeado por 13 tílias plantadas.",
     "descricaoLonga": "Ótimo ponto de foto e início simbólico de roteiro. Fica ainda mais bonito decorado no Natal.",
     "fotos": [],
-    "localizacao": { "lat": -27.2935, "lng": -51.9580 },
+    "localizacao": {
+      "lat": -27.0105,
+      "lng": -51.4042
+    },
     "horarioFuncionamento": null,
     "precoEstimado": 0,
     "duracaoMediaVisitaMin": 10,
     "avaliacao": 4.8,
-    "tagsDeInteresse": ["historia"],
+    "tagsDeInteresse": [
+      "historia"
+    ],
     "statusOperacional": "ativo",
     "pesoInstitucional": 0.4
   },
@@ -38,20 +49,47 @@
     "descricaoCurta": "O Castelinho — antiga residência do fundador, depois prefeitura, hoje museu.",
     "descricaoLonga": "Foi residência de Andreas Thaler (fundador), depois prefeitura, hoje museu da história da imigração tirolesa.",
     "fotos": [],
-    "localizacao": { "lat": -27.2858, "lng": -51.9628 },
+    "localizacao": {
+      "lat": -27.0028,
+      "lng": -51.409
+    },
     "horarioFuncionamento": {
-      "segunda": { "abre": "09:00", "fecha": "12:00" },
-      "terca": { "abre": "09:00", "fecha": "12:00" },
-      "quarta": { "abre": "09:00", "fecha": "12:00" },
-      "quinta": { "abre": "09:00", "fecha": "12:00" },
-      "sexta": { "abre": "09:00", "fecha": "12:00" },
-      "sabado": { "abre": "09:00", "fecha": "12:00" },
-      "domingo": { "abre": "09:00", "fecha": "12:00" }
+      "segunda": {
+        "abre": "09:00",
+        "fecha": "12:00"
+      },
+      "terca": {
+        "abre": "09:00",
+        "fecha": "12:00"
+      },
+      "quarta": {
+        "abre": "09:00",
+        "fecha": "12:00"
+      },
+      "quinta": {
+        "abre": "09:00",
+        "fecha": "12:00"
+      },
+      "sexta": {
+        "abre": "09:00",
+        "fecha": "12:00"
+      },
+      "sabado": {
+        "abre": "09:00",
+        "fecha": "12:00"
+      },
+      "domingo": {
+        "abre": "09:00",
+        "fecha": "12:00"
+      }
     },
     "precoEstimado": 5,
     "duracaoMediaVisitaMin": 45,
     "avaliacao": 4.8,
-    "tagsDeInteresse": ["historia", "cultura"],
+    "tagsDeInteresse": [
+      "historia",
+      "cultura"
+    ],
     "statusOperacional": "ativo",
     "pesoInstitucional": 0.7
   },
@@ -62,20 +100,47 @@
     "descricaoCurta": "Reconstruída em 1952, torres inspiradas nas Dachglocken tirolesas.",
     "descricaoLonga": "Altar e bancos com talha em madeira local. Às 18h toca uma Ave Maria gravada em vez de sino.",
     "fotos": [],
-    "localizacao": { "lat": -27.2862, "lng": -51.9618 },
+    "localizacao": {
+      "lat": -27.0032,
+      "lng": -51.408
+    },
     "horarioFuncionamento": {
-      "segunda": { "abre": "08:00", "fecha": "18:30" },
-      "terca": { "abre": "08:00", "fecha": "18:30" },
-      "quarta": { "abre": "08:00", "fecha": "18:30" },
-      "quinta": { "abre": "08:00", "fecha": "18:30" },
-      "sexta": { "abre": "08:00", "fecha": "18:30" },
-      "sabado": { "abre": "08:00", "fecha": "19:00" },
-      "domingo": { "abre": "08:00", "fecha": "19:00" }
+      "segunda": {
+        "abre": "08:00",
+        "fecha": "18:30"
+      },
+      "terca": {
+        "abre": "08:00",
+        "fecha": "18:30"
+      },
+      "quarta": {
+        "abre": "08:00",
+        "fecha": "18:30"
+      },
+      "quinta": {
+        "abre": "08:00",
+        "fecha": "18:30"
+      },
+      "sexta": {
+        "abre": "08:00",
+        "fecha": "18:30"
+      },
+      "sabado": {
+        "abre": "08:00",
+        "fecha": "19:00"
+      },
+      "domingo": {
+        "abre": "08:00",
+        "fecha": "19:00"
+      }
     },
     "precoEstimado": 0,
     "duracaoMediaVisitaMin": 20,
     "avaliacao": 4.8,
-    "tagsDeInteresse": ["historia", "cultura"],
+    "tagsDeInteresse": [
+      "historia",
+      "cultura"
+    ],
     "statusOperacional": "ativo",
     "pesoInstitucional": 0.5
   },
@@ -86,19 +151,43 @@
     "descricaoCurta": "Memorial da imigração: lago com ilha em formato da Áustria, Via-Crúcis em madeira.",
     "descricaoLonga": "Monumento do milênio, pedalinhos e playground. O lago representa os 9 estados austríacos.",
     "fotos": [],
-    "localizacao": { "lat": -27.2845, "lng": -51.9605 },
+    "localizacao": {
+      "lat": -27.0015,
+      "lng": -51.4067
+    },
     "horarioFuncionamento": {
-      "terca": { "abre": "08:00", "fecha": "17:30" },
-      "quarta": { "abre": "08:00", "fecha": "17:30" },
-      "quinta": { "abre": "08:00", "fecha": "17:30" },
-      "sexta": { "abre": "08:00", "fecha": "17:30" },
-      "sabado": { "abre": "09:00", "fecha": "17:30" },
-      "domingo": { "abre": "10:00", "fecha": "18:30" }
+      "terca": {
+        "abre": "08:00",
+        "fecha": "17:30"
+      },
+      "quarta": {
+        "abre": "08:00",
+        "fecha": "17:30"
+      },
+      "quinta": {
+        "abre": "08:00",
+        "fecha": "17:30"
+      },
+      "sexta": {
+        "abre": "08:00",
+        "fecha": "17:30"
+      },
+      "sabado": {
+        "abre": "09:00",
+        "fecha": "17:30"
+      },
+      "domingo": {
+        "abre": "10:00",
+        "fecha": "18:30"
+      }
     },
     "precoEstimado": 0,
     "duracaoMediaVisitaMin": 50,
     "avaliacao": 4.4,
-    "tagsDeInteresse": ["natureza", "familia"],
+    "tagsDeInteresse": [
+      "natureza",
+      "familia"
+    ],
     "statusOperacional": "ativo",
     "pesoInstitucional": 0.5
   },
@@ -109,19 +198,44 @@
     "descricaoCurta": "45.000 m² com trilhas, lago, mini-zoo e a Minicidade — réplica em miniatura de Treze Tílias.",
     "descricaoLonga": "O destaque mais citado da cidade. Tem restaurante de comida típica austríaca dentro do parque.",
     "fotos": [],
-    "localizacao": { "lat": -27.2810, "lng": -51.9560 },
+    "localizacao": {
+      "lat": -26.998,
+      "lng": -51.4022
+    },
     "horarioFuncionamento": {
-      "terca": { "abre": "10:00", "fecha": "18:00" },
-      "quarta": { "abre": "10:00", "fecha": "18:00" },
-      "quinta": { "abre": "10:00", "fecha": "18:00" },
-      "sexta": { "abre": "10:00", "fecha": "18:00" },
-      "sabado": { "abre": "10:00", "fecha": "18:00" },
-      "domingo": { "abre": "10:00", "fecha": "18:00" }
+      "terca": {
+        "abre": "10:00",
+        "fecha": "18:00"
+      },
+      "quarta": {
+        "abre": "10:00",
+        "fecha": "18:00"
+      },
+      "quinta": {
+        "abre": "10:00",
+        "fecha": "18:00"
+      },
+      "sexta": {
+        "abre": "10:00",
+        "fecha": "18:00"
+      },
+      "sabado": {
+        "abre": "10:00",
+        "fecha": "18:00"
+      },
+      "domingo": {
+        "abre": "10:00",
+        "fecha": "18:00"
+      }
     },
     "precoEstimado": 95,
     "duracaoMediaVisitaMin": 150,
     "avaliacao": 4.7,
-    "tagsDeInteresse": ["natureza", "familia", "cultura"],
+    "tagsDeInteresse": [
+      "natureza",
+      "familia",
+      "cultura"
+    ],
     "statusOperacional": "ativo",
     "pesoInstitucional": 0.9
   },
@@ -132,18 +246,39 @@
     "descricaoCurta": "18 pistas conforme normas da Federação Mundial de Minigolfe — único no Brasil nesse padrão.",
     "descricaoLonga": "Bom para famílias e grupos. Fecha em dia de chuva.",
     "fotos": [],
-    "localizacao": { "lat": -27.2880, "lng": -51.9650 },
+    "localizacao": {
+      "lat": -27.005,
+      "lng": -51.4112
+    },
     "horarioFuncionamento": {
-      "quarta": { "abre": "14:00", "fecha": "18:00" },
-      "quinta": { "abre": "14:00", "fecha": "18:00" },
-      "sexta": { "abre": "14:00", "fecha": "18:00" },
-      "sabado": { "abre": "14:00", "fecha": "18:00" },
-      "domingo": { "abre": "14:00", "fecha": "18:00" }
+      "quarta": {
+        "abre": "14:00",
+        "fecha": "18:00"
+      },
+      "quinta": {
+        "abre": "14:00",
+        "fecha": "18:00"
+      },
+      "sexta": {
+        "abre": "14:00",
+        "fecha": "18:00"
+      },
+      "sabado": {
+        "abre": "14:00",
+        "fecha": "18:00"
+      },
+      "domingo": {
+        "abre": "14:00",
+        "fecha": "18:00"
+      }
     },
     "precoEstimado": 35,
     "duracaoMediaVisitaMin": 60,
     "avaliacao": 4.7,
-    "tagsDeInteresse": ["familia", "lazer"],
+    "tagsDeInteresse": [
+      "familia",
+      "lazer"
+    ],
     "statusOperacional": "ativo",
     "pesoInstitucional": 0.3
   },
@@ -154,19 +289,43 @@
     "descricaoCurta": "Primeira microcervejaria do Oeste Catarinense, modelo brewpub europeu.",
     "descricaoLonga": "Visitante vê o processo de fabricação. Fundada em 2004.",
     "fotos": [],
-    "localizacao": { "lat": -27.2790, "lng": -51.9700 },
+    "localizacao": {
+      "lat": -26.996,
+      "lng": -51.4162
+    },
     "horarioFuncionamento": {
-      "terca": { "abre": "10:00", "fecha": "18:00" },
-      "quarta": { "abre": "10:00", "fecha": "18:00" },
-      "quinta": { "abre": "10:00", "fecha": "18:00" },
-      "sexta": { "abre": "10:00", "fecha": "18:00" },
-      "sabado": { "abre": "10:00", "fecha": "18:00" },
-      "domingo": { "abre": "10:00", "fecha": "18:00" }
+      "terca": {
+        "abre": "10:00",
+        "fecha": "18:00"
+      },
+      "quarta": {
+        "abre": "10:00",
+        "fecha": "18:00"
+      },
+      "quinta": {
+        "abre": "10:00",
+        "fecha": "18:00"
+      },
+      "sexta": {
+        "abre": "10:00",
+        "fecha": "18:00"
+      },
+      "sabado": {
+        "abre": "10:00",
+        "fecha": "18:00"
+      },
+      "domingo": {
+        "abre": "10:00",
+        "fecha": "18:00"
+      }
     },
     "precoEstimado": 40,
     "duracaoMediaVisitaMin": 60,
     "avaliacao": 4.8,
-    "tagsDeInteresse": ["gastronomia", "cultura"],
+    "tagsDeInteresse": [
+      "gastronomia",
+      "cultura"
+    ],
     "statusOperacional": "ativo",
     "pesoInstitucional": 0.4
   },
@@ -177,19 +336,42 @@
     "descricaoCurta": "Vinculado à cervejaria Bierbaum — pratos típicos, pizza e chope da casa.",
     "descricaoLonga": "Avaliação muito consistente entre visitantes.",
     "fotos": [],
-    "localizacao": { "lat": -27.2870, "lng": -51.9640 },
+    "localizacao": {
+      "lat": -27.004,
+      "lng": -51.4102
+    },
     "horarioFuncionamento": {
-      "terca": { "abre": "18:00", "fecha": "23:30" },
-      "quarta": { "abre": "18:00", "fecha": "23:30" },
-      "quinta": { "abre": "18:00", "fecha": "23:30" },
-      "sexta": { "abre": "18:00", "fecha": "23:30" },
-      "sabado": { "abre": "18:00", "fecha": "23:30" },
-      "domingo": { "abre": "18:00", "fecha": "23:30" }
+      "terca": {
+        "abre": "18:00",
+        "fecha": "23:30"
+      },
+      "quarta": {
+        "abre": "18:00",
+        "fecha": "23:30"
+      },
+      "quinta": {
+        "abre": "18:00",
+        "fecha": "23:30"
+      },
+      "sexta": {
+        "abre": "18:00",
+        "fecha": "23:30"
+      },
+      "sabado": {
+        "abre": "18:00",
+        "fecha": "23:30"
+      },
+      "domingo": {
+        "abre": "18:00",
+        "fecha": "23:30"
+      }
     },
     "precoEstimado": 60,
     "duracaoMediaVisitaMin": 75,
     "avaliacao": 4.7,
-    "tagsDeInteresse": ["gastronomia"],
+    "tagsDeInteresse": [
+      "gastronomia"
+    ],
     "statusOperacional": "ativo",
     "pesoInstitucional": 0.3
   },
@@ -200,19 +382,43 @@
     "descricaoCurta": "Premiada (2 ouros na Grande Prova de Vinhos do Brasil 2015). Visita guiada + degustação.",
     "descricaoLonga": "Capela em frente ao bistrô. Atendimento muito elogiado.",
     "fotos": [],
-    "localizacao": { "lat": -27.2800, "lng": -51.9720 },
+    "localizacao": {
+      "lat": -26.997,
+      "lng": -51.4182
+    },
     "horarioFuncionamento": {
-      "terca": { "abre": "09:00", "fecha": "18:00" },
-      "quarta": { "abre": "09:00", "fecha": "18:00" },
-      "quinta": { "abre": "09:00", "fecha": "18:00" },
-      "sexta": { "abre": "09:00", "fecha": "18:00" },
-      "sabado": { "abre": "09:00", "fecha": "18:00" },
-      "domingo": { "abre": "09:00", "fecha": "12:00" }
+      "terca": {
+        "abre": "09:00",
+        "fecha": "18:00"
+      },
+      "quarta": {
+        "abre": "09:00",
+        "fecha": "18:00"
+      },
+      "quinta": {
+        "abre": "09:00",
+        "fecha": "18:00"
+      },
+      "sexta": {
+        "abre": "09:00",
+        "fecha": "18:00"
+      },
+      "sabado": {
+        "abre": "09:00",
+        "fecha": "18:00"
+      },
+      "domingo": {
+        "abre": "09:00",
+        "fecha": "12:00"
+      }
     },
     "precoEstimado": 45,
     "duracaoMediaVisitaMin": 60,
     "avaliacao": 4.7,
-    "tagsDeInteresse": ["gastronomia", "cultura"],
+    "tagsDeInteresse": [
+      "gastronomia",
+      "cultura"
+    ],
     "statusOperacional": "ativo",
     "pesoInstitucional": 0.5
   },
@@ -223,20 +429,47 @@
     "descricaoCurta": "Loja de chocolates e produtos locais — maior número de avaliações da cidade.",
     "descricaoLonga": "Alto tráfego turístico comprovado, referência obrigatória do passeio.",
     "fotos": [],
-    "localizacao": { "lat": -27.2900, "lng": -51.9700 },
+    "localizacao": {
+      "lat": -27.007,
+      "lng": -51.4162
+    },
     "horarioFuncionamento": {
-      "segunda": { "abre": "08:00", "fecha": "18:00" },
-      "terca": { "abre": "08:00", "fecha": "18:00" },
-      "quarta": { "abre": "08:00", "fecha": "18:00" },
-      "quinta": { "abre": "08:00", "fecha": "18:00" },
-      "sexta": { "abre": "08:00", "fecha": "18:00" },
-      "sabado": { "abre": "08:00", "fecha": "18:00" },
-      "domingo": { "abre": "09:00", "fecha": "17:00" }
+      "segunda": {
+        "abre": "08:00",
+        "fecha": "18:00"
+      },
+      "terca": {
+        "abre": "08:00",
+        "fecha": "18:00"
+      },
+      "quarta": {
+        "abre": "08:00",
+        "fecha": "18:00"
+      },
+      "quinta": {
+        "abre": "08:00",
+        "fecha": "18:00"
+      },
+      "sexta": {
+        "abre": "08:00",
+        "fecha": "18:00"
+      },
+      "sabado": {
+        "abre": "08:00",
+        "fecha": "18:00"
+      },
+      "domingo": {
+        "abre": "09:00",
+        "fecha": "17:00"
+      }
     },
     "precoEstimado": 25,
     "duracaoMediaVisitaMin": 30,
     "avaliacao": 4.5,
-    "tagsDeInteresse": ["gastronomia", "compras"],
+    "tagsDeInteresse": [
+      "gastronomia",
+      "compras"
+    ],
     "statusOperacional": "ativo",
     "pesoInstitucional": 0.8
   },
@@ -247,19 +480,43 @@
     "descricaoCurta": "Fundada por um casal — fundador veio de Liechtenstein, se apaixonou pela cidade e ficou.",
     "descricaoLonga": "Loja com história pessoal forte por trás do produto.",
     "fotos": [],
-    "localizacao": { "lat": -27.2885, "lng": -51.9610 },
+    "localizacao": {
+      "lat": -27.0055,
+      "lng": -51.4072
+    },
     "horarioFuncionamento": {
-      "terca": { "abre": "09:00", "fecha": "18:00" },
-      "quarta": { "abre": "09:00", "fecha": "18:00" },
-      "quinta": { "abre": "09:00", "fecha": "18:00" },
-      "sexta": { "abre": "09:00", "fecha": "18:00" },
-      "sabado": { "abre": "09:00", "fecha": "18:00" },
-      "domingo": { "abre": "09:00", "fecha": "13:00" }
+      "terca": {
+        "abre": "09:00",
+        "fecha": "18:00"
+      },
+      "quarta": {
+        "abre": "09:00",
+        "fecha": "18:00"
+      },
+      "quinta": {
+        "abre": "09:00",
+        "fecha": "18:00"
+      },
+      "sexta": {
+        "abre": "09:00",
+        "fecha": "18:00"
+      },
+      "sabado": {
+        "abre": "09:00",
+        "fecha": "18:00"
+      },
+      "domingo": {
+        "abre": "09:00",
+        "fecha": "13:00"
+      }
     },
     "precoEstimado": 20,
     "duracaoMediaVisitaMin": 25,
     "avaliacao": 4.5,
-    "tagsDeInteresse": ["gastronomia", "compras"],
+    "tagsDeInteresse": [
+      "gastronomia",
+      "compras"
+    ],
     "statusOperacional": "ativo",
     "pesoInstitucional": 0.3
   },
@@ -270,19 +527,43 @@
     "descricaoCurta": "Lago com peixes para alimentar, playground — ótimo para famílias.",
     "descricaoLonga": "Especialidade: Strudel e Eiskaffee (café gelado com sorvete).",
     "fotos": [],
-    "localizacao": { "lat": -27.2875, "lng": -51.9655 },
+    "localizacao": {
+      "lat": -27.0045,
+      "lng": -51.4117
+    },
     "horarioFuncionamento": {
-      "segunda": { "abre": "14:00", "fecha": "18:30" },
-      "quarta": { "abre": "14:00", "fecha": "18:30" },
-      "quinta": { "abre": "14:00", "fecha": "18:30" },
-      "sexta": { "abre": "14:00", "fecha": "18:30" },
-      "sabado": { "abre": "14:00", "fecha": "18:30" },
-      "domingo": { "abre": "14:00", "fecha": "18:30" }
+      "segunda": {
+        "abre": "14:00",
+        "fecha": "18:30"
+      },
+      "quarta": {
+        "abre": "14:00",
+        "fecha": "18:30"
+      },
+      "quinta": {
+        "abre": "14:00",
+        "fecha": "18:30"
+      },
+      "sexta": {
+        "abre": "14:00",
+        "fecha": "18:30"
+      },
+      "sabado": {
+        "abre": "14:00",
+        "fecha": "18:30"
+      },
+      "domingo": {
+        "abre": "14:00",
+        "fecha": "18:30"
+      }
     },
     "precoEstimado": 30,
     "duracaoMediaVisitaMin": 45,
     "avaliacao": 4.7,
-    "tagsDeInteresse": ["gastronomia", "familia"],
+    "tagsDeInteresse": [
+      "gastronomia",
+      "familia"
+    ],
     "statusOperacional": "ativo",
     "pesoInstitucional": 0.4
   },
@@ -293,19 +574,43 @@
     "descricaoCurta": "Maior loja austríaca do Brasil, conduzida pelas famílias Ungericht e Astner.",
     "descricaoLonga": "Considerada um pouco cara, mas vale a visita pela variedade de produtos importados.",
     "fotos": [],
-    "localizacao": { "lat": -27.2868, "lng": -51.9635 },
+    "localizacao": {
+      "lat": -27.0038,
+      "lng": -51.4097
+    },
     "horarioFuncionamento": {
-      "segunda": { "abre": "09:00", "fecha": "18:00" },
-      "terca": { "abre": "09:00", "fecha": "18:00" },
-      "quinta": { "abre": "09:00", "fecha": "18:00" },
-      "sexta": { "abre": "09:00", "fecha": "18:00" },
-      "sabado": { "abre": "09:00", "fecha": "18:00" },
-      "domingo": { "abre": "09:30", "fecha": "17:00" }
+      "segunda": {
+        "abre": "09:00",
+        "fecha": "18:00"
+      },
+      "terca": {
+        "abre": "09:00",
+        "fecha": "18:00"
+      },
+      "quinta": {
+        "abre": "09:00",
+        "fecha": "18:00"
+      },
+      "sexta": {
+        "abre": "09:00",
+        "fecha": "18:00"
+      },
+      "sabado": {
+        "abre": "09:00",
+        "fecha": "18:00"
+      },
+      "domingo": {
+        "abre": "09:30",
+        "fecha": "17:00"
+      }
     },
     "precoEstimado": 15,
     "duracaoMediaVisitaMin": 35,
     "avaliacao": 4.7,
-    "tagsDeInteresse": ["compras", "cultura"],
+    "tagsDeInteresse": [
+      "compras",
+      "cultura"
+    ],
     "statusOperacional": "ativo",
     "pesoInstitucional": 0.4
   },
@@ -316,20 +621,46 @@
     "descricaoCurta": "Boa variedade de produtos artesanais e lembranças, preço considerado justo.",
     "descricaoLonga": "Bom ponto para lembranças de viagem feitas localmente.",
     "fotos": [],
-    "localizacao": { "lat": -27.2852, "lng": -51.9615 },
+    "localizacao": {
+      "lat": -27.0022,
+      "lng": -51.4077
+    },
     "horarioFuncionamento": {
-      "segunda": { "abre": "09:00", "fecha": "18:00" },
-      "terca": { "abre": "09:00", "fecha": "18:00" },
-      "quarta": { "abre": "09:00", "fecha": "18:00" },
-      "quinta": { "abre": "09:00", "fecha": "18:00" },
-      "sexta": { "abre": "09:00", "fecha": "18:00" },
-      "sabado": { "abre": "09:00", "fecha": "18:00" },
-      "domingo": { "abre": "09:00", "fecha": "12:00" }
+      "segunda": {
+        "abre": "09:00",
+        "fecha": "18:00"
+      },
+      "terca": {
+        "abre": "09:00",
+        "fecha": "18:00"
+      },
+      "quarta": {
+        "abre": "09:00",
+        "fecha": "18:00"
+      },
+      "quinta": {
+        "abre": "09:00",
+        "fecha": "18:00"
+      },
+      "sexta": {
+        "abre": "09:00",
+        "fecha": "18:00"
+      },
+      "sabado": {
+        "abre": "09:00",
+        "fecha": "18:00"
+      },
+      "domingo": {
+        "abre": "09:00",
+        "fecha": "12:00"
+      }
     },
     "precoEstimado": 10,
     "duracaoMediaVisitaMin": 20,
     "avaliacao": 4.6,
-    "tagsDeInteresse": ["compras"],
+    "tagsDeInteresse": [
+      "compras"
+    ],
     "statusOperacional": "ativo",
     "pesoInstitucional": 0.2
   },
@@ -340,19 +671,43 @@
     "descricaoCurta": "Loja/ateliê de referência da família Thaler, tradição de escultura em madeira.",
     "descricaoLonga": "Recepção pessoal contando a história da família escultora.",
     "fotos": [],
-    "localizacao": { "lat": -27.2848, "lng": -51.9598 },
+    "localizacao": {
+      "lat": -27.0018,
+      "lng": -51.406
+    },
     "horarioFuncionamento": {
-      "segunda": { "abre": "09:00", "fecha": "18:00" },
-      "terca": { "abre": "09:00", "fecha": "18:00" },
-      "quarta": { "abre": "09:00", "fecha": "18:00" },
-      "quinta": { "abre": "09:00", "fecha": "18:00" },
-      "sexta": { "abre": "09:00", "fecha": "18:00" },
-      "sabado": { "abre": "09:00", "fecha": "12:00" }
+      "segunda": {
+        "abre": "09:00",
+        "fecha": "18:00"
+      },
+      "terca": {
+        "abre": "09:00",
+        "fecha": "18:00"
+      },
+      "quarta": {
+        "abre": "09:00",
+        "fecha": "18:00"
+      },
+      "quinta": {
+        "abre": "09:00",
+        "fecha": "18:00"
+      },
+      "sexta": {
+        "abre": "09:00",
+        "fecha": "18:00"
+      },
+      "sabado": {
+        "abre": "09:00",
+        "fecha": "12:00"
+      }
     },
     "precoEstimado": 0,
     "duracaoMediaVisitaMin": 20,
     "avaliacao": 4.8,
-    "tagsDeInteresse": ["historia", "cultura"],
+    "tagsDeInteresse": [
+      "historia",
+      "cultura"
+    ],
     "statusOperacional": "ativo",
     "pesoInstitucional": 0.5
   },
@@ -363,15 +718,27 @@
     "descricaoCurta": "Parque aquático sazonal da cidade.",
     "descricaoLonga": "Reviews recentes apontam estrutura precisando de manutenção. Confirmar status antes de recomendar.",
     "fotos": [],
-    "localizacao": { "lat": -27.2820, "lng": -51.9590 },
+    "localizacao": {
+      "lat": -26.999,
+      "lng": -51.4052
+    },
     "horarioFuncionamento": {
-      "sabado": { "abre": "09:00", "fecha": "17:00" },
-      "domingo": { "abre": "09:00", "fecha": "17:00" }
+      "sabado": {
+        "abre": "09:00",
+        "fecha": "17:00"
+      },
+      "domingo": {
+        "abre": "09:00",
+        "fecha": "17:00"
+      }
     },
     "precoEstimado": 50,
     "duracaoMediaVisitaMin": 120,
     "avaliacao": 4.1,
-    "tagsDeInteresse": ["lazer", "familia"],
+    "tagsDeInteresse": [
+      "lazer",
+      "familia"
+    ],
     "statusOperacional": "em_reforma",
     "pesoInstitucional": 0.1
   }
