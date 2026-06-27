@@ -1,0 +1,159 @@
+/* roteiro.css
+   Linde Guia — Treze Tílias
+   Estilos específicos da tela "Criar Roteiro". Usa variáveis de tokens.css.
+*/
+
+.pagina-roteiro {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--espaco-8) var(--espaco-5) var(--espaco-10);
+}
+
+.pagina-roteiro__cabecalho {
+  text-align: center;
+  margin-bottom: var(--espaco-8);
+}
+
+.pagina-roteiro__cabecalho h1 {
+  font-family: var(--fonte-titulo);
+  font-size: var(--escala-xl);
+  color: var(--cor-marca);
+  margin-bottom: var(--espaco-2);
+}
+
+.pagina-roteiro__cabecalho p {
+  color: var(--cor-texto-suave);
+}
+
+/* ===== Campo (wrapper genérico de cada pergunta) ===== */
+.form-roteiro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-6);
+}
+
+.campo {
+  border: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-3);
+}
+
+.campo__rotulo {
+  font-weight: var(--peso-medio);
+  font-size: var(--escala-md);
+  color: var(--cor-texto);
+}
+
+.campo__opcional-marca {
+  font-weight: var(--peso-regular);
+  font-size: var(--escala-xs);
+  color: var(--cor-texto-suave);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.campo__ajuda {
+  font-size: var(--escala-sm);
+  color: var(--cor-texto-suave);
+}
+
+.campo__input {
+  font-family: var(--fonte-corpo);
+  font-size: var(--escala-base);
+  padding: var(--espaco-3) var(--espaco-4);
+  border: 1.5px solid var(--cor-borda);
+  border-radius: var(--raio-medio);
+  background: var(--cor-fundo-card);
+  color: var(--cor-texto);
+  transition: border-color var(--transicao-rapida);
+}
+
+.campo__input:focus {
+  border-color: var(--cor-marca);
+}
+
+/* ===== Chips (seleção única ou múltipla) ===== */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-2);
+}
+
+.chip {
+  font-family: var(--fonte-corpo);
+  font-size: var(--escala-sm);
+  font-weight: var(--peso-medio);
+  padding: var(--espaco-2) var(--espaco-4);
+  border-radius: 999px;
+  border: 1.5px solid var(--cor-borda);
+  background: var(--cor-fundo-card);
+  color: var(--cor-texto);
+  cursor: pointer;
+  transition: background var(--transicao-rapida), border-color var(--transicao-rapida), color var(--transicao-rapida);
+}
+
+.chip:hover {
+  border-color: var(--cor-marca);
+}
+
+.chip[aria-pressed="true"] {
+  background: var(--cor-marca);
+  border-color: var(--cor-marca);
+  color: var(--cor-pedra-mais-clara);
+}
+
+/* ===== Localização ===== */
+.localizacao {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-3);
+  flex-wrap: wrap;
+}
+
+.botao--pequeno {
+  padding: var(--espaco-2) var(--espaco-4);
+  font-size: var(--escala-sm);
+}
+
+.localizacao__status {
+  font-size: var(--escala-sm);
+  color: var(--cor-texto-suave);
+}
+
+.localizacao__status[data-estado="ok"] {
+  color: var(--cor-lodengrun);
+  font-weight: var(--peso-medio);
+}
+
+.localizacao__status[data-estado="erro"] {
+  color: var(--cor-vermelho-tirol);
+}
+
+/* ===== Erro do formulário ===== */
+.form-roteiro__erro {
+  background: var(--cor-pedra-mais-clara);
+  border: 1.5px solid var(--cor-vermelho-tirol);
+  color: var(--cor-vermelho-tirol-escuro);
+  padding: var(--espaco-3) var(--espaco-4);
+  border-radius: var(--raio-medio);
+  font-size: var(--escala-sm);
+}
+
+.form-roteiro__erro[hidden] {
+  display: none;
+}
+
+/* ===== Botão grande de submit ===== */
+.botao--grande {
+  width: 100%;
+  padding: var(--espaco-4);
+  font-size: var(--escala-md);
+}
+
+@media (max-width: 480px) {
+  .pagina-roteiro {
+    padding: var(--espaco-6) var(--espaco-4) var(--espaco-8);
+  }
+}
