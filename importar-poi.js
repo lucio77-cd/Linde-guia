@@ -70,28 +70,47 @@ function iniciarImportador() {
     let comErro = 0;
 
     for (const poi of pois) {
-      try {
-        const jaExiste = await comTimeout(
-          existeComMesmoNome(poi.nome),
-          TIMEOUT_MS,
-          `checar duplicado de ${poi.nome}`
-        );
+      await aguardar(400); // pequeno espaçamento entre operações, evita contenção do SDK
 
-        if (jaExiste) {
-          escreverLog(logEl, `~ Já existe, pulado: ${poi.nome}`);
-          pulados++;
-          continue;
+      let tentativas = 0;
+      let sucesso = false;
+      let ultimoErro = null;
+
+      while (tentativas < 3 && !sucesso) {
+        tentativas++;
+        try {
+          const jaExiste = await comTimeout(
+            existeComMesmoNome(poi.nome),
+            TIMEOUT_MS,
+            `checar duplicado de ${poi.nome}`
+          );
+
+          if (jaExiste) {
+            escreverLog(logEl, `~ Já existe, pulado: ${poi.nome}`);
+            pulados++;
+            sucesso = true;
+            break;
+          }
+
+          await comTimeout(
+            addDoc(collection(db, NOME_COLECAO), poi),
+            TIMEOUT_MS,
+            `criar ${poi.nome}`
+          );
+          escreverLog(logEl, `+ Criado: ${poi.nome}`);
+          criados++;
+          sucesso = true;
+        } catch (erro) {
+          ultimoErro = erro;
+          if (tentativas < 3) {
+            escreverLog(logEl, `  (tentativa ${tentativas} falhou para "${poi.nome}", tentando de novo em 1.5s...)`);
+            await aguardar(1500);
+          }
         }
+      }
 
-        await comTimeout(
-          addDoc(collection(db, NOME_COLECAO), poi),
-          TIMEOUT_MS,
-          `criar ${poi.nome}`
-        );
-        escreverLog(logEl, `+ Criado: ${poi.nome}`);
-        criados++;
-      } catch (erro) {
-        escreverLog(logEl, `x ERRO em "${poi.nome}": ${erro.message}`);
+      if (!sucesso) {
+        escreverLog(logEl, `x ERRO em "${poi.nome}" após 3 tentativas: ${ultimoErro.message}`);
         comErro++;
       }
     }
@@ -133,6 +152,10 @@ async function existeComMesmoNome(nome) {
 function escreverLog(elemento, texto) {
   elemento.textContent += texto + "\n";
   elemento.scrollTop = elemento.scrollHeight;
+}
+
+function aguardar(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function pararComErro(botao) {
