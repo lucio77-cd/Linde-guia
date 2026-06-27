@@ -237,3 +237,67 @@
     padding: var(--espaco-6) var(--espaco-4) var(--espaco-8);
   }
 }
+
+/* ============================================================
+   MAPA — Leaflet, com marcadores customizados na identidade visual
+   ============================================================ */
+.mapa-rota {
+  width: 100%;
+  height: 220px;
+  border-radius: var(--raio-grande);
+  border: 1px solid var(--cor-borda);
+  margin-bottom: var(--espaco-5);
+  z-index: 0; /* evita o mapa subir sobre o header em telas pequenas */
+}
+
+.mapa-rota--em-rota {
+  height: 200px;
+  margin-bottom: var(--espaco-4);
+}
+
+.marcador-numerado {
+  background: var(--cor-marca);
+  color: var(--cor-pedra-mais-clara);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--fonte-titulo);
+  font-weight: var(--peso-negrito);
+  font-size: var(--escala-sm);
+  border: 2px solid var(--cor-pedra-mais-clara);
+  box-shadow: 0 1px 3px rgba(38, 35, 33, 0.3);
+}
+
+.marcador-destino {
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 1px 2px rgba(38, 35, 33, 0.4));
+}
+
+/* ===== Status de GPS (Em Rota) ===== */
+.status-gps {
+  text-align: center;
+  font-size: var(--escala-sm);
+  color: var(--cor-texto-suave);
+  margin-bottom: var(--espaco-4);
+}
+
+/* ===== Botão de texto (ação manual discreta, fallback do GPS) ===== */
+.botao--texto {
+  background: none;
+  border: none;
+  color: var(--cor-texto-suave);
+  text-decoration: underline;
+  font-size: var(--escala-sm);
+  padding: var(--espaco-2);
+  cursor: pointer;
+}
+
+.botao--texto:hover {
+  color: var(--cor-marca);
+}
