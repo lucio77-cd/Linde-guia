@@ -223,7 +223,7 @@ function montarPerfilBusca() {
   // Se não há coordenada de GPS (usuário digitou endereço manual), usamos
   // o centro da Praça Andreas Thaler como ponto de partida aproximado.
   // ponto-detalhe/explorar podem evoluir isso para geocodificação real depois.
-  const CENTRO_TREZE_TILIAS = { lat: -27.2856, lng: -51.9622 };
+  const CENTRO_TREZE_TILIAS = { lat: -27.0026, lng: -51.4084 };
   const RAIO_MAXIMO_RAZOAVEL_KM = 15; // Treze Tílias é pequena; GPS muito além disso é erro de leitura
 
   let localizacaoPartida = estado.localizacaoPartida || CENTRO_TREZE_TILIAS;
