@@ -1,0 +1,118 @@
+// firestore.rules
+// Linde Guia — Treze Tílias
+//
+// Modelo: leitura pública dos dados turísticos (pois, eventos) — é um guia
+// pra visitantes, não precisa de login pra ver conteúdo.
+// Escrita restrita a administradores (Secretaria de Turismo / ASTURTILIAS),
+// que usam o painel admin/admin.html.
+// Dados de usuário (perfil, rotas salvas) só o próprio dono acessa.
+//
+// IMPORTANTE: este arquivo precisa de uma coleção "usuarios_admin" no
+// Firestore, com um documento por admin autorizado (doc ID = uid do Firebase
+// Auth daquele admin). Sem isso, ninguém consegue escrever em "pois"/"eventos".
+// Crie esse documento manualmente no Console depois que o primeiro admin
+// fizer login pela primeira vez.
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================================
+    // FUNÇÕES AUXILIARES
+    // ============================================================
+
+    function estaLogado() {
+      return request.auth != null;
+    }
+
+    // Verifica se o uid logado tem um documento em "usuarios_admin".
+    // Só usar quando estaLogado() já for verdade (senão request.auth.uid é nulo).
+    function ehAdmin() {
+      return estaLogado() &&
+        exists(/databases/$(database)/documents/usuarios_admin/$(request.auth.uid));
+    }
+
+    // O usuário só pode tocar no PRÓPRIO documento (users/{uid})
+    function ehDonoDoDocumento(userId) {
+      return estaLogado() && request.auth.uid == userId;
+    }
+
+    // ============================================================
+    // POIS — leitura pública, escrita só admin, com validação de campo
+    // ============================================================
+    match /pois/{poiId} {
+      allow get, list: if true;
+
+      allow create: if ehAdmin() && poiTemCamposValidos();
+      allow update: if ehAdmin() && poiTemCamposValidos();
+      allow delete: if ehAdmin();
+
+      // Validação mínima: nunca aceitar POI sem nome, com preço negativo,
+      // ou com status_operacional fora do conjunto permitido.
+      function poiTemCamposValidos() {
+        let dados = request.resource.data;
+        return dados.nome is string && dados.nome.size() > 0
+          && dados.categoria is string
+          && (!('preco_estimado' in dados) || dados.preco_estimado is number && dados.preco_estimado >= 0)
+          && (!('status_operacional' in dados) ||
+              dados.status_operacional in ['ativo', 'sazonal', 'em_reforma', 'fechado_temporariamente']);
+      }
+    }
+
+    // ============================================================
+    // EVENTOS — mesmo padrão dos POIs
+    // ============================================================
+    match /eventos/{eventoId} {
+      allow get, list: if true;
+
+      allow create, update: if ehAdmin() && eventoTemCamposValidos();
+      allow delete: if ehAdmin();
+
+      function eventoTemCamposValidos() {
+        let dados = request.resource.data;
+        return dados.nome is string && dados.nome.size() > 0
+          && (!('data_inicio' in dados) || dados.data_inicio is timestamp)
+          && (!('data_fim' in dados) || dados.data_fim is timestamp);
+      }
+    }
+
+    // ============================================================
+    // USUARIOS_ADMIN — quem é admin. Só admin LÊ; ninguém escreve via app.
+    // ============================================================
+    // Escrita nesta coleção é feita manualmente pelo Console do Firebase
+    // (ou Admin SDK em um script de setup), nunca pelo client. Por isso
+    // não existe "allow write" aqui — fica negado por padrão.
+    match /usuarios_admin/{adminId} {
+      allow get: if ehAdmin();
+      allow list: if false; // impede listar todos os admins por enumeração
+    }
+
+    // ============================================================
+    // USUARIOS — perfil, favoritos. Só o próprio dono acessa.
+    // ============================================================
+    match /usuarios/{userId} {
+      allow read, write: if ehDonoDoDocumento(userId);
+    }
+
+    // ============================================================
+    // ROTAS_GERADAS — histórico de rotas (analytics interno)
+    // ============================================================
+    // Usuário logado pode salvar/ler a própria rota. Admin pode ler tudo
+    // (pra entender o que mais é pedido), mas não escreve aqui diretamente.
+    match /rotas_geradas/{rotaId} {
+      allow create: if estaLogado() && request.resource.data.userId == request.auth.uid;
+      allow get: if estaLogado() &&
+        (resource.data.userId == request.auth.uid || ehAdmin());
+      allow list: if ehAdmin();
+      allow update, delete: if false; // rota gerada é histórico, não se edita
+    }
+
+    // ============================================================
+    // PADRÃO: qualquer coisa fora do mapeado acima é NEGADA
+    // ============================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
