@@ -1,0 +1,239 @@
+/* minha-rota.css
+   Linde Guia — Treze Tílias
+   Estilos das sub-vistas: resultado da rota, modo em rota, finalização.
+*/
+
+.pagina-rota {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--espaco-8) var(--espaco-5) var(--espaco-10);
+}
+
+/* ===== Estados vazios (carregando, sem rota, rota vazia) ===== */
+.estado-vazio {
+  text-align: center;
+  padding: var(--espaco-8) var(--espaco-4);
+}
+
+.estado-vazio h1 {
+  font-family: var(--fonte-titulo);
+  font-size: var(--escala-xl);
+  color: var(--cor-marca);
+  margin-bottom: var(--espaco-3);
+}
+
+.estado-vazio p {
+  color: var(--cor-texto-suave);
+  max-width: 440px;
+  margin: 0 auto var(--espaco-5);
+}
+
+/* ===== Resumo da rota ===== */
+.vista-resultado__resumo {
+  text-align: center;
+  margin-bottom: var(--espaco-6);
+}
+
+.vista-resultado__resumo h1 {
+  font-family: var(--fonte-titulo);
+  font-size: var(--escala-xl);
+  color: var(--cor-marca);
+  margin-bottom: var(--espaco-2);
+}
+
+.vista-resultado__texto-resumo {
+  color: var(--cor-texto-suave);
+  font-size: var(--escala-md);
+}
+
+/* ===== Lista de paradas ===== */
+.lista-paradas {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-4);
+  margin-bottom: var(--espaco-8);
+}
+
+.parada-card {
+  display: flex;
+  gap: var(--espaco-4);
+  padding: var(--espaco-4);
+  background: var(--cor-fundo-card);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-grande);
+  box-shadow: var(--sombra-card);
+}
+
+.parada-card__numero {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: var(--cor-marca);
+  color: var(--cor-pedra-mais-clara);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--fonte-titulo);
+  font-weight: var(--peso-negrito);
+}
+
+.parada-card__corpo {
+  flex: 1;
+  min-width: 0;
+}
+
+.parada-card__horario {
+  font-family: var(--fonte-dado);
+  font-size: var(--escala-sm);
+  color: var(--cor-dourado-velho);
+  font-weight: var(--peso-medio);
+}
+
+.parada-card__nome {
+  font-family: var(--fonte-titulo);
+  font-size: var(--escala-md);
+  color: var(--cor-texto);
+  margin: var(--espaco-1) 0;
+}
+
+.parada-card__detalhes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-3);
+  font-size: var(--escala-sm);
+  color: var(--cor-texto-suave);
+}
+
+.parada-card__acoes {
+  margin-top: var(--espaco-2);
+}
+
+.parada-card__trocar {
+  font-size: var(--escala-xs);
+  color: var(--cor-vermelho-tirol);
+  text-decoration: underline;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.vista-resultado__acoes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-3);
+}
+
+/* ===== Modo Em Rota ===== */
+.vista-em-rota__progresso {
+  margin-bottom: var(--espaco-6);
+}
+
+.vista-em-rota__progresso span {
+  font-size: var(--escala-sm);
+  color: var(--cor-texto-suave);
+  display: block;
+  margin-bottom: var(--espaco-2);
+}
+
+.vista-em-rota__barra {
+  height: 6px;
+  background: var(--cor-borda);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.vista-em-rota__barra-preenchida {
+  height: 100%;
+  background: var(--cor-vermelho-tirol);
+  transition: width var(--transicao-base);
+}
+
+.card-parada-atual {
+  background: var(--cor-fundo-card);
+  border: 1.5px solid var(--cor-marca);
+  border-radius: var(--raio-grande);
+  padding: var(--espaco-6);
+  margin-bottom: var(--espaco-6);
+  box-shadow: var(--sombra-card-hover);
+}
+
+.card-parada-atual__categoria {
+  font-size: var(--escala-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--cor-dourado-velho);
+  font-weight: var(--peso-medio);
+}
+
+.card-parada-atual__nome {
+  font-family: var(--fonte-titulo);
+  font-size: var(--escala-lg);
+  color: var(--cor-marca);
+  margin: var(--espaco-2) 0 var(--espaco-3);
+}
+
+.card-parada-atual__info {
+  display: flex;
+  gap: var(--espaco-4);
+  flex-wrap: wrap;
+  font-size: var(--escala-sm);
+  color: var(--cor-texto-suave);
+  margin-bottom: var(--espaco-4);
+}
+
+.card-parada-atual__navegar {
+  display: inline-block;
+}
+
+.vista-em-rota__acoes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-3);
+}
+
+.aviso-recalculo {
+  margin-top: var(--espaco-5);
+  padding: var(--espaco-3) var(--espaco-4);
+  background: var(--cor-pedra-mais-clara);
+  border-left: 3px solid var(--cor-vermelho-tirol);
+  border-radius: var(--raio-pequeno);
+  font-size: var(--escala-sm);
+}
+
+.aviso-recalculo[hidden] {
+  display: none;
+}
+
+/* ===== Finalização ===== */
+.vista-finalizada {
+  text-align: center;
+  padding: var(--espaco-8) var(--espaco-4);
+}
+
+.vista-finalizada h1 {
+  font-family: var(--fonte-titulo);
+  font-size: var(--escala-xl);
+  color: var(--cor-marca);
+  margin-bottom: var(--espaco-3);
+}
+
+.vista-finalizada p {
+  color: var(--cor-texto-suave);
+  margin-bottom: var(--espaco-6);
+}
+
+.vista-finalizada__acoes {
+  display: flex;
+  gap: var(--espaco-3);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+  .pagina-rota {
+    padding: var(--espaco-6) var(--espaco-4) var(--espaco-8);
+  }
+}
