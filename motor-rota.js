@@ -227,17 +227,46 @@ function montarSequencia(candidatosPontuados, perfilBusca) {
 
   const sequenciaOtimizada = ordenarPorProximidadeGeografica(selecionados, perfilBusca.localizacaoPartida);
 
-  const paradasComHorario = calcularHorariosReais(sequenciaOtimizada, perfilBusca.horarioInicio);
-
-  const paradasValidadas = revalidarHorariosFinais(paradasComHorario, perfilBusca.data);
+  const paradasFinais = calcularERevalidarAteEstabilizar(sequenciaOtimizada, perfilBusca);
 
   return {
-    paradas: paradasValidadas,
+    paradas: paradasFinais,
     tempoTotalEstimadoMin: tempoUsadoMin,
-    custoTotalEstimado: paradasValidadas.reduce((soma, p) => soma + (p.precoEstimado || 0), 0),
+    custoTotalEstimado: paradasFinais.reduce((soma, p) => soma + (p.precoEstimado || 0), 0),
     alternativasDescartadas: descartados,
     perfilOriginal: perfilBusca,
   };
+}
+
+// Calcula horários reais e remove paradas que ficariam fechadas no horário
+// calculado. Como remover uma parada do meio muda o horário de TODAS as
+// que vêm depois dela, repete o ciclo (calcular -> filtrar) até nada mais
+// precisar ser removido. Isso evita o "buraco" de horário que aparecia
+// quando uma parada cortada no meio deixava o cursor de tempo desalinhado
+// para as paradas seguintes.
+function calcularERevalidarAteEstabilizar(paradas, perfilBusca) {
+  let atuais = paradas;
+
+  // Limite de segurança: nunca mais iterações do que paradas existem,
+  // já que cada iteração remove pelo menos uma parada ou estabiliza.
+  for (let i = 0; i <= atuais.length; i++) {
+    const comHorario = calcularHorariosReais(atuais, perfilBusca.horarioInicio);
+    const validas = comHorario.filter((parada) =>
+      estaAbertoNoHorario(parada, parada.horarioChegada, perfilBusca.data)
+    );
+
+    if (validas.length === comHorario.length) {
+      return validas; // nada foi removido nesta rodada, já estabilizou
+    }
+
+    atuais = validas;
+
+    if (atuais.length === 0) {
+      return [];
+    }
+  }
+
+  return atuais;
 }
 
 function ordenarPorProximidadeGeografica(paradas, pontoPartida) {
@@ -252,7 +281,14 @@ function ordenarPorProximidadeGeografica(paradas, pontoPartida) {
         calcularDistanciaKm(posicaoAtual, a.localizacao) - calcularDistanciaKm(posicaoAtual, b.localizacao)
     );
     const proxima = restantes.shift();
-    ordenadas.push(proxima);
+
+    // CORREÇÃO: o deslocamentoMin calculado em montarSequencia() reflete a
+    // ordem por SCORE, não a ordem geográfica final. Sem recalcular aqui,
+    // o horário da parada herda a distância de uma posição anterior errada,
+    // criando saltos artificiais de horas entre paradas vizinhas no mapa.
+    const deslocamentoMinReal = estimarDeslocamentoMin(posicaoAtual, proxima.localizacao);
+
+    ordenadas.push({ ...proxima, deslocamentoMin: deslocamentoMinReal });
     posicaoAtual = proxima.localizacao || posicaoAtual;
   }
 
@@ -273,11 +309,8 @@ function calcularHorariosReais(paradas, horarioInicio) {
 }
 
 // Recheck final: evita o caso "a 3ª parada fecha antes da rota chegar lá"
-function revalidarHorariosFinais(paradas, dataReferencia) {
-  return paradas.filter((parada) =>
-    estaAbertoNoHorario(parada, parada.horarioChegada, dataReferencia)
-  );
-}
+// (substituída por calcularERevalidarAteEstabilizar, que recalcula o
+// cursor de horário a cada remoção em vez de só filtrar no final)
 
 // ============================================================
 // ROTA VAZIA (nenhum candidato viável)
