@@ -5,10 +5,13 @@
 // com Firestore ou Auth importa "db" / "auth" daqui — nunca chama
 // initializeApp() de novo em outro lugar do projeto.
 
-import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
-import { getAnalytics, isSupported as analyticsIsSupported } from "firebase/analytics";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getAnalytics,
+  isSupported as analyticsIsSupported,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
 
 // Configuração do projeto no Firebase Console
 const firebaseConfig = {
