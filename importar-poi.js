@@ -3,21 +3,18 @@
  * Linde Guia — Treze Tílias
  *
  * USO INTERNO ÚNICO — não faz parte do app que o turista usa.
- * Lê pois-seed.json e escreve cada POI no Firestore, usando o mesmo
- * Firebase já configurado (firebase-config.js) e a mesma camada de
- * dados (pois-data.js) que o resto do app usa.
  *
- * Seguro de clicar mais de uma vez: antes de criar, checa se já existe
- * um POI com o mesmo nome e, se sim, pula (não duplica).
- *
- * Depois de rodar uma vez com sucesso, apague importar.html e
- * importar-poi.js do repositório.
+ * v2: cada operação no Firestore tem um TIMEOUT de 8 segundos. Se travar
+ * (geralmente por regra de segurança bloqueando), mostra o erro na tela
+ * em vez de ficar girando pra sempre — importante pra quem está testando
+ * no celular, sem acesso a DevTools/Console do navegador.
  */
 
 import { db } from "./firebase-config.js";
 import { collection, getDocs, addDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const NOME_COLECAO = "pois";
+const TIMEOUT_MS = 8000;
 
 function iniciarImportador() {
   const botao = document.getElementById("btn-importar");
@@ -28,16 +25,57 @@ function iniciarImportador() {
     botao.textContent = "Importando...";
     logEl.textContent = "";
 
+    escreverLog(logEl, "Passo 1: lendo pois-seed.json...");
+
+    let pois;
     try {
-      const resposta = await fetch("./pois-seed.json");
-      const pois = await resposta.json();
-      escreverLog(logEl, `Lidos ${pois.length} POIs de pois-seed.json.\n`);
+      const resposta = await comTimeout(fetch("./pois-seed.json"), TIMEOUT_MS, "ler pois-seed.json");
+      pois = await resposta.json();
+      escreverLog(logEl, `OK — ${pois.length} POIs encontrados no arquivo.\n`);
+    } catch (erro) {
+      escreverLog(logEl, `ERRO ao ler pois-seed.json: ${erro.message}`);
+      escreverLog(logEl, "Confirme se o arquivo está na mesma pasta de importar.html no GitHub.");
+      pararComErro(botao);
+      return;
+    }
 
-      let criados = 0;
-      let pulados = 0;
+    escreverLog(logEl, "Passo 2: testando conexão com o Firestore...");
 
-      for (const poi of pois) {
-        const jaExiste = await existeComMesmoNome(poi.nome);
+    try {
+      await comTimeout(
+        getDocs(collection(db, NOME_COLECAO)),
+        TIMEOUT_MS,
+        "conectar ao Firestore"
+      );
+      escreverLog(logEl, "OK — consegui falar com o Firestore.\n");
+    } catch (erro) {
+      escreverLog(logEl, `ERRO ao conectar ao Firestore: ${erro.message}`);
+      if (String(erro.message).toLowerCase().includes("permission")) {
+        escreverLog(
+          logEl,
+          "\nIsso parece ser bloqueio de permissão (regra de segurança do Firestore). " +
+            "Veja as instruções abaixo do botão para liberar temporariamente."
+        );
+      } else {
+        escreverLog(logEl, "\nIsso pode ser timeout de rede — tente de novo.");
+      }
+      pararComErro(botao);
+      return;
+    }
+
+    escreverLog(logEl, "Passo 3: importando POIs (pode levar alguns segundos por item)...\n");
+
+    let criados = 0;
+    let pulados = 0;
+    let comErro = 0;
+
+    for (const poi of pois) {
+      try {
+        const jaExiste = await comTimeout(
+          existeComMesmoNome(poi.nome),
+          TIMEOUT_MS,
+          `checar duplicado de ${poi.nome}`
+        );
 
         if (jaExiste) {
           escreverLog(logEl, `~ Já existe, pulado: ${poi.nome}`);
@@ -45,20 +83,45 @@ function iniciarImportador() {
           continue;
         }
 
-        await addDoc(collection(db, NOME_COLECAO), poi);
+        await comTimeout(
+          addDoc(collection(db, NOME_COLECAO), poi),
+          TIMEOUT_MS,
+          `criar ${poi.nome}`
+        );
         escreverLog(logEl, `+ Criado: ${poi.nome}`);
         criados++;
+      } catch (erro) {
+        escreverLog(logEl, `x ERRO em "${poi.nome}": ${erro.message}`);
+        comErro++;
       }
+    }
 
-      escreverLog(logEl, `\nConcluído. ${criados} criados, ${pulados} já existiam.`);
+    escreverLog(
+      logEl,
+      `\nConcluído. ${criados} criados, ${pulados} já existiam, ${comErro} com erro.`
+    );
+
+    if (comErro > 0) {
+      escreverLog(logEl, "\nAlguns itens falharam — provavelmente bloqueio de permissão. Veja as instruções abaixo.");
+      pararComErro(botao);
+    } else {
       botao.textContent = "Importação concluída";
-    } catch (erro) {
-      console.error("[importar-poi] Erro:", erro);
-      escreverLog(logEl, `\nERRO: ${erro.message}`);
-      botao.disabled = false;
-      botao.textContent = "Importar POIs agora";
     }
   });
+}
+
+// Envolve qualquer Promise do Firestore com um limite de tempo, pra nunca
+// ficar girando pra sempre sem explicação.
+function comTimeout(promessa, ms, descricaoOperacao) {
+  return Promise.race([
+    promessa,
+    new Promise((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`Tempo esgotado ao tentar ${descricaoOperacao} (mais de ${ms / 1000}s sem resposta — provável bloqueio de permissão)`)),
+        ms
+      )
+    ),
+  ]);
 }
 
 async function existeComMesmoNome(nome) {
@@ -70,6 +133,11 @@ async function existeComMesmoNome(nome) {
 function escreverLog(elemento, texto) {
   elemento.textContent += texto + "\n";
   elemento.scrollTop = elemento.scrollHeight;
+}
+
+function pararComErro(botao) {
+  botao.disabled = false;
+  botao.textContent = "Tentar de novo";
 }
 
 document.addEventListener("DOMContentLoaded", iniciarImportador);
