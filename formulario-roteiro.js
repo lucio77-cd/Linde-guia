@@ -224,16 +224,41 @@ function montarPerfilBusca() {
   // o centro da Praça Andreas Thaler como ponto de partida aproximado.
   // ponto-detalhe/explorar podem evoluir isso para geocodificação real depois.
   const CENTRO_TREZE_TILIAS = { lat: -27.2856, lng: -51.9622 };
+  const RAIO_MAXIMO_RAZOAVEL_KM = 15; // Treze Tílias é pequena; GPS muito além disso é erro de leitura
+
+  let localizacaoPartida = estado.localizacaoPartida || CENTRO_TREZE_TILIAS;
+
+  // Checagem de sanidade: GPS de primeira leitura em celular às vezes vem
+  // impreciso (sinal fraco, modo economia de bateria) e cai a dezenas de km
+  // de distância — o que faz a rota e o mapa saírem completamente errados.
+  // Se isso acontecer, descarta o GPS e cai no centro da cidade.
+  if (estado.localizacaoPartida && distanciaKm(estado.localizacaoPartida, CENTRO_TREZE_TILIAS) > RAIO_MAXIMO_RAZOAVEL_KM) {
+    console.warn("[formulario-roteiro] GPS muito distante da cidade, usando centro como fallback.");
+    localizacaoPartida = CENTRO_TREZE_TILIAS;
+  }
 
   return {
     data: estado.horarioInicio,
     horarioInicio: estado.horarioInicio,
     tempoDisponivelMin: estado.tempoDisponivelMin,
-    localizacaoPartida: estado.localizacaoPartida || CENTRO_TREZE_TILIAS,
+    localizacaoPartida,
     orcamentoFaixa: estado.orcamentoFaixa,
     composicaoGrupo: estado.composicaoGrupo,
     interesses: estado.interesses,
   };
+}
+
+function distanciaKm(a, b) {
+  const R = 6371;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLon = ((b.lng - a.lng) * Math.PI) / 180;
+  const lat1 = (a.lat * Math.PI) / 180;
+  const lat2 = (b.lat * Math.PI) / 180;
+  const sinDLat = Math.sin(dLat / 2);
+  const sinDLon = Math.sin(dLon / 2);
+  const aH = sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon;
+  const c = 2 * Math.atan2(Math.sqrt(aH), Math.sqrt(1 - aH));
+  return R * c;
 }
 
 function mostrarErro(elemento, texto) {
