@@ -36,6 +36,39 @@
       white-space: pre-wrap;
     }
     #log:empty { display: none; }
+    .ajuda-regras {
+      text-align: left;
+      margin-top: var(--espaco-6);
+      border: 1px solid var(--cor-borda);
+      border-radius: var(--raio-medio);
+      padding: var(--espaco-4);
+      background: var(--cor-fundo-card);
+    }
+    .ajuda-regras summary {
+      cursor: pointer;
+      font-weight: var(--peso-medio);
+      color: var(--cor-vermelho-tirol);
+    }
+    .ajuda-regras__corpo {
+      margin-top: var(--espaco-3);
+      font-size: var(--escala-sm);
+    }
+    .ajuda-regras__corpo ol {
+      padding-left: var(--espaco-5);
+      margin: var(--espaco-2) 0;
+    }
+    .ajuda-regras__corpo li {
+      margin-bottom: var(--espaco-2);
+    }
+    .ajuda-regras__codigo {
+      background: var(--cor-tinta-carvao);
+      color: var(--cor-pedra-clara);
+      padding: var(--espaco-3);
+      border-radius: var(--raio-pequeno);
+      font-size: var(--escala-xs);
+      overflow-x: auto;
+      margin: var(--espaco-2) 0;
+    }
   </style>
 </head>
 <body>
@@ -60,6 +93,34 @@
     </button>
 
     <pre id="log"></pre>
+
+    <details class="ajuda-regras">
+      <summary>Se aparecer erro de permissão, clique aqui</summary>
+      <div class="ajuda-regras__corpo">
+        <p><strong>O que fazer:</strong></p>
+        <ol>
+          <li>Abra <a href="https://console.firebase.google.com/" target="_blank" rel="noopener">console.firebase.google.com</a> e entre no projeto <strong>linde-guia</strong>.</li>
+          <li>No menu lateral, vá em <strong>Firestore Database</strong> → aba <strong>Regras</strong>.</li>
+          <li>Substitua temporariamente o conteúdo por:
+            <pre class="ajuda-regras__codigo">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}</pre>
+          </li>
+          <li>Clique em <strong>Publicar</strong>.</li>
+          <li>Volte aqui e clique em "Tentar de novo".</li>
+        </ol>
+        <p>
+          <strong>Importante:</strong> essa regra libera o banco pra qualquer pessoa ler e escrever.
+          Use só pra terminar esta importação e <strong>troque de volta</strong> pela regra definitiva
+          (arquivo <code>firestore.rules</code> do projeto) depois que confirmar que os 17 POIs entraram.
+        </p>
+      </div>
+    </details>
   </main>
 
   <script type="module" src="firebase-config.js"></script>
