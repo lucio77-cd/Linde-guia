@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Linde Guia — Treze Tílias</title>
+  <meta name="description" content="Monte seu passeio por Treze Tílias: tempo, horário, localização e orçamento — a rota certa pra você." />
+
+  <link rel="stylesheet" href="css/tokens.css" />
+  <link rel="stylesheet" href="css/global.css" />
+</head>
+<body>
+
+  <header class="topo">
+    <div class="topo__marca">
+      <span class="topo__nome">Linde Guia</span>
+      <span class="topo__selo">Treze Tílias</span>
+    </div>
+    <nav class="topo__nav" aria-label="Navegação principal">
+      <a href="explorar.html">Explorar</a>
+      <a href="eventos.html">Eventos</a>
+      <a href="perfil.html">Perfil</a>
+    </nav>
+  </header>
+
+  <!-- Banner de evento: só renderiza algo se houver evento ativo na data atual.
+       A lógica fica em js/banner-evento.js — aqui é só o slot vazio. -->
+  <section id="banner-evento" class="banner-evento" hidden aria-live="polite">
+    <p id="banner-evento__texto"></p>
+    <a id="banner-evento__link" href="eventos.html">Ver evento</a>
+  </section>
+
+  <main>
+    <section class="hero">
+      <div class="hero__conteudo">
+        <h1 class="hero__titulo">
+          Uma cidade tirolesa,<br />
+          do jeito que dá tempo de ver.
+        </h1>
+        <p class="hero__subtitulo">
+          Diz quanto tempo você tem, de onde está partindo e quanto quer gastar.
+          A gente monta o passeio.
+        </p>
+
+        <div class="hero__acoes">
+          <a class="botao botao--principal" href="roteiro.html">
+            Criar meu roteiro
+          </a>
+          <a class="botao botao--secundario" href="explorar.html">
+            Ver tudo o que tem na cidade
+          </a>
+        </div>
+      </div>
+
+      <!-- Elemento-assinatura: silhueta de viga em V (enxaimel), não foto de banco de imagem -->
+      <div class="hero__silhueta" aria-hidden="true">
+        <svg viewBox="0 0 400 220" preserveAspectRatio="xMidYMax slice">
+          <polyline points="0,220 60,60 120,220" />
+          <polyline points="100,220 160,30 220,220" />
+          <polyline points="200,220 260,70 320,220" />
+          <polyline points="300,220 360,50 400,180" />
+        </svg>
+      </div>
+    </section>
+
+    <section class="atalhos" aria-label="Acesso rápido">
+      <a class="atalho" href="explorar.html?categoria=gastronomia">
+        <span class="atalho__rotulo">Gastronomia</span>
+      </a>
+      <a class="atalho" href="explorar.html?categoria=compras">
+        <span class="atalho__rotulo">Compras</span>
+      </a>
+      <a class="atalho" href="explorar.html?categoria=historico">
+        <span class="atalho__rotulo">História</span>
+      </a>
+      <a class="atalho" href="eventos.html">
+        <span class="atalho__rotulo">Eventos</span>
+      </a>
+    </section>
+  </main>
+
+  <footer class="rodape">
+    <p>Linde Guia · um projeto a serviço de quem visita Treze Tílias.</p>
+  </footer>
+
+  <script type="module" src="js/firebase-config.js"></script>
+  <script type="module" src="js/eventos-data.js"></script>
+  <script type="module" src="js/banner-evento.js"></script>
+</body>
+</html>
