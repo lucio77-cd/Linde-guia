@@ -11,12 +11,12 @@
  * TROQUE o valor abaixo antes de subir para produção.
  */
 
-const SENHA_ADMIN = "TROQUE_AQUI_SUA_SENHA";
-const CHAVE_SESSAO = "linde-guia:admin-autenticado";
+const SENHA_ADMIN = "281223";
+const CHAVE_SESSAO = "linde-guia:linden";
 
 function iniciarAuth() {
   // Se já autenticou nesta sessão do navegador, pula a tela de senha
-  if (sessionStorage.getItem(CHAVE_SESSAO) === "true") {
+  if (sessionStorage.getItem(HAVE_SESSAO) === "true") {
     liberarAcesso();
     return;
   }
