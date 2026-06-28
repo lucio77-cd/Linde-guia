@@ -10,8 +10,6 @@
  * card da parada ativa durante o passeio (mesmo formato visual).
  */
 
-import { desenharMapaCompleto } from "./mapa-rota.js";
-
 const CHAVE_SESSION_STORAGE = "linde-guia:rota-gerada";
 
 // ============================================================
@@ -96,20 +94,14 @@ function renderizarResultado(rota) {
   rota.paradas.forEach((parada, indice) => {
     listaEl.appendChild(criarParadaCard(parada, indice));
   });
-
-  // Mapa precisa que o elemento esteja visível (não display:none) antes
-  // de inicializar, senão o Leaflet calcula tamanho errado — por isso
-  // desenhamos depois de mostrarEstado("vista-resultado") no fluxo principal.
-  desenharMapaCompleto("mapa-resultado", rota.paradas, rota.perfilOriginal?.localizacaoPartida);
 }
 
 function montarTextoResumo(rota) {
   const horas = Math.floor(rota.tempoTotalEstimadoMin / 60);
   const minutos = rota.tempoTotalEstimadoMin % 60;
   const tempoTexto = horas > 0 ? `${horas}h${minutos > 0 ? minutos + "min" : ""}` : `${minutos}min`;
-  const custoTexto = rota.custoTotalEstimado > 0 ? `~R$${rota.custoTotalEstimado}` : "grátis";
 
-  return `${rota.paradas.length} ${rota.paradas.length === 1 ? "parada" : "paradas"} · ${tempoTexto} · ${custoTexto}`;
+  return `${rota.paradas.length} ${rota.paradas.length === 1 ? "parada" : "paradas"} · ${tempoTexto}`;
 }
 
 function criarParadaCard(parada, indice) {
