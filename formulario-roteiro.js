@@ -12,6 +12,7 @@
 import { gerarRota } from "./motor-rota.js";
 import { buscarPoisAtivos } from "./pois-data.js";
 import { buscarEventosAtivosNaData } from "./eventos-data.js";
+import { registrarRotaCriada } from "./registro-data.js";
 
 // ============================================================
 // ESTADO DO FORMULÁRIO (preenchido pelos chips e inputs)
@@ -199,6 +200,7 @@ function configurarSubmit() {
       const rota = gerarRota(pois, eventos, perfilBusca);
 
       sessionStorage.setItem("linde-guia:rota-gerada", JSON.stringify(rota));
+      registrarRotaCriada(perfilBusca, rota); // não bloqueia o redirect, falha silenciosa
       window.location.href = "minha-rota.html";
     } catch (erro) {
       console.error("[formulario-roteiro] Erro ao gerar rota:", erro);
