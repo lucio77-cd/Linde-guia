@@ -1,0 +1,316 @@
+/* admin.css
+   Linde Guia — Painel administrativo (uso interno, não faz parte do
+   app que o turista usa). Reaproveita tokens.css para consistência
+   visual, mas com layout mais denso/funcional, típico de painel.
+*/
+
+body {
+  background: var(--cor-fundo);
+}
+
+/* ===== Tela de senha ===== */
+.tela-senha {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--espaco-5);
+}
+
+.form-senha {
+  background: var(--cor-fundo-card);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-grande);
+  padding: var(--espaco-8);
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+  box-shadow: var(--sombra-card);
+}
+
+.form-senha h1 {
+  font-family: var(--fonte-titulo);
+  color: var(--cor-marca);
+  font-size: var(--escala-lg);
+  margin-bottom: var(--espaco-2);
+}
+
+.form-senha p {
+  color: var(--cor-texto-suave);
+  font-size: var(--escala-sm);
+  margin-bottom: var(--espaco-5);
+}
+
+.form-senha input {
+  width: 100%;
+  padding: var(--espaco-3);
+  border: 1.5px solid var(--cor-borda);
+  border-radius: var(--raio-medio);
+  margin-bottom: var(--espaco-4);
+  font-size: var(--escala-base);
+}
+
+.erro-senha {
+  color: var(--cor-vermelho-tirol);
+  font-size: var(--escala-sm);
+  margin-top: var(--espaco-3);
+}
+
+/* ===== Layout geral do painel ===== */
+.conteudo-admin[hidden],
+.tela-senha[hidden] {
+  display: none;
+}
+
+.topo-admin {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--espaco-4) var(--espaco-6);
+  background: var(--cor-marca);
+  color: var(--cor-pedra-mais-clara);
+}
+
+.topo-admin__marca {
+  font-family: var(--fonte-titulo);
+  font-weight: var(--peso-negrito);
+}
+
+.topo-admin__marca span {
+  opacity: 0.7;
+  font-weight: var(--peso-regular);
+  font-size: var(--escala-sm);
+}
+
+.topo-admin__nav {
+  display: flex;
+  gap: var(--espaco-2);
+}
+
+.aba-nav {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: var(--cor-pedra-mais-clara);
+  padding: var(--espaco-2) var(--espaco-4);
+  border-radius: var(--raio-medio);
+  cursor: pointer;
+  font-size: var(--escala-sm);
+}
+
+.aba-nav.ativa {
+  background: var(--cor-pedra-mais-clara);
+  color: var(--cor-marca);
+  font-weight: var(--peso-medio);
+}
+
+.conteudo-principal-admin {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--espaco-6) var(--espaco-5) var(--espaco-10);
+}
+
+.aba-conteudo[hidden] {
+  display: none;
+}
+
+/* ===== Cartões de resumo (números grandes no topo) ===== */
+.cartoes-resumo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--espaco-3);
+  margin-bottom: var(--espaco-6);
+}
+
+.cartao-resumo {
+  background: var(--cor-fundo-card);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-medio);
+  padding: var(--espaco-4);
+  text-align: center;
+}
+
+.cartao-resumo strong {
+  display: block;
+  font-family: var(--fonte-titulo);
+  font-size: var(--escala-2xl);
+  color: var(--cor-marca);
+}
+
+.cartao-resumo span {
+  font-size: var(--escala-xs);
+  color: var(--cor-texto-suave);
+}
+
+/* ===== Cards de gráfico e tabela ===== */
+.grafico-card,
+.tabela-card {
+  background: var(--cor-fundo-card);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-grande);
+  padding: var(--espaco-5);
+  margin-bottom: var(--espaco-5);
+}
+
+.grafico-card h2,
+.tabela-card h2 {
+  font-family: var(--fonte-titulo);
+  font-size: var(--escala-md);
+  color: var(--cor-marca);
+  margin-bottom: var(--espaco-4);
+}
+
+.grafico-card canvas {
+  max-height: 280px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--escala-sm);
+}
+
+th, td {
+  text-align: left;
+  padding: var(--espaco-2) var(--espaco-3);
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+th {
+  color: var(--cor-texto-suave);
+  font-weight: var(--peso-medio);
+}
+
+/* ===== Aba Locais ===== */
+.locais-cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--espaco-5);
+}
+
+.locais-cabecalho h2 {
+  font-family: var(--fonte-titulo);
+  color: var(--cor-marca);
+}
+
+.lista-locais-admin {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-3);
+}
+
+.local-admin-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--cor-fundo-card);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-medio);
+  padding: var(--espaco-4);
+}
+
+.local-admin-card__info strong {
+  display: block;
+  font-family: var(--fonte-titulo);
+  color: var(--cor-texto);
+}
+
+.local-admin-card__info span {
+  font-size: var(--escala-xs);
+  color: var(--cor-texto-suave);
+}
+
+.local-admin-card__status {
+  font-size: var(--escala-xs);
+  padding: 2px var(--espaco-2);
+  border-radius: 999px;
+  font-weight: var(--peso-medio);
+}
+
+.local-admin-card__status--ativo { background: #dceee0; color: var(--cor-lodengrun-escuro); }
+.local-admin-card__status--sazonal { background: #fdf0d5; color: #8a6d1f; }
+.local-admin-card__status--em_reforma,
+.local-admin-card__status--fechado_temporariamente { background: #f7dada; color: var(--cor-vermelho-tirol-escuro); }
+
+/* ===== Modal de edição/criação ===== */
+.modal-local {
+  position: fixed;
+  inset: 0;
+  background: rgba(38, 35, 33, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--espaco-4);
+  z-index: 100;
+}
+
+.modal-local[hidden] {
+  display: none;
+}
+
+.modal-local__caixa {
+  background: var(--cor-fundo-card);
+  border-radius: var(--raio-grande);
+  padding: var(--espaco-6);
+  max-width: 460px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-local__caixa h2 {
+  font-family: var(--fonte-titulo);
+  color: var(--cor-marca);
+  margin-bottom: var(--espaco-4);
+}
+
+#form-local label {
+  display: block;
+  font-size: var(--escala-sm);
+  font-weight: var(--peso-medio);
+  margin-bottom: var(--espaco-3);
+}
+
+#form-local input,
+#form-local select {
+  width: 100%;
+  padding: var(--espaco-2) var(--espaco-3);
+  border: 1.5px solid var(--cor-borda);
+  border-radius: var(--raio-pequeno);
+  margin-top: var(--espaco-1);
+  font-size: var(--escala-base);
+}
+
+.form-local__linha {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espaco-3);
+}
+
+.modal-local__acoes {
+  display: flex;
+  gap: var(--espaco-2);
+  margin-top: var(--espaco-4);
+  flex-wrap: wrap;
+}
+
+.modal-local__acoes .botao {
+  flex: 1;
+}
+
+.botao--excluir {
+  background: transparent;
+  border: 1.5px solid var(--cor-vermelho-tirol);
+  color: var(--cor-vermelho-tirol);
+}
+
+.botao--excluir:hover {
+  background: var(--cor-vermelho-tirol);
+  color: var(--cor-pedra-mais-clara);
+}
+
+@media (max-width: 480px) {
+  .form-local__linha {
+    grid-template-columns: 1fr;
+  }
+}
