@@ -12,6 +12,18 @@
 // Auth daquele admin). Sem isso, ninguém consegue escrever em "pois"/"eventos".
 // Crie esse documento manualmente no Console depois que o primeiro admin
 // fizer login pela primeira vez.
+//
+// ATENÇÃO — PENDÊNCIA CONHECIDA: admin-auth.js autentica o painel só por
+// senha local (sessionStorage), SEM Firebase Auth. A função ehAdmin()
+// abaixo exige request.auth != null. Resultado: com o admin-auth.js
+// atual, NENHUMA chamada do painel (admin-locais.js, leitura de
+// rotas_criadas/checkins em admin-estatisticas.js) passa pelas regras —
+// tudo cai em "permission-denied", mesmo com a senha certa. Isso só se
+// resolve fazendo o painel autenticar de verdade no Firebase Auth (ex:
+// signInAnonymously() + checar o uid contra usuarios_admin, ou login
+// com email/senha de admin) antes de chamar getDocs/addDoc/etc. Esse
+// arquivo de regras já está pronto para esse cenário — falta o admin
+// passar a logar de verdade.
 
 rules_version = '2';
 
@@ -100,12 +112,62 @@ service cloud.firestore {
     // ============================================================
     // Usuário logado pode salvar/ler a própria rota. Admin pode ler tudo
     // (pra entender o que mais é pedido), mas não escreve aqui diretamente.
+    //
+    // ATENÇÃO: nenhum código do app atual grava nesta coleção — o fluxo
+    // real (formulario-roteiro.js / modo-em-rota.js) usa "rotas_criadas"
+    // e "checkins" (ver regras abaixo). Mantida aqui caso "Minhas Rotas"
+    // (perfil de usuário logado) seja implementado no futuro; se não for
+    // usada, pode ser removida.
     match /rotas_geradas/{rotaId} {
       allow create: if estaLogado() && request.resource.data.userId == request.auth.uid;
       allow get: if estaLogado() &&
         (resource.data.userId == request.auth.uid || ehAdmin());
       allow list: if ehAdmin();
       allow update, delete: if false; // rota gerada é histórico, não se edita
+    }
+
+    // ============================================================
+    // ROTAS_CRIADAS — eventos de analytics (criação/finalização de roteiro)
+    // ============================================================
+    // Gravada por registro-data.js a partir do fluxo público do turista
+    // (formulario-roteiro.js no "Criar roteiro", modo-em-rota.js ao
+    // finalizar) — SEM login, então a escrita precisa ser pública, como
+    // qualquer analytics anônimo. Só o painel admin lê os dados
+    // agregados (admin-estatisticas.js). Histórico: nunca se edita ou
+    // apaga por aqui.
+    //
+    // create exige tipoEvento válido para impedir que a coleção pública
+    // seja usada para gravar lixo arbitrário sem relação com o app.
+    match /rotas_criadas/{registroId} {
+      allow create: if registroRotaTemCamposValidos();
+      allow get, list: if ehAdmin();
+      allow update, delete: if false;
+
+      function registroRotaTemCamposValidos() {
+        let dados = request.resource.data;
+        return dados.criadoEm is timestamp
+          && (!('tipoEvento' in dados) || dados.tipoEvento in ['criacao', 'finalizacao']);
+      }
+    }
+
+    // ============================================================
+    // CHECKINS — eventos de analytics (check-in manual "Cheguei")
+    // ============================================================
+    // Mesmo padrão de rotas_criadas: gravado sem login pelo turista
+    // durante o passeio (modo-em-rota.js), lido só pelo admin.
+    match /checkins/{checkinId} {
+      allow create: if checkinTemCamposValidos();
+      allow get, list: if ehAdmin();
+      allow update, delete: if false;
+
+      // poiNome é tratado como opcional pelo próprio painel
+      // (admin-estatisticas.js cai para "Desconhecido" se ausente), então
+      // a regra não exige o campo — só valida o tipo quando ele existe.
+      function checkinTemCamposValidos() {
+        let dados = request.resource.data;
+        return dados.checkinEm is timestamp
+          && (!('poiNome' in dados) || dados.poiNome is string);
+      }
     }
 
     // ============================================================
