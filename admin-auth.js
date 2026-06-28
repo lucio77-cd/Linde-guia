@@ -16,7 +16,7 @@ const CHAVE_SESSAO = "linde-guia:linden";
 
 function iniciarAuth() {
   // Se já autenticou nesta sessão do navegador, pula a tela de senha
-  if (sessionStorage.getItem(HAVE_SESSAO) === "true") {
+  if (sessionStorage.getItem(CHAVE_SESSAO) === "true") {
     liberarAcesso();
     return;
   }
