@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel Administrativo — Linde Guia</title>
+  <meta name="robots" content="noindex, nofollow" />
+
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="global.css" />
+  <link rel="stylesheet" href="admin.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- ===== Tela de senha — bloqueia tudo até autenticar ===== -->
+  <div id="tela-senha" class="tela-senha">
+    <form id="form-senha" class="form-senha">
+      <h1>Linde Guia — Painel</h1>
+      <p>Acesso restrito. Digite a senha para continuar.</p>
+      <input type="password" id="input-senha" placeholder="Senha" autocomplete="current-password" required />
+      <button type="submit" class="botao botao--principal botao--grande">Entrar</button>
+      <p id="erro-senha" class="erro-senha" hidden>Senha incorreta.</p>
+    </form>
+  </div>
+
+  <!-- ===== Conteúdo real do painel — só aparece após senha correta ===== -->
+  <div id="conteudo-admin" class="conteudo-admin" hidden>
+
+    <header class="topo-admin">
+      <div class="topo-admin__marca">Linde Guia <span>· Painel</span></div>
+      <nav class="topo-admin__nav">
+        <button class="aba-nav ativa" data-aba="aba-estatisticas">Estatísticas</button>
+        <button class="aba-nav" data-aba="aba-locais">Locais</button>
+      </nav>
+    </header>
+
+    <main class="conteudo-principal-admin">
+
+      <!-- ===== ABA: ESTATÍSTICAS ===== -->
+      <section id="aba-estatisticas" class="aba-conteudo">
+        <div class="cartoes-resumo" id="cartoes-resumo"></div>
+
+        <div class="grafico-card">
+          <h2>Rotas criadas por dia</h2>
+          <canvas id="grafico-rotas-por-dia"></canvas>
+        </div>
+
+        <div class="grafico-card">
+          <h2>Horário em que as rotas são criadas</h2>
+          <canvas id="grafico-rotas-por-horario"></canvas>
+        </div>
+
+        <div class="grafico-card">
+          <h2>Rotas criadas vs. concluídas</h2>
+          <canvas id="grafico-conclusao"></canvas>
+        </div>
+
+        <div class="grafico-card">
+          <h2>Locais mais visitados (check-ins confirmados)</h2>
+          <canvas id="grafico-locais-visitados"></canvas>
+        </div>
+
+        <div class="tabela-card">
+          <h2>Check-ins recentes</h2>
+          <table id="tabela-checkins">
+            <thead>
+              <tr><th>Local</th><th>Dia</th><th>Horário</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===== ABA: LOCAIS (CRUD de POIs) ===== -->
+      <section id="aba-locais" class="aba-conteudo" hidden>
+        <div class="locais-cabecalho">
+          <h2>Locais cadastrados</h2>
+          <button id="btn-novo-local" type="button" class="botao botao--principal">+ Novo local</button>
+        </div>
+
+        <div id="lista-locais-admin" class="lista-locais-admin"></div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ===== Modal de edição/criação de local ===== -->
+  <div id="modal-local" class="modal-local" hidden>
+    <div class="modal-local__caixa">
+      <h2 id="modal-local__titulo">Novo local</h2>
+      <form id="form-local">
+        <input type="hidden" id="campo-id" />
+
+        <label>Nome
+          <input type="text" id="campo-nome" required />
+        </label>
+
+        <label>Categoria
+          <select id="campo-categoria">
+            <option value="historico">Histórico</option>
+            <option value="natureza">Natureza</option>
+            <option value="gastronomia">Gastronomia</option>
+            <option value="compras">Compras</option>
+            <option value="lazer">Lazer</option>
+          </select>
+        </label>
+
+        <label>Descrição curta
+          <input type="text" id="campo-descricao" />
+        </label>
+
+        <div class="form-local__linha">
+          <label>Latitude
+            <input type="number" step="0.000001" id="campo-lat" required />
+          </label>
+          <label>Longitude
+            <input type="number" step="0.000001" id="campo-lng" required />
+          </label>
+        </div>
+
+        <div class="form-local__linha">
+          <label>Preço estimado (R$)
+            <input type="number" step="1" min="0" id="campo-preco" value="0" />
+          </label>
+          <label>Duração da visita (min)
+            <input type="number" step="5" min="5" id="campo-duracao" value="30" />
+          </label>
+        </div>
+
+        <label>Status
+          <select id="campo-status">
+            <option value="ativo">Ativo</option>
+            <option value="sazonal">Sazonal</option>
+            <option value="em_reforma">Em reforma</option>
+            <option value="fechado_temporariamente">Fechado temporariamente</option>
+          </select>
+        </label>
+
+        <p id="erro-form-local" class="erro-senha" hidden></p>
+
+        <div class="modal-local__acoes">
+          <button type="button" id="btn-cancelar-local" class="botao botao--secundario">Cancelar</button>
+          <button type="button" id="btn-excluir-local" class="botao botao--excluir" hidden>Excluir</button>
+          <button type="submit" class="botao botao--principal">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module" src="firebase-config.js"></script>
+  <script type="module" src="admin-auth.js"></script>
+  <script type="module" src="admin-estatisticas.js"></script>
+  <script type="module" src="admin-locais.js"></script>
+</body>
+</html>
