@@ -2,38 +2,35 @@
  * modo-em-rota.js
  * Linde Guia — Treze Tílias
  *
- * Controla a sub-vista "Em Rota": desenha o card e o mapa da parada
- * atual, e usa GPS contínuo (watchPosition) para detectar automaticamente
- * quando o usuário chega perto o suficiente — sem precisar apertar botão.
- * "Pular essa parada" e "Já cheguei" continuam como ações manuais de
- * fallback, caso o GPS falhe ou o usuário prefira controlar na mão.
+ * Controla a sub-vista "Em Rota": desenha o card da parada atual e os
+ * botões de checklist manual ("Cheguei" / "Pular essa parada").
+ *
+ * PAUSADO NESTA VERSÃO: GPS contínuo (watchPosition) e mapa focado.
+ * O foco agora é confiabilidade do dado de check-in (botão manual,
+ * sempre certo) em vez de detecção automática por proximidade.
+ * Quando o trabalho do mapa for retomado, reintroduzir aqui.
+ *
+ * Cada "Cheguei" grava um check-in real no Firestore via
+ * registro-data.js, que alimenta o painel admin (estatísticas de
+ * locais visitados, horário, dia).
  */
 
 import { recalcularRota } from "./motor-rota.js";
 import { lerRotaDoStorage, salvarRotaNoStorage, mostrarEstado } from "./render-rota.js";
-import { criarMapaFocado } from "./mapa-rota.js";
+import { registrarCheckin, registrarRoteiroFinalizado } from "./registro-data.js";
 
 const CHAVE_INDEX = "linde-guia:parada-atual-index";
-const RAIO_CHEGADA_METROS = 50;
-const INTERVALO_MIN_ENTRE_CHECAGENS_MS = 4000; // evita disparo duplicado em sequência
-
-let watcherId = null;
-let mapaFocado = null;
-let ultimaChecagemEm = 0;
-let processandoAvanco = false;
 
 function iniciarModoEmRota() {
   document.addEventListener("linde-guia:iniciar-em-rota", (evento) => {
-    mapaFocado = criarMapaFocado("mapa-em-rota");
     desenharParadaAtual(evento.detail.rota, obterIndiceAtual());
-    iniciarMonitoramentoGPS();
   });
 
   document.getElementById("btn-pular-parada").addEventListener("click", () => {
     avancarRota("pular");
   });
 
-  document.getElementById("btn-ja-cheguei").addEventListener("click", () => {
+  document.getElementById("btn-cheguei").addEventListener("click", () => {
     avancarRota("chegou");
   });
 }
@@ -41,87 +38,28 @@ function iniciarModoEmRota() {
 document.addEventListener("DOMContentLoaded", iniciarModoEmRota);
 
 // ============================================================
-// GPS CONTÍNUO — detecta chegada automaticamente
+// AVANÇAR NO ROTEIRO ("Cheguei" ou "Pular essa parada")
 // ============================================================
-function iniciarMonitoramentoGPS() {
-  const statusEl = document.getElementById("status-gps");
-
-  if (!navigator.geolocation) {
-    statusEl.textContent = "Seu navegador não permite localização automática — use o botão \"Já cheguei\".";
-    return;
-  }
-
-  pararMonitoramentoGPS(); // garante que não há watcher duplicado de uma execução anterior
-
-  watcherId = navigator.geolocation.watchPosition(
-    (posicao) => {
-      const posicaoAtual = { lat: posicao.coords.latitude, lng: posicao.coords.longitude };
-      atualizarMapaComPosicao(posicaoAtual);
-      checarProximidadeDaParadaAtual(posicaoAtual, statusEl);
-    },
-    () => {
-      statusEl.textContent = "Não consegui acessar sua localização — use o botão \"Já cheguei\" quando estiver no local.";
-    },
-    { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
-  );
-}
-
-function pararMonitoramentoGPS() {
-  if (watcherId !== null) {
-    navigator.geolocation.clearWatch(watcherId);
-    watcherId = null;
-  }
-}
-
-function checarProximidadeDaParadaAtual(posicaoAtual, statusEl) {
+function avancarRota(acao) {
   const rota = lerRotaDoStorage();
   if (!rota) return;
 
   const indiceAtual = obterIndiceAtual();
-  const parada = rota.paradas[indiceAtual];
-  if (!parada || !parada.localizacao) return;
+  const paradaAtual = rota.paradas[indiceAtual];
 
-  const distanciaMetros = calcularDistanciaMetros(posicaoAtual, parada.localizacao);
-  statusEl.textContent = `Você está a ${formatarDistancia(distanciaMetros)} de ${parada.nome}.`;
-
-  const agora = Date.now();
-  const podeChecarDeNovo = agora - ultimaChecagemEm > INTERVALO_MIN_ENTRE_CHECAGENS_MS;
-
-  if (distanciaMetros <= RAIO_CHEGADA_METROS && podeChecarDeNovo && !processandoAvanco) {
-    ultimaChecagemEm = agora;
-    statusEl.textContent = `Chegou em ${parada.nome}! Marcando automaticamente...`;
-    avancarRota("chegou", posicaoAtual);
-  }
-}
-
-function formatarDistancia(metros) {
-  if (metros < 1000) return `${Math.round(metros)}m`;
-  return `${(metros / 1000).toFixed(1)}km`;
-}
-
-// ============================================================
-// AVANÇAR NO ROTEIRO ("chegou" automático/manual, ou "pular")
-// ============================================================
-function avancarRota(acao, posicaoConhecida) {
-  if (processandoAvanco) return; // evita corrida entre GPS automático e clique manual simultâneos
-  processandoAvanco = true;
-
-  const rota = lerRotaDoStorage();
-  if (!rota) {
-    processandoAvanco = false;
-    return;
+  if (acao === "chegou" && paradaAtual) {
+    registrarCheckin(paradaAtual, "manual"); // não bloqueia o fluxo, falha silenciosa
   }
 
-  const indiceAtual = obterIndiceAtual();
-
-  obterPosicaoEHorarioAtuais(posicaoConhecida)
+  obterPosicaoEHorarioAtuais()
     .then(({ posicaoAtual, horarioAtual }) => {
       const rotaAtualizada = recalcularRota(rota, indiceAtual, acao, horarioAtual, posicaoAtual);
 
       salvarRotaNoStorage(rotaAtualizada);
 
       if (rotaAtualizada.finalizada) {
-        pararMonitoramentoGPS();
+        const visitadas = rotaAtualizada.paradas.length;
+        registrarRoteiroFinalizado(rota, visitadas);
         mostrarEstado("vista-finalizada");
         sessionStorage.removeItem(CHAVE_INDEX);
         return;
@@ -134,18 +72,11 @@ function avancarRota(acao, posicaoConhecida) {
     .catch((erro) => {
       console.error("[modo-em-rota] Erro ao recalcular rota:", erro);
       mostrarAvisoRecalculo("Não conseguimos recalcular agora. Tenta de novo em um instante.");
-    })
-    .finally(() => {
-      processandoAvanco = false;
     });
 }
 
-function obterPosicaoEHorarioAtuais(posicaoConhecida) {
+function obterPosicaoEHorarioAtuais() {
   const horarioAtual = new Date().toISOString();
-
-  if (posicaoConhecida) {
-    return Promise.resolve({ posicaoAtual: posicaoConhecida, horarioAtual });
-  }
 
   return new Promise((resolve) => {
     if (!navigator.geolocation) {
@@ -178,13 +109,12 @@ function definirIndiceAtual(indice) {
 }
 
 // ============================================================
-// DESENHO DO CARD + MAPA DA PARADA ATUAL
+// DESENHO DO CARD DA PARADA ATUAL
 // ============================================================
 function desenharParadaAtual(rota, indice) {
   const parada = rota.paradas[indice];
 
   if (!parada) {
-    pararMonitoramentoGPS();
     mostrarEstado("vista-finalizada");
     return;
   }
@@ -198,7 +128,6 @@ function desenharParadaAtual(rota, indice) {
     <div class="card-parada-atual__info">
       <span>Chegada prevista: ${formatarHorarioLocal(parada.horarioChegada)}</span>
       <span>${parada.duracaoMediaVisitaMin} min de visita</span>
-      <span>${parada.precoEstimado > 0 ? "R$" + parada.precoEstimado : "Grátis"}</span>
     </div>
     <div class="card-parada-atual__navegacao">
       <a class="botao botao--secundario"
@@ -213,10 +142,6 @@ function desenharParadaAtual(rota, indice) {
       </a>
     </div>
   `;
-
-  if (mapaFocado) {
-    mapaFocado.atualizar(parada.localizacao, null, parada.nome);
-  }
 
   esconderAvisoRecalculo();
   avisarSeRiscoDeFechar(parada);
@@ -233,14 +158,6 @@ function montarLinkGoogleMaps(localizacao) {
 function montarLinkWaze(localizacao) {
   if (!localizacao) return "#";
   return `https://waze.com/ul?ll=${localizacao.lat},${localizacao.lng}&navigate=yes`;
-}
-
-function atualizarMapaComPosicao(posicaoAtual) {
-  const rota = lerRotaDoStorage();
-  if (!rota || !mapaFocado) return;
-  const parada = rota.paradas[obterIndiceAtual()];
-  if (!parada) return;
-  mapaFocado.atualizar(parada.localizacao, posicaoAtual, parada.nome);
 }
 
 function atualizarProgresso(indice, total) {
@@ -282,28 +199,4 @@ function mostrarAvisoRecalculo(texto) {
 
 function esconderAvisoRecalculo() {
   document.getElementById("aviso-recalculo").hidden = true;
-}
-
-// ============================================================
-// CÁLCULO DE DISTÂNCIA (haversine, em metros — mesma fórmula do motor,
-// só que em metros em vez de km, para precisão na detecção de chegada)
-// ============================================================
-function calcularDistanciaMetros(a, b) {
-  if (!a || !b) return Infinity;
-  const R = 6371000;
-  const dLat = grauParaRad(b.lat - a.lat);
-  const dLon = grauParaRad(b.lng - a.lng);
-  const lat1 = grauParaRad(a.lat);
-  const lat2 = grauParaRad(b.lat);
-
-  const sinDLat = Math.sin(dLat / 2);
-  const sinDLon = Math.sin(dLon / 2);
-  const aHaversine = sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon;
-  const c = 2 * Math.atan2(Math.sqrt(aHaversine), Math.sqrt(1 - aHaversine));
-
-  return R * c;
-}
-
-function grauParaRad(graus) {
-  return (graus * Math.PI) / 180;
 }
