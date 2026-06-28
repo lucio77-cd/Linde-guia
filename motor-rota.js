@@ -69,9 +69,21 @@ function recalcularRota(rotaAtual, paradaAtualIndex, acao, horarioAtual, posicao
   const candidatosPontuados = pontuarCandidatos(candidatosViaveis, perfilAtualizado);
   const novaSequenciaRestante = montarSequencia(candidatosPontuados, perfilAtualizado);
 
+  const paradasCompletas = [...rotaAtual.paradas.slice(0, paradaAtualIndex + 1), ...novaSequenciaRestante.paradas];
+
+  // tempoTotalEstimadoMin precisava ser recalculado aqui — antes ele
+  // vinha do spread "...rotaAtual" e ficava com o valor da rota
+  // ORIGINAL (antes do recálculo), nunca refletindo o tempo real após
+  // "Cheguei"/"Pular essa parada". Usa horarioInicio da rota original
+  // (não o horarioAtual do recálculo) porque o resumo da rota sempre
+  // se refere ao início do passeio como um todo, não ao momento do
+  // recálculo.
+  const tempoTotalRealMin = calcularTempoTotalReal(paradasCompletas, rotaAtual.perfilOriginal.horarioInicio);
+
   return {
     ...rotaAtual,
-    paradas: [...rotaAtual.paradas.slice(0, paradaAtualIndex + 1), ...novaSequenciaRestante.paradas],
+    paradas: paradasCompletas,
+    tempoTotalEstimadoMin: tempoTotalRealMin,
     custoTotalEstimado: rotaAtual.custoTotalEstimado,
     alternativasDescartadas: novaSequenciaRestante.alternativasDescartadas,
   };
@@ -217,9 +229,18 @@ function montarSequencia(candidatosPontuados, perfilBusca) {
   const sequenciaComDeslocamentos = recalcularDeslocamentos(selecionados, perfilBusca.localizacaoPartida);
   const paradasFinais = calcularERevalidarAteEstabilizar(sequenciaComDeslocamentos, perfilBusca);
 
+  // tempoTotalEstimadoMin precisa refletir as PARADAS FINAIS, não o
+  // tempoUsadoMin acumulado antes da revalidação — se
+  // calcularERevalidarAteEstabilizar remover alguma parada por ela
+  // estar fechada no horário calculado, tempoUsadoMin ficaria
+  // desatualizado e voltaria a divergir da soma dos horários reais
+  // exibidos (o mesmo problema de consistência corrigido antes, agora
+  // pela porta dos fundos da revalidação por horário de funcionamento).
+  const tempoTotalRealMin = calcularTempoTotalReal(paradasFinais, perfilBusca.horarioInicio);
+
   return {
     paradas: paradasFinais,
-    tempoTotalEstimadoMin: tempoUsadoMin,
+    tempoTotalEstimadoMin: tempoTotalRealMin,
     custoTotalEstimado: paradasFinais.reduce((soma, p) => soma + (p.precoEstimado || 0), 0),
     alternativasDescartadas: descartados,
     perfilOriginal: perfilBusca,
@@ -303,17 +324,33 @@ function recalcularDeslocamentos(paradas, pontoPartida) {
   });
 }
 
+// Calcula horários reais e remove paradas que ficariam fechadas no
+// horário calculado. Como remover uma parada do meio muda QUEM é o
+// "anterior geográfico" de cada parada seguinte (e portanto o
+// deslocamentoMin dela), o ciclo recalcula deslocamentos -> horários ->
+// filtra a cada rodada, até nada mais precisar ser removido.
+//
+// BUG CORRIGIDO: antes, só os horários eram recalculados a cada rodada,
+// mas o deslocamentoMin de cada parada continuava sendo o original (a
+// distância da parada que foi removida, não da nova parada anterior na
+// sequência). Isso fazia o horário de chegada da parada seguinte a uma
+// remoção ficar calculado com a distância errada — por exemplo, se B
+// fosse removida de A→B→C, o C calculava seu deslocamento como se ainda
+// viesse de B, quando na verdade agora vem direto de A.
 function calcularERevalidarAteEstabilizar(paradas, perfilBusca) {
   let atuais = paradas;
 
+  // Limite de segurança: nunca mais iterações do que paradas existem,
+  // já que cada iteração remove pelo menos uma parada ou estabiliza.
   for (let i = 0; i <= atuais.length; i++) {
-    const comHorario = calcularHorariosReais(atuais, perfilBusca.horarioInicio);
+    const comDeslocamentosAtualizados = recalcularDeslocamentos(atuais, perfilBusca.localizacaoPartida);
+    const comHorario = calcularHorariosReais(comDeslocamentosAtualizados, perfilBusca.horarioInicio);
     const validas = comHorario.filter((parada) =>
       estaAbertoNoHorario(parada, parada.horarioChegada, perfilBusca.data)
     );
 
     if (validas.length === comHorario.length) {
-      return validas;
+      return validas; // nada foi removido nesta rodada, já estabilizou
     }
 
     atuais = validas;
@@ -348,6 +385,19 @@ function calcularHorariosReais(paradas, horarioInicio) {
 
     return { ...parada, horarioChegada: chegada, horarioSaida: saida };
   });
+}
+
+// Deriva o tempo total da rota a partir do horarioSaida da ÚLTIMA
+// parada, comparado ao horarioInicio — em vez de somar
+// deslocamento+duração+margem manualmente outra vez. Usar a mesma fonte
+// (os timestamps já calculados por calcularHorariosReais) garante que
+// tempoTotalEstimadoMin nunca pode divergir do que a tela mostra,
+// mesmo que paradas sejam removidas depois por estarem fechadas.
+function calcularTempoTotalReal(paradas, horarioInicio) {
+  if (paradas.length === 0) return 0;
+  const ultimaSaida = paradas[paradas.length - 1].horarioSaida;
+  const diffMs = new Date(ultimaSaida).getTime() - new Date(horarioInicio).getTime();
+  return Math.max(0, Math.round(diffMs / 60000));
 }
 
 function rotaVazia(perfilBusca) {
