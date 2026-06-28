@@ -9,7 +9,8 @@
  * Etapas (na ordem que são executadas):
  *   1. filtrarCandidatos()      -> remove o que é IMPOSSÍVEL (fechado, sem orçamento, sem tempo)
  *   2. pontuarCandidatos()      -> dá nota pra cada POI restante
- *   3. montarSequencia()        -> escolhe a combinação + ordem que cabe no tempo e flui geograficamente
+ *   3. montarSequencia()        -> escolhe a combinação + ordem por inserção mais barata,
+ *                                   mantendo a rota sempre geograficamente coerente
  *   4. recalcularRota()         -> usado durante o passeio, quando o usuário marca "Cheguei" ou "Pula essa"
  */
 
@@ -17,56 +18,43 @@
 // 1. PESOS DO MOTOR — ajustar aqui sem tocar na lógica abaixo
 // ============================================================
 const PESOS = {
-  distancia: 0.35,    // cidade pequena: o que está mais perto pesa MUITO
-  tempo: 0.25,         // encaixar bem no tempo restante do dia
-  custo: 0.15,         // aderência ao orçamento escolhido
-  avaliacao: 0.15,     // nota/qualidade do lugar
-  interesse: 0.10,     // match com interesses marcados (se o usuário preencheu)
+  distancia: 0.35,
+  tempo: 0.25,
+  custo: 0.15,
+  avaliacao: 0.15,
+  interesse: 0.10,
 };
 
 const FAIXA_ORCAMENTO = {
-  economico: { max: 30 },     // R$ por pessoa, por parada
+  economico: { max: 30 },
   moderado: { max: 80 },
   sem_limite: { max: Infinity },
 };
 
-const MARGEM_SEGURANCA_MIN = 10; // minutos de "colchão" entre paradas, pra não estourar horário por atraso
+const MARGEM_SEGURANCA_MIN = 10;
 
-// ============================================================
-// FUNÇÃO PRINCIPAL — chamada pela tela "Criar Roteiro"
-// ============================================================
 function gerarRota(pois, eventos, perfilBusca) {
   const candidatosIniciais = injetarEventosAtivos(pois, eventos, perfilBusca.data);
-
   const candidatosViaveis = filtrarCandidatos(candidatosIniciais, perfilBusca);
-
   if (candidatosViaveis.length === 0) {
     return rotaVazia(perfilBusca);
   }
-
   const candidatosPontuados = pontuarCandidatos(candidatosViaveis, perfilBusca);
-
   const rota = montarSequencia(candidatosPontuados, perfilBusca);
-
   return rota;
 }
 
-// ============================================================
-// FUNÇÃO DE RECÁLCULO — chamada pelo "modo Em Rota"
-// ============================================================
 function recalcularRota(rotaAtual, paradaAtualIndex, acao, horarioAtual, posicaoAtual) {
-  // acao: "chegou" | "pular"
   const paradasRestantes = rotaAtual.paradas.slice(paradaAtualIndex + 1);
 
   if (acao === "pular") {
-    paradasRestantes.shift(); // remove a próxima parada da lista
+    paradasRestantes.shift();
   }
 
   if (paradasRestantes.length === 0) {
     return { ...rotaAtual, paradas: rotaAtual.paradas.slice(0, paradaAtualIndex + 1), finalizada: true };
   }
 
-  // Reaproveita os candidatos descartados na geração original (não refaz pontuação do zero)
   const candidatosDeReserva = rotaAtual.alternativasDescartadas || [];
 
   const perfilAtualizado = {
@@ -84,14 +72,11 @@ function recalcularRota(rotaAtual, paradaAtualIndex, acao, horarioAtual, posicao
   return {
     ...rotaAtual,
     paradas: [...rotaAtual.paradas.slice(0, paradaAtualIndex + 1), ...novaSequenciaRestante.paradas],
-    custoTotalEstimado: rotaAtual.custoTotalEstimado, // recalculado de fato na renderização
+    custoTotalEstimado: rotaAtual.custoTotalEstimado,
     alternativasDescartadas: novaSequenciaRestante.alternativasDescartadas,
   };
 }
 
-// ============================================================
-// ETAPA 0 — injeta eventos sazonais ativos como candidatos
-// ============================================================
 function injetarEventosAtivos(pois, eventos, dataReferencia) {
   const eventosAtivos = (eventos || []).filter((evento) =>
     dataEstaNoIntervalo(dataReferencia, evento.dataInicio, evento.dataFim)
@@ -106,22 +91,18 @@ function injetarEventosAtivos(pois, eventos, dataReferencia) {
     horarioFuncionamento: evento.horarioFuncionamento,
     precoEstimado: evento.precoEstimado || 0,
     duracaoMediaVisitaMin: evento.duracaoMediaVisitaMin || 60,
-    avaliacao: 5, // eventos institucionais entram com nota alta por padrão
+    avaliacao: 5,
     tagsDeInteresse: evento.tagsDeInteresse || ["cultura"],
     statusOperacional: "ativo",
-    pesoInstitucional: evento.pesoInstitucional ?? 1, // eventos puxam peso institucional máximo
+    pesoInstitucional: evento.pesoInstitucional ?? 1,
   }));
 
   return [...pois, ...eventosComoPoi];
 }
 
-// ============================================================
-// ETAPA 1 — FILTRO DURO
-// ============================================================
 function filtrarCandidatos(pois, perfilBusca) {
   return pois.filter((poi) => {
     if (poi.statusOperacional === "fechado_temporariamente") return false;
-
     if (!estaAbertoNoHorario(poi, perfilBusca.horarioInicio, perfilBusca.data)) return false;
 
     const limitePreco = FAIXA_ORCAMENTO[perfilBusca.orcamentoFaixa]?.max ?? Infinity;
@@ -136,19 +117,13 @@ function filtrarCandidatos(pois, perfilBusca) {
 }
 
 function estaAbertoNoHorario(poi, horarioInicio, dataReferencia) {
-  if (!poi.horarioFuncionamento) return true; // sem dado de horário, assume aberto (POI 24h, ex: praça)
-
+  if (!poi.horarioFuncionamento) return true;
   const diaSemana = obterDiaSemana(dataReferencia);
   const janela = poi.horarioFuncionamento[diaSemana];
-
   if (!janela || janela.fechado) return false;
-
   return horarioDentroDaJanela(horarioInicio, janela.abre, janela.fecha);
 }
 
-// ============================================================
-// ETAPA 2 — PONTUAÇÃO
-// ============================================================
 function pontuarCandidatos(pois, perfilBusca) {
   return pois.map((poi) => {
     const distanciaScore = normalizarProximidade(poi.localizacao, perfilBusca.localizacaoPartida);
@@ -163,29 +138,28 @@ function pontuarCandidatos(pois, perfilBusca) {
       PESOS.custo * custoScore +
       PESOS.avaliacao * avaliacaoScore +
       PESOS.interesse * interesseScore +
-      (poi.pesoInstitucional || 0) * 0.05; // bônus pequeno, não domina o score
+      (poi.pesoInstitucional || 0) * 0.05;
 
     return { ...poi, score };
   });
 }
 
 function normalizarProximidade(localizacaoPoi, localizacaoPartida) {
-  if (!localizacaoPoi) return 0.5; // sem coordenada, nota neutra
+  if (!localizacaoPoi) return 0.5;
   const distanciaKm = calcularDistanciaKm(localizacaoPartida, localizacaoPoi);
-  const distanciaMaximaRelevanteKm = 5; // Treze Tílias é pequena, 5km já é "longe" no contexto local
+  const distanciaMaximaRelevanteKm = 5;
   return Math.max(0, 1 - distanciaKm / distanciaMaximaRelevanteKm);
 }
 
 function normalizarEncaixeTempo(poi, tempoDisponivelMin) {
   const proporcaoUsada = poi.duracaoMediaVisitaMin / tempoDisponivelMin;
-  // penaliza paradas que sozinhas consomem quase todo o tempo disponível
   return Math.max(0, 1 - proporcaoUsada);
 }
 
 function normalizarAdequacaoOrcamento(preco, faixa) {
   const limite = FAIXA_ORCAMENTO[faixa]?.max ?? Infinity;
   if (limite === Infinity) return 1;
-  if (preco === 0) return 1; // grátis sempre pontua bem
+  if (preco === 0) return 1;
   return Math.max(0, 1 - preco / limite);
 }
 
@@ -195,39 +169,53 @@ function normalizarAvaliacao(avaliacao) {
 }
 
 function normalizarMatchInteresse(tagsPoi, interessesUsuario) {
-  if (!interessesUsuario || interessesUsuario.length === 0) return 0.5; // sem preferência, neutro
+  if (!interessesUsuario || interessesUsuario.length === 0) return 0.5;
   if (!tagsPoi || tagsPoi.length === 0) return 0;
   const intersecao = tagsPoi.filter((tag) => interessesUsuario.includes(tag));
   return intersecao.length / interessesUsuario.length;
 }
 
-// ============================================================
-// ETAPA 3 — MONTAGEM DA SEQUÊNCIA (combinação + ordem)
-// ============================================================
+// MONTAGEM POR INSERÇÃO MAIS BARATA
+//
+// ANTES: este algoritmo era "greedy por score" — decidia se cada POI cabia
+// no tempo somando os deslocamentos NA ORDEM DE SCORE (melhor avaliado
+// primeiro), e só depois reordenava geograficamente o que tinha sido
+// aceito. Isso fazia a decisão de inclusão/exclusão usar uma rota
+// hipotética que nunca era a entregue: dois POIs de score quase igual
+// mas em direções opostas podiam ser aceitos na ordem score-A, score-B,
+// gerando um deslocamento total bem maior do que a melhor ordem
+// geográfica real — e por causa disso um terceiro POI que caberia
+// tranquilamente na rota geográfica ótima era descartado por "falta de
+// tempo" que na verdade não existia.
+//
+// AGORA: a rota parcial é mantida sempre na sua melhor ordem geográfica
+// (vizinho mais próximo), e cada candidato (ainda priorizado por score)
+// é testado pela INSERÇÃO MAIS BARATA dentro dessa rota parcial — ou
+// seja, a posição que adiciona o menor deslocamento extra. A decisão de
+// "cabe ou não cabe" passa a usar o custo real de inserir na rota
+// geográfica, não o custo de uma sequência por score que seria
+// descartada depois.
 function montarSequencia(candidatosPontuados, perfilBusca) {
   const ordenadosPorScore = [...candidatosPontuados].sort((a, b) => b.score - a.score);
 
-  const selecionados = [];
+  const selecionados = []; // mantida sempre na ordem geográfica de visita
   const descartados = [];
   let tempoUsadoMin = 0;
-  let posicaoAtual = perfilBusca.localizacaoPartida;
 
   for (const candidato of ordenadosPorScore) {
-    const deslocamentoMin = estimarDeslocamentoMin(posicaoAtual, candidato.localizacao);
-    const custoTempoTotal = deslocamentoMin + candidato.duracaoMediaVisitaMin + MARGEM_SEGURANCA_MIN;
+    const melhorInsercao = encontrarMelhorInsercao(selecionados, candidato, perfilBusca.localizacaoPartida);
+    const custoExtraMin = melhorInsercao.custoExtraMin;
 
-    if (tempoUsadoMin + custoTempoTotal <= perfilBusca.tempoDisponivelMin) {
-      selecionados.push({ ...candidato, deslocamentoMin });
-      tempoUsadoMin += custoTempoTotal;
-      posicaoAtual = candidato.localizacao || posicaoAtual;
+    if (tempoUsadoMin + custoExtraMin <= perfilBusca.tempoDisponivelMin) {
+      selecionados.splice(melhorInsercao.posicao, 0, candidato);
+      tempoUsadoMin += custoExtraMin;
     } else {
       descartados.push(candidato);
     }
   }
 
-  const sequenciaOtimizada = ordenarPorProximidadeGeografica(selecionados, perfilBusca.localizacaoPartida);
-
-  const paradasFinais = calcularERevalidarAteEstabilizar(sequenciaOtimizada, perfilBusca);
+  const sequenciaComDeslocamentos = recalcularDeslocamentos(selecionados, perfilBusca.localizacaoPartida);
+  const paradasFinais = calcularERevalidarAteEstabilizar(sequenciaComDeslocamentos, perfilBusca);
 
   return {
     paradas: paradasFinais,
@@ -238,17 +226,86 @@ function montarSequencia(candidatosPontuados, perfilBusca) {
   };
 }
 
-// Calcula horários reais e remove paradas que ficariam fechadas no horário
-// calculado. Como remover uma parada do meio muda o horário de TODAS as
-// que vêm depois dela, repete o ciclo (calcular -> filtrar) até nada mais
-// precisar ser removido. Isso evita o "buraco" de horário que aparecia
-// quando uma parada cortada no meio deixava o cursor de tempo desalinhado
-// para as paradas seguintes.
+// Testa inserir "candidato" em cada posição possível da rota parcial
+// (que já está em ordem geográfica) e devolve a posição de menor custo
+// extra de tempo (deslocamento adicional + duração da visita + margem,
+// quando aplicável). Inserir no meio de duas paradas existentes
+// substitui o trecho "anterior -> próxima" por
+// "anterior -> candidato -> próxima", então o custo extra é o que esse
+// desvio acrescenta, não o trecho inteiro.
+//
+// IMPORTANTE: a contagem de margem aqui precisa espelhar exatamente a
+// regra usada em calcularHorariosReais (margem só existe ENTRE paradas,
+// nunca antes da primeira chegada) — senão tempoTotalEstimadoMin volta a
+// divergir da soma dos horários reais exibidos.
+function encontrarMelhorInsercao(rotaParcial, candidato, pontoPartida) {
+  const duracaoCandidato = candidato.duracaoMediaVisitaMin;
+
+  if (rotaParcial.length === 0) {
+    // Primeira parada da rota: sem margem antes dela, igual no horário real.
+    const deslocamentoMin = estimarDeslocamentoMin(pontoPartida, candidato.localizacao);
+    return { posicao: 0, custoExtraMin: deslocamentoMin + duracaoCandidato };
+  }
+
+  let melhorPosicao = 0;
+  let melhorCustoExtra = Infinity;
+
+  for (let posicao = 0; posicao <= rotaParcial.length; posicao++) {
+    const ehInicio = posicao === 0;
+    const anterior = ehInicio ? pontoPartida : rotaParcial[posicao - 1].localizacao;
+    const proxima = posicao === rotaParcial.length ? null : rotaParcial[posicao].localizacao;
+
+    const deslocamentoAteCandidato = estimarDeslocamentoMin(anterior, candidato.localizacao);
+    // Margem antes do candidato: só existe se ele não for a primeira parada da rota.
+    const margemAntesCandidato = ehInicio ? 0 : MARGEM_SEGURANCA_MIN;
+
+    let custoExtra;
+    if (proxima === null) {
+      // Inserção no final da rota: só soma o trecho novo, nada é substituído.
+      custoExtra = margemAntesCandidato + deslocamentoAteCandidato + duracaoCandidato;
+    } else {
+      // Inserção no meio: troca "anterior -> proxima" (com 1 margem entre
+      // elas, exceto se "anterior" for o ponto de partida) por
+      // "anterior -> candidato -> proxima" (com até 2 margens: antes do
+      // candidato e depois dele). O custo extra é a diferença.
+      const margemOriginalEntrePontos = ehInicio ? 0 : MARGEM_SEGURANCA_MIN;
+      const deslocamentoOriginal = estimarDeslocamentoMin(anterior, proxima);
+      const deslocamentoCandidatoProxima = estimarDeslocamentoMin(candidato.localizacao, proxima);
+
+      custoExtra =
+        margemAntesCandidato +
+        deslocamentoAteCandidato +
+        duracaoCandidato +
+        MARGEM_SEGURANCA_MIN + // margem entre o candidato e a próxima parada
+        deslocamentoCandidatoProxima -
+        margemOriginalEntrePontos -
+        deslocamentoOriginal;
+    }
+
+    if (custoExtra < melhorCustoExtra) {
+      melhorCustoExtra = custoExtra;
+      melhorPosicao = posicao;
+    }
+  }
+
+  return { posicao: melhorPosicao, custoExtraMin: melhorCustoExtra };
+}
+
+// Recalcula o deslocamentoMin de cada parada a partir da ordem final —
+// necessário porque encontrarMelhorInsercao só avalia custo marginal,
+// sem gravar o deslocamento real de cada parada na sequência definitiva.
+function recalcularDeslocamentos(paradas, pontoPartida) {
+  let posicaoAtual = pontoPartida;
+  return paradas.map((parada) => {
+    const deslocamentoMin = estimarDeslocamentoMin(posicaoAtual, parada.localizacao);
+    posicaoAtual = parada.localizacao || posicaoAtual;
+    return { ...parada, deslocamentoMin };
+  });
+}
+
 function calcularERevalidarAteEstabilizar(paradas, perfilBusca) {
   let atuais = paradas;
 
-  // Limite de segurança: nunca mais iterações do que paradas existem,
-  // já que cada iteração remove pelo menos uma parada ou estabiliza.
   for (let i = 0; i <= atuais.length; i++) {
     const comHorario = calcularHorariosReais(atuais, perfilBusca.horarioInicio);
     const validas = comHorario.filter((parada) =>
@@ -256,7 +313,7 @@ function calcularERevalidarAteEstabilizar(paradas, perfilBusca) {
     );
 
     if (validas.length === comHorario.length) {
-      return validas; // nada foi removido nesta rodada, já estabilizou
+      return validas;
     }
 
     atuais = validas;
@@ -269,36 +326,21 @@ function calcularERevalidarAteEstabilizar(paradas, perfilBusca) {
   return atuais;
 }
 
-function ordenarPorProximidadeGeografica(paradas, pontoPartida) {
-  // Algoritmo simples do "vizinho mais próximo" — suficiente pra cidade pequena com poucas paradas por rota
-  const restantes = [...paradas];
-  const ordenadas = [];
-  let posicaoAtual = pontoPartida;
-
-  while (restantes.length > 0) {
-    restantes.sort(
-      (a, b) =>
-        calcularDistanciaKm(posicaoAtual, a.localizacao) - calcularDistanciaKm(posicaoAtual, b.localizacao)
-    );
-    const proxima = restantes.shift();
-
-    // CORREÇÃO: o deslocamentoMin calculado em montarSequencia() reflete a
-    // ordem por SCORE, não a ordem geográfica final. Sem recalcular aqui,
-    // o horário da parada herda a distância de uma posição anterior errada,
-    // criando saltos artificiais de horas entre paradas vizinhas no mapa.
-    const deslocamentoMinReal = estimarDeslocamentoMin(posicaoAtual, proxima.localizacao);
-
-    ordenadas.push({ ...proxima, deslocamentoMin: deslocamentoMinReal });
-    posicaoAtual = proxima.localizacao || posicaoAtual;
-  }
-
-  return ordenadas;
-}
-
 function calcularHorariosReais(paradas, horarioInicio) {
   let horarioCursor = new Date(horarioInicio);
 
-  return paradas.map((parada) => {
+  return paradas.map((parada, indice) => {
+    // A margem de segurança entra como colchão ENTRE paradas (depois da
+    // primeira), não antes da primeira chegada — não faz sentido ter
+    // buffer antes mesmo de a pessoa ter saído do ponto de partida.
+    // Sem isso, tempoTotalEstimadoMin (que inclui a margem na decisão de
+    // quem cabe na rota) ficava maior do que a soma dos horários de
+    // chegada/saída exibidos por parada, uma inconsistência visível pro
+    // usuário se ele somasse os horários da lista manualmente.
+    if (indice > 0) {
+      horarioCursor = adicionarMinutos(horarioCursor, MARGEM_SEGURANCA_MIN);
+    }
+
     horarioCursor = adicionarMinutos(horarioCursor, parada.deslocamentoMin);
     const chegada = new Date(horarioCursor);
     horarioCursor = adicionarMinutos(horarioCursor, parada.duracaoMediaVisitaMin);
@@ -308,13 +350,6 @@ function calcularHorariosReais(paradas, horarioInicio) {
   });
 }
 
-// Recheck final: evita o caso "a 3ª parada fecha antes da rota chegar lá"
-// (substituída por calcularERevalidarAteEstabilizar, que recalcula o
-// cursor de horário a cada remoção em vez de só filtrar no final)
-
-// ============================================================
-// ROTA VAZIA (nenhum candidato viável)
-// ============================================================
 function rotaVazia(perfilBusca) {
   return {
     paradas: [],
@@ -326,9 +361,6 @@ function rotaVazia(perfilBusca) {
   };
 }
 
-// ============================================================
-// UTILITÁRIOS PUROS (sem Firebase, sem DOM)
-// ============================================================
 function calcularDistanciaKm(a, b) {
   if (!a || !b) return 0;
   const R = 6371;
@@ -351,7 +383,7 @@ function grauParaRad(graus) {
 
 function estimarDeslocamentoMin(origem, destino) {
   const km = calcularDistanciaKm(origem, destino);
-  const VELOCIDADE_CAMINHADA_KMH = 4.5; // Treze Tílias: roteiro pensado a pé no centro histórico
+  const VELOCIDADE_CAMINHADA_KMH = 4.5;
   return Math.round((km / VELOCIDADE_CAMINHADA_KMH) * 60);
 }
 
