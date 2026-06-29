@@ -19,7 +19,8 @@
       "familia"
     ],
     "statusOperacional": "ativo",
-    "pesoInstitucional": 0.6
+    "pesoInstitucional": 0.6,
+    "prioridadeGastronomica": 0
   },
   {
     "nome": "Pórtico Sul (Portal de Entrada)",
@@ -40,7 +41,8 @@
       "historia"
     ],
     "statusOperacional": "ativo",
-    "pesoInstitucional": 0.4
+    "pesoInstitucional": 0.4,
+    "prioridadeGastronomica": 0
   },
   {
     "nome": "Museu Municipal Andreas Thaler",
@@ -91,7 +93,8 @@
       "cultura"
     ],
     "statusOperacional": "ativo",
-    "pesoInstitucional": 0.7
+    "pesoInstitucional": 0.7,
+    "prioridadeGastronomica": 0
   },
   {
     "nome": "Igreja Matriz N. Sra. do Perpétuo Socorro",
@@ -142,7 +145,8 @@
       "cultura"
     ],
     "statusOperacional": "ativo",
-    "pesoInstitucional": 0.5
+    "pesoInstitucional": 0.5,
+    "prioridadeGastronomica": 0
   },
   {
     "nome": "Parque do Imigrante",
@@ -189,7 +193,8 @@
       "familia"
     ],
     "statusOperacional": "ativo",
-    "pesoInstitucional": 0.5
+    "pesoInstitucional": 0.5,
+    "prioridadeGastronomica": 0
   },
   {
     "nome": "Parque Lindendorf",
@@ -237,7 +242,8 @@
       "cultura"
     ],
     "statusOperacional": "ativo",
-    "pesoInstitucional": 0.9
+    "pesoInstitucional": 0.9,
+    "prioridadeGastronomica": 0
   },
   {
     "nome": "Minigolf Treze Tílias",
@@ -280,7 +286,8 @@
       "lazer"
     ],
     "statusOperacional": "ativo",
-    "pesoInstitucional": 0.3
+    "pesoInstitucional": 0.3,
+    "prioridadeGastronomica": 0
   },
   {
     "nome": "Bierbaum Brauhaus",
@@ -327,7 +334,8 @@
       "cultura"
     ],
     "statusOperacional": "ativo",
-    "pesoInstitucional": 0.4
+    "pesoInstitucional": 0.4,
+    "prioridadeGastronomica": 0
   },
   {
     "nome": "Restaurante Edelweiss",
@@ -373,7 +381,8 @@
       "gastronomia"
     ],
     "statusOperacional": "ativo",
-    "pesoInstitucional": 0.3
+    "pesoInstitucional": 0.3,
+    "prioridadeGastronomica": 0
   },
   {
     "nome": "Vinícola Kranz",
@@ -420,7 +429,8 @@
       "cultura"
     ],
     "statusOperacional": "ativo",
-    "pesoInstitucional": 0.5
+    "pesoInstitucional": 0.5,
+    "prioridadeGastronomica": 0
   },
   {
     "nome": "Chocolates Treze Tílias",
@@ -471,7 +481,8 @@
       "compras"
     ],
     "statusOperacional": "ativo",
-    "pesoInstitucional": 0.8
+    "pesoInstitucional": 0.8,
+    "prioridadeGastronomica": 0
   },
   {
     "nome": "Chocolate Flavor of the Alps",
@@ -518,7 +529,8 @@
       "compras"
     ],
     "statusOperacional": "ativo",
-    "pesoInstitucional": 0.3
+    "pesoInstitucional": 0.3,
+    "prioridadeGastronomica": 0
   },
   {
     "nome": "Eiskaffee Trudi",
@@ -565,7 +577,8 @@
       "familia"
     ],
     "statusOperacional": "ativo",
-    "pesoInstitucional": 0.4
+    "pesoInstitucional": 0.4,
+    "prioridadeGastronomica": 0
   },
   {
     "nome": "Mundo Tirolês",
@@ -612,7 +625,8 @@
       "cultura"
     ],
     "statusOperacional": "ativo",
-    "pesoInstitucional": 0.4
+    "pesoInstitucional": 0.4,
+    "prioridadeGastronomica": 0
   },
   {
     "nome": "Esquina do Artesanato",
@@ -662,7 +676,8 @@
       "compras"
     ],
     "statusOperacional": "ativo",
-    "pesoInstitucional": 0.2
+    "pesoInstitucional": 0.2,
+    "prioridadeGastronomica": 0
   },
   {
     "nome": "Esculturas Thaler",
@@ -709,7 +724,8 @@
       "cultura"
     ],
     "statusOperacional": "ativo",
-    "pesoInstitucional": 0.5
+    "pesoInstitucional": 0.5,
+    "prioridadeGastronomica": 0
   },
   {
     "nome": "Águas Tirolesas",
@@ -740,6 +756,74 @@
       "familia"
     ],
     "statusOperacional": "em_reforma",
-    "pesoInstitucional": 0.1
+    "pesoInstitucional": 0.1,
+    "prioridadeGastronomica": 0
+  },
+  {
+    "nome": "Padaria da Cris",
+    "categoria": "gastronomia",
+    "subcategoria": "padaria_cafe",
+    "descricaoCurta": "Padaria e café para começar o dia — indicado pela curadoria local.",
+    "descricaoLonga": "Aguardando confirmação de endereço e horário exatos.",
+    "fotos": [],
+    "localizacao": {
+      "lat": -27.0026,
+      "lng": -51.4084
+    },
+    "horarioFuncionamento": null,
+    "precoEstimado": 20,
+    "duracaoMediaVisitaMin": 25,
+    "avaliacao": 0,
+    "tagsDeInteresse": [
+      "gastronomia"
+    ],
+    "statusOperacional": "ativo",
+    "pesoInstitucional": 0,
+    "prioridadeGastronomica": 5
+  },
+  {
+    "nome": "Biergarten",
+    "categoria": "gastronomia",
+    "subcategoria": "cervejaria",
+    "descricaoCurta": "Experiência gastronômica de destaque — cerveja e ambiente tirolês.",
+    "descricaoLonga": "Aguardando confirmação de endereço e horário exatos.",
+    "fotos": [],
+    "localizacao": {
+      "lat": -27.0026,
+      "lng": -51.4084
+    },
+    "horarioFuncionamento": null,
+    "precoEstimado": 50,
+    "duracaoMediaVisitaMin": 60,
+    "avaliacao": 0,
+    "tagsDeInteresse": [
+      "gastronomia",
+      "cultura"
+    ],
+    "statusOperacional": "ativo",
+    "pesoInstitucional": 0,
+    "prioridadeGastronomica": 5
+  },
+  {
+    "nome": "Adega Wine Bar",
+    "categoria": "gastronomia",
+    "subcategoria": "wine_bar",
+    "descricaoCurta": "Wine bar para experiência gastronômica e degustação.",
+    "descricaoLonga": "Aguardando confirmação de endereço e horário exatos.",
+    "fotos": [],
+    "localizacao": {
+      "lat": -27.0026,
+      "lng": -51.4084
+    },
+    "horarioFuncionamento": null,
+    "precoEstimado": 60,
+    "duracaoMediaVisitaMin": 60,
+    "avaliacao": 0,
+    "tagsDeInteresse": [
+      "gastronomia"
+    ],
+    "statusOperacional": "ativo",
+    "pesoInstitucional": 0,
+    "prioridadeGastronomica": 5
   }
 ]
