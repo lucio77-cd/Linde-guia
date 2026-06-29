@@ -220,6 +220,12 @@ th {
   color: var(--cor-texto-suave);
 }
 
+.local-admin-card__prioridade {
+  font-size: var(--escala-xs);
+  color: var(--cor-dourado-velho);
+  font-weight: var(--peso-medio);
+}
+
 .local-admin-card__status {
   font-size: var(--escala-xs);
   padding: 2px var(--espaco-2);
@@ -285,6 +291,18 @@ th {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--espaco-3);
+}
+
+.campo-condicional[hidden] {
+  display: none;
+}
+
+.campo-condicional__ajuda {
+  display: block;
+  font-weight: var(--peso-regular);
+  font-size: var(--escala-xs);
+  color: var(--cor-texto-suave);
+  margin-top: var(--espaco-1);
 }
 
 .modal-local__acoes {
