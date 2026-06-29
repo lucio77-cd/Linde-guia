@@ -20,6 +20,10 @@
  *   tagsDeInteresse: [],
  *   statusOperacional,        // "ativo" | "sazonal" | "em_reforma" | "fechado_temporariamente"
  *   pesoInstitucional         // 0-1, opcional
+ *   prioridadeGastronomica    // 1-5, opcional, só relevante se categoria === "gastronomia".
+ *                             // Definido no painel admin. Nível >= 4 GARANTE um slot na
+ *                             // rota (não é só bônus de pontuação) quando o lugar já é
+ *                             // viável (aberto, dentro do orçamento, cabe no tempo).
  * }
  */
 
@@ -182,6 +186,9 @@ function normalizarPoi(id, dadosFirestore) {
     tagsDeInteresse: dadosFirestore.tags_de_interesse || dadosFirestore.tagsDeInteresse || [],
     statusOperacional: dadosFirestore.status_operacional || dadosFirestore.statusOperacional || "ativo",
     pesoInstitucional: Number(dadosFirestore.peso_institucional ?? dadosFirestore.pesoInstitucional ?? 0),
+    prioridadeGastronomica: Number(
+      dadosFirestore.prioridade_gastronomica ?? dadosFirestore.prioridadeGastronomica ?? 0
+    ),
   };
 }
 
@@ -213,6 +220,7 @@ function desnormalizarPoi(poi, { parcial = false } = {}) {
     tags_de_interesse: poi.tagsDeInteresse,
     status_operacional: poi.statusOperacional,
     peso_institucional: poi.pesoInstitucional,
+    prioridade_gastronomica: poi.prioridadeGastronomica,
   };
 
   if (!parcial) return mapa;
@@ -235,4 +243,3 @@ export {
   removerPoi,
   invalidarCache,
 };
-
