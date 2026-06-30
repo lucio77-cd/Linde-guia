@@ -118,16 +118,27 @@ function construirDataHoraDeHoje(horaTexto) {
 }
 
 // ============================================================
-// LOCALIZAÇÃO — GPS do navegador, com fallback manual
+// LOCALIZAÇÃO — GPS do navegador + geocodificação via Nominatim
 // ============================================================
+
+// Bounding box real do município de Treze Tílias (SC), usado pra
+// restringir a busca do Nominatim e evitar resultados de outras cidades.
+// Fonte: topographic-map.com, confirmado em fontes múltiplas anteriores.
+const BBOX_TREZE_TILIAS = {
+  sul: -27.04, norte: -26.84,
+  oeste: -51.54, leste: -51.33,
+};
+const CENTRO_TREZE_TILIAS_NOMINATIM = "Treze Tílias, SC, Brasil";
+
 function configurarBotaoLocalizacao() {
   const botao = document.getElementById("btn-usar-localizacao");
   const statusEl = document.getElementById("localizacao-status");
   const inputEndereco = document.getElementById("input-endereco");
 
+  // GPS do navegador
   botao.addEventListener("click", () => {
     if (!navigator.geolocation) {
-      definirStatusLocalizacao(statusEl, "erro", "Seu navegador não permite localização automática. Digite um endereço.");
+      definirStatusLocalizacao(statusEl, "erro", "Seu navegador não permite localização automática. Digite um endereço abaixo.");
       return;
     }
 
@@ -150,13 +161,93 @@ function configurarBotaoLocalizacao() {
     );
   });
 
-  inputEndereco.addEventListener("input", () => {
-    estado.enderecoManual = inputEndereco.value;
-    if (inputEndereco.value) {
-      estado.localizacaoPartida = null; // endereço manual tem prioridade sobre GPS antigo
-      definirStatusLocalizacao(statusEl, null, "");
+  // Geocodificação ao sair do campo (evento blur) — evita chamar a API
+  // a cada tecla digitada (respeitando os termos de uso do Nominatim).
+  inputEndereco.addEventListener("blur", () => {
+    const texto = inputEndereco.value.trim();
+    if (!texto) return;
+    geocodificarEndereco(texto, statusEl);
+  });
+
+  // Também dispara ao apertar Enter no campo
+  inputEndereco.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const texto = inputEndereco.value.trim();
+      if (texto) geocodificarEndereco(texto, statusEl);
     }
   });
+
+  // Limpa a coordenada se o usuário apagar o campo depois de ter buscado
+  inputEndereco.addEventListener("input", () => {
+    if (!inputEndereco.value.trim()) {
+      estado.localizacaoPartida = null;
+      estado.enderecoManual = "";
+      definirStatusLocalizacao(statusEl, null, "");
+    } else {
+      estado.enderecoManual = inputEndereco.value;
+    }
+  });
+}
+
+async function geocodificarEndereco(texto, statusEl) {
+  definirStatusLocalizacao(statusEl, "buscando", "Buscando endereço...");
+
+  // Nominatim — gratuito, sem chave de API.
+  // Estratégia de busca em 2 tentativas:
+  //   1. Busca dentro do bounding box de Treze Tílias (resultado mais preciso)
+  //   2. Se não achar, busca adicionando "Treze Tílias" ao texto (fallback)
+  const urlComBbox = `https://nominatim.openstreetmap.org/search?` + new URLSearchParams({
+    q: `${texto}, Treze Tílias, SC`,
+    format: "json",
+    limit: "1",
+    countrycodes: "br",
+    viewbox: `${BBOX_TREZE_TILIAS.oeste},${BBOX_TREZE_TILIAS.norte},${BBOX_TREZE_TILIAS.leste},${BBOX_TREZE_TILIAS.sul}`,
+    bounded: "1",
+  });
+
+  const urlSemBbox = `https://nominatim.openstreetmap.org/search?` + new URLSearchParams({
+    q: `${texto}, ${CENTRO_TREZE_TILIAS_NOMINATIM}`,
+    format: "json",
+    limit: "1",
+    countrycodes: "br",
+  });
+
+  try {
+    let resultado = await buscarNominatim(urlComBbox);
+
+    if (!resultado) {
+      resultado = await buscarNominatim(urlSemBbox);
+    }
+
+    if (resultado) {
+      estado.localizacaoPartida = {
+        lat: parseFloat(resultado.lat),
+        lng: parseFloat(resultado.lon),
+      };
+      estado.enderecoManual = texto;
+      definirStatusLocalizacao(statusEl, "ok", `Encontrado: ${resultado.display_name.split(",").slice(0, 2).join(",")}`);
+    } else {
+      // Não achou nada — usa o centro da cidade como fallback silencioso
+      estado.localizacaoPartida = null; // montarPerfilBusca() vai usar o centro
+      estado.enderecoManual = texto;
+      definirStatusLocalizacao(statusEl, "ok", "Partindo do centro de Treze Tílias.");
+    }
+  } catch (erro) {
+    console.warn("[geocodificação] Nominatim falhou:", erro);
+    estado.localizacaoPartida = null;
+    estado.enderecoManual = texto;
+    definirStatusLocalizacao(statusEl, "ok", "Não achei o endereço exato — partindo do centro da cidade.");
+  }
+}
+
+async function buscarNominatim(url) {
+  const resposta = await fetch(url, {
+    headers: { "Accept-Language": "pt-BR", "User-Agent": "LindeGuia/1.0 (treze-tilias-guia)" }
+  });
+  if (!resposta.ok) return null;
+  const dados = await resposta.json();
+  return dados.length > 0 ? dados[0] : null;
 }
 
 function definirStatusLocalizacao(elemento, estadoVisual, texto) {
