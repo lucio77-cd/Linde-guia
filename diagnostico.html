@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Diagnóstico + Reimportação — Linde Guia</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="global.css" />
+  <style>
+    .pagina { max-width: 600px; margin: 0 auto; padding: var(--espaco-8) var(--espaco-5); }
+    h1 { font-family: var(--fonte-titulo); color: var(--cor-marca); margin-bottom: var(--espaco-2); }
+    p { color: var(--cor-texto-suave); margin-bottom: var(--espaco-5); font-size: var(--escala-sm); }
+    .acoes { display: flex; gap: var(--espaco-3); flex-wrap: wrap; margin-bottom: var(--espaco-5); }
+    #log {
+      background: var(--cor-fundo-card); border: 1px solid var(--cor-borda);
+      border-radius: var(--raio-medio); padding: var(--espaco-4);
+      font-family: var(--fonte-dado); font-size: var(--escala-sm);
+      max-height: 500px; overflow-y: auto; white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <header class="topo">
+    <div class="topo__marca">
+      <a href="index.html" class="topo__nome">Linde Guia</a>
+      <span class="topo__selo">Diagnóstico</span>
+    </div>
+  </header>
+  <main class="pagina">
+    <h1>Diagnóstico + Reimportação</h1>
+    <p>Use os botões abaixo para ver quantos locais existem no banco e reimportar os que faltam. O botão "Ver o que está no banco" não altera nada — só lê. O de reimportação pula locais que já existem (sem duplicar).</p>
+    <div class="acoes">
+      <button id="btn-ver" type="button" class="botao botao--secundario">Ver o que está no banco</button>
+      <button id="btn-importar" type="button" class="botao botao--principal">Reimportar locais faltantes</button>
+    </div>
+    <pre id="log">Clique em um dos botões acima.</pre>
+  </main>
+  <script type="module" src="firebase-config.js"></script>
+  <script type="module" src="diagnostico.js"></script>
+</body>
+</html>
