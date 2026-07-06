@@ -5,43 +5,634 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Linde Guia — Treze Tílias</title>
   <meta name="description" content="Monte seu passeio por Treze Tílias: tempo, horário, localização e orçamento — a rota certa pra você." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="tokens.css" />
-  <link rel="stylesheet" href="global.css" />
+  <style>
+    /* ============================================================
+       TOKENS
+    ============================================================ */
+    :root {
+      --borde: #8B1A1A;
+      --borde-escuro: #6B1212;
+      --dourado: #C8943A;
+      --dourado-claro: #E5B96A;
+      --creme: #F5F0E8;
+      --creme-medio: #EDE6D6;
+      --creme-escuro: #DDD4C0;
+      --verde: #2D4A1E;
+      --verde-claro: #3D6428;
+      --tinta: #1C1714;
+      --tinta-suave: #4A3F38;
+      --branco: #FDFAF6;
+
+      --fonte-display: 'Playfair Display', Georgia, serif;
+      --fonte-corpo: 'Inter', system-ui, sans-serif;
+
+      --raio: 12px;
+      --raio-grande: 20px;
+      --transicao: 0.22s ease;
+    }
+
+    /* ============================================================
+       RESET & BASE
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--fonte-corpo);
+      background: var(--creme);
+      color: var(--tinta);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    img { display: block; max-width: 100%; }
+
+    /* ============================================================
+       HEADER / TOPO
+    ============================================================ */
+    .topo {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--branco);
+      border-bottom: 1px solid var(--creme-escuro);
+      padding: 0 clamp(1.25rem, 5vw, 3rem);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+    }
+
+    .topo__marca {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+    }
+
+    /* Edelweiss SVG inline como logo-assinatura */
+    .topo__flor {
+      width: 36px;
+      height: 36px;
+      flex-shrink: 0;
+    }
+
+    .topo__textos {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.15;
+    }
+
+    .topo__nome {
+      font-family: var(--fonte-display);
+      font-weight: 700;
+      font-size: 1.125rem;
+      color: var(--tinta);
+      letter-spacing: -0.01em;
+    }
+
+    .topo__selo {
+      font-family: var(--fonte-corpo);
+      font-size: 0.625rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--borde);
+    }
+
+    .topo__nav {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .topo__nav a {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--tinta-suave);
+      padding: 0.5rem 0.875rem;
+      border-radius: 8px;
+      transition: background var(--transicao), color var(--transicao);
+    }
+
+    .topo__nav a:hover {
+      background: var(--creme-medio);
+      color: var(--tinta);
+    }
+
+    .topo__nav a.destaque {
+      background: var(--borde);
+      color: var(--branco);
+    }
+
+    .topo__nav a.destaque:hover {
+      background: var(--borde-escuro);
+    }
+
+    /* ============================================================
+       BANNER DE EVENTO
+    ============================================================ */
+    .banner-evento {
+      background: var(--verde);
+      color: var(--branco);
+      text-align: center;
+      padding: 0.625rem 1.25rem;
+      font-size: 0.875rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+    }
+
+    .banner-evento[hidden] { display: none; }
+
+    .banner-evento a {
+      background: rgba(255,255,255,0.18);
+      padding: 0.25rem 0.75rem;
+      border-radius: 100px;
+      font-weight: 600;
+      font-size: 0.8125rem;
+      transition: background var(--transicao);
+    }
+
+    .banner-evento a:hover { background: rgba(255,255,255,0.3); }
+
+    /* ============================================================
+       HERO — split: texto à esquerda, foto à direita
+    ============================================================ */
+    .hero {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: calc(100svh - 64px);
+      max-height: 760px;
+      overflow: hidden;
+    }
+
+    .hero__lado-texto {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: clamp(2.5rem, 6vw, 5rem) clamp(1.5rem, 5vw, 4rem);
+      background: var(--creme);
+      position: relative;
+    }
+
+    /* Ornamento de canto — linhas finas decorativas */
+    .hero__lado-texto::before {
+      content: '';
+      position: absolute;
+      top: 2rem;
+      left: clamp(1.5rem, 5vw, 4rem);
+      width: 3rem;
+      height: 2px;
+      background: var(--dourado);
+    }
+
+    .hero__eyebrow {
+      font-family: var(--fonte-corpo);
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--dourado);
+      margin-bottom: 1.25rem;
+    }
+
+    .hero__titulo {
+      font-family: var(--fonte-display);
+      font-size: clamp(2rem, 4.5vw, 3.25rem);
+      font-weight: 700;
+      line-height: 1.15;
+      color: var(--tinta);
+      margin-bottom: 1.25rem;
+      letter-spacing: -0.02em;
+    }
+
+    .hero__titulo em {
+      font-style: italic;
+      color: var(--borde);
+    }
+
+    .hero__subtitulo {
+      font-size: clamp(0.9375rem, 1.5vw, 1.0625rem);
+      line-height: 1.65;
+      color: var(--tinta-suave);
+      max-width: 38ch;
+      margin-bottom: 2.5rem;
+      font-weight: 300;
+    }
+
+    .hero__acoes {
+      display: flex;
+      flex-direction: column;
+      gap: 0.875rem;
+      max-width: 300px;
+    }
+
+    /* ============================================================
+       FOTO DO HERO
+    ============================================================ */
+    .hero__foto {
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Placeholder que imita foto de Treze Tílias com gradiente + SVG de montanha */
+    .hero__foto-placeholder {
+      width: 100%;
+      height: 100%;
+      background:
+        linear-gradient(160deg, #3D6428 0%, #2D4A1E 35%, #6B8C3E 60%, #4A6B2A 100%);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      position: relative;
+    }
+
+    .hero__foto-placeholder::after {
+      content: 'Treze Tílias, SC';
+      position: absolute;
+      bottom: 1.25rem;
+      left: 1.25rem;
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.7);
+      font-weight: 500;
+      letter-spacing: 0.08em;
+    }
+
+    .hero__skyline {
+      width: 100%;
+      position: absolute;
+      bottom: 0;
+    }
+
+    /* ============================================================
+       BOTÕES
+    ============================================================ */
+    .botao {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      font-family: var(--fonte-corpo);
+      font-size: 0.9375rem;
+      font-weight: 600;
+      padding: 0.875rem 1.75rem;
+      border-radius: var(--raio);
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all var(--transicao);
+      text-align: center;
+      line-height: 1;
+    }
+
+    .botao--principal {
+      background: var(--borde);
+      color: var(--branco);
+      border-color: var(--borde);
+    }
+
+    .botao--principal:hover {
+      background: var(--borde-escuro);
+      border-color: var(--borde-escuro);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(139,26,26,0.28);
+    }
+
+    .botao--secundario {
+      background: transparent;
+      color: var(--tinta);
+      border-color: var(--creme-escuro);
+    }
+
+    .botao--secundario:hover {
+      border-color: var(--tinta-suave);
+      background: var(--creme-medio);
+    }
+
+    /* ============================================================
+       ORNAMENTO DIVISOR
+    ============================================================ */
+    .divisor-ornamental {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      padding: 3.5rem clamp(1.25rem, 5vw, 3rem) 0;
+    }
+
+    .divisor-ornamental__linha {
+      flex: 1;
+      max-width: 120px;
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--creme-escuro));
+    }
+
+    .divisor-ornamental__linha:last-child {
+      background: linear-gradient(to left, transparent, var(--creme-escuro));
+    }
+
+    /* ============================================================
+       SEÇÃO DE CATEGORIA
+    ============================================================ */
+    .secao-categorias {
+      padding: 2.5rem clamp(1.25rem, 5vw, 3rem) 4rem;
+    }
+
+    .secao-categorias__cabecalho {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .secao-categorias__titulo {
+      font-family: var(--fonte-display);
+      font-size: clamp(1.625rem, 3vw, 2.25rem);
+      font-weight: 600;
+      color: var(--tinta);
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.015em;
+    }
+
+    .secao-categorias__subtitulo {
+      font-size: 0.9375rem;
+      color: var(--borde);
+      font-weight: 400;
+    }
+
+    .grade-categorias {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .card-categoria {
+      background: var(--branco);
+      border: 1.5px solid var(--creme-escuro);
+      border-radius: var(--raio-grande);
+      padding: 1.75rem 1.5rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.875rem;
+      transition: border-color var(--transicao), box-shadow var(--transicao), transform var(--transicao);
+      cursor: pointer;
+    }
+
+    .card-categoria:hover {
+      border-color: var(--borde);
+      box-shadow: 0 8px 32px rgba(139,26,26,0.1);
+      transform: translateY(-3px);
+    }
+
+    .card-categoria__icone {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card-categoria__icone--gastronomia { background: #FDF0E8; }
+    .card-categoria__icone--historia    { background: #E8EDF5; }
+    .card-categoria__icone--natureza    { background: #E8F5EC; }
+    .card-categoria__icone--eventos     { background: #F5EBE8; }
+
+    .card-categoria__titulo {
+      font-family: var(--fonte-display);
+      font-size: 1.1875rem;
+      font-weight: 600;
+      color: var(--tinta);
+    }
+
+    .card-categoria__descricao {
+      font-size: 0.875rem;
+      line-height: 1.6;
+      color: var(--tinta-suave);
+      flex: 1;
+    }
+
+    .card-categoria__link {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--borde);
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: gap var(--transicao);
+    }
+
+    .card-categoria:hover .card-categoria__link {
+      gap: 0.6rem;
+    }
+
+    /* ============================================================
+       SEÇÃO SELOS / CTA BOTTOM
+    ============================================================ */
+    .secao-selos {
+      background: var(--verde);
+      margin: 0 clamp(1.25rem, 5vw, 3rem) 4rem;
+      border-radius: var(--raio-grande);
+      padding: 2.5rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .secao-selos::before {
+      content: '';
+      position: absolute;
+      right: -40px;
+      top: -40px;
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.04);
+    }
+
+    .secao-selos__icone {
+      flex-shrink: 0;
+      width: 64px;
+      height: 64px;
+    }
+
+    .secao-selos__textos { flex: 1; }
+
+    .secao-selos__titulo {
+      font-family: var(--fonte-display);
+      font-size: 1.375rem;
+      font-weight: 600;
+      color: var(--branco);
+      margin-bottom: 0.375rem;
+    }
+
+    .secao-selos__descricao {
+      font-size: 0.875rem;
+      color: rgba(255,255,255,0.75);
+      line-height: 1.55;
+    }
+
+    .secao-selos .botao {
+      flex-shrink: 0;
+      background: var(--branco);
+      color: var(--verde);
+      border-color: var(--branco);
+      font-size: 0.875rem;
+      padding: 0.75rem 1.375rem;
+      white-space: nowrap;
+    }
+
+    .secao-selos .botao:hover {
+      background: var(--creme);
+    }
+
+    /* ============================================================
+       FOOTER
+    ============================================================ */
+    .rodape {
+      border-top: 1px solid var(--creme-escuro);
+      padding: 2rem clamp(1.25rem, 5vw, 3rem);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .rodape p {
+      font-size: 0.8125rem;
+      color: var(--tinta-suave);
+    }
+
+    .rodape__ornamento {
+      opacity: 0.35;
+    }
+
+    /* ============================================================
+       RESPONSIVO — MOBILE
+    ============================================================ */
+    @media (max-width: 700px) {
+      .hero {
+        grid-template-columns: 1fr;
+        max-height: none;
+        min-height: auto;
+      }
+
+      .hero__lado-texto {
+        padding: 3rem 1.25rem 2.5rem;
+        text-align: center;
+        align-items: center;
+      }
+
+      .hero__lado-texto::before { display: none; }
+
+      .hero__subtitulo { max-width: 100%; }
+
+      .hero__acoes { max-width: 100%; width: 100%; }
+
+      .hero__foto {
+        height: 260px;
+        order: -1;
+      }
+
+      .divisor-ornamental { padding-top: 2.5rem; }
+
+      .secao-selos {
+        flex-direction: column;
+        text-align: center;
+        margin: 0 1.25rem 3rem;
+      }
+
+      .secao-selos .botao { width: 100%; }
+
+      .topo__nav a:not(.destaque) { display: none; }
+
+      .grade-categorias {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.875rem;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .grade-categorias {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ============================================================
+       ACESSIBILIDADE
+    ============================================================ */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition: none !important; }
+    }
+
+    :focus-visible {
+      outline: 3px solid var(--borde);
+      outline-offset: 3px;
+      border-radius: 4px;
+    }
+  </style>
 </head>
 <body>
 
   <header class="topo">
-    <div class="topo__marca">
-      <span class="topo__nome">Linde Guia</span>
-      <span class="topo__selo">Treze Tílias</span>
-    </div>
+    <a href="index.html" class="topo__marca">
+      <!-- Edelweiss SVG — assinatura visual da Linde Guia -->
+      <svg class="topo__flor" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+        <!-- Pétalas externas -->
+        <ellipse cx="24" cy="10" rx="4" ry="8" fill="#C8943A" opacity="0.9"/>
+        <ellipse cx="24" cy="10" rx="4" ry="8" fill="#C8943A" opacity="0.9" transform="rotate(45 24 24)"/>
+        <ellipse cx="24" cy="10" rx="4" ry="8" fill="#C8943A" opacity="0.9" transform="rotate(90 24 24)"/>
+        <ellipse cx="24" cy="10" rx="4" ry="8" fill="#C8943A" opacity="0.9" transform="rotate(135 24 24)"/>
+        <ellipse cx="24" cy="10" rx="4" ry="8" fill="#C8943A" opacity="0.75" transform="rotate(22.5 24 24)"/>
+        <ellipse cx="24" cy="10" rx="4" ry="8" fill="#C8943A" opacity="0.75" transform="rotate(67.5 24 24)"/>
+        <ellipse cx="24" cy="10" rx="4" ry="8" fill="#C8943A" opacity="0.75" transform="rotate(112.5 24 24)"/>
+        <ellipse cx="24" cy="10" rx="4" ry="8" fill="#C8943A" opacity="0.75" transform="rotate(157.5 24 24)"/>
+        <!-- Centro -->
+        <circle cx="24" cy="24" r="6" fill="#8B1A1A"/>
+        <circle cx="24" cy="24" r="3.5" fill="#C8943A"/>
+      </svg>
+      <div class="topo__textos">
+        <span class="topo__nome">Linde Guia</span>
+        <span class="topo__selo">Treze Tílias</span>
+      </div>
+    </a>
+
     <nav class="topo__nav" aria-label="Navegação principal">
       <a href="explorar.html">Explorar</a>
       <a href="eventos.html">Eventos</a>
       <a href="perfil.html">Perfil</a>
+      <a href="roteiro.html" class="destaque">Criar roteiro</a>
     </nav>
   </header>
 
-  <!-- Banner de evento: só renderiza algo se houver evento ativo na data atual.
-       A lógica fica em js/banner-evento.js — aqui é só o slot vazio. -->
   <section id="banner-evento" class="banner-evento" hidden aria-live="polite">
     <p id="banner-evento__texto"></p>
     <a id="banner-evento__link" href="eventos.html">Ver evento</a>
   </section>
 
   <main>
+
+    <!-- ===== HERO ===== -->
     <section class="hero">
-      <div class="hero__conteudo">
+      <div class="hero__lado-texto">
+        <p class="hero__eyebrow">Roteiro personalizado · Treze Tílias, SC</p>
         <h1 class="hero__titulo">
-          Uma cidade tirolesa,<br />
-          do jeito que dá tempo de ver.
+          Uma cidade tirolesa,<br/>
+          do jeito que <em>dá tempo</em><br/>
+          de ver.
         </h1>
         <p class="hero__subtitulo">
           Diz quanto tempo você tem, de onde está partindo e quanto quer gastar.
           A gente monta o passeio.
         </p>
-
         <div class="hero__acoes">
           <a class="botao botao--principal" href="roteiro.html">
             Criar meu roteiro
@@ -52,35 +643,291 @@
         </div>
       </div>
 
-      <!-- Elemento-assinatura: silhueta de viga em V (enxaimel), não foto de banco de imagem -->
-      <div class="hero__silhueta" aria-hidden="true">
-        <svg viewBox="0 0 400 220" preserveAspectRatio="xMidYMax slice">
-          <polyline points="0,220 60,60 120,220" />
-          <polyline points="100,220 160,30 220,220" />
-          <polyline points="200,220 260,70 320,220" />
-          <polyline points="300,220 360,50 400,180" />
-        </svg>
+      <!-- Foto placeholder: skyline SVG de cidade tirolesa no lugar até ter foto real -->
+      <div class="hero__foto" aria-hidden="true">
+        <div class="hero__foto-placeholder">
+
+          <!-- Céu com névoa de montanha -->
+          <svg viewBox="0 0 600 500" preserveAspectRatio="xMidYMid slice"
+               xmlns="http://www.w3.org/2000/svg"
+               style="position:absolute;inset:0;width:100%;height:100%">
+            <defs>
+              <linearGradient id="ceu" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#B8D4E8"/>
+                <stop offset="60%" stop-color="#D4E8D4"/>
+                <stop offset="100%" stop-color="#3D6428"/>
+              </linearGradient>
+              <linearGradient id="mont1" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#4A7A32"/>
+                <stop offset="100%" stop-color="#2D4A1E"/>
+              </linearGradient>
+              <linearGradient id="mont2" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#6B9E4A"/>
+                <stop offset="100%" stop-color="#3D6428"/>
+              </linearGradient>
+              <filter id="blur-mont">
+                <feGaussianBlur stdDeviation="2"/>
+              </filter>
+            </defs>
+
+            <!-- Fundo de céu -->
+            <rect width="600" height="500" fill="url(#ceu)"/>
+
+            <!-- Nuvens suaves -->
+            <ellipse cx="120" cy="80" rx="90" ry="28" fill="white" opacity="0.55"/>
+            <ellipse cx="200" cy="65" rx="70" ry="22" fill="white" opacity="0.45"/>
+            <ellipse cx="420" cy="100" rx="110" ry="32" fill="white" opacity="0.5"/>
+            <ellipse cx="500" cy="85" rx="75" ry="24" fill="white" opacity="0.4"/>
+
+            <!-- Montanhas de fundo (longe, acinzentadas) -->
+            <polygon points="0,300 80,160 160,300" fill="#8FAF7A" opacity="0.6" filter="url(#blur-mont)"/>
+            <polygon points="80,300 200,120 320,300" fill="#7A9E60" opacity="0.6" filter="url(#blur-mont)"/>
+            <polygon points="280,300 400,140 520,300" fill="#8FAF7A" opacity="0.55" filter="url(#blur-mont)"/>
+            <polygon points="460,300 560,170 650,300" fill="#7A9E60" opacity="0.5" filter="url(#blur-mont)"/>
+
+            <!-- Montanhas frente -->
+            <polygon points="-20,380 100,200 220,380" fill="url(#mont1)"/>
+            <polygon points="160,380 300,170 440,380" fill="url(#mont2)"/>
+            <polygon points="380,380 500,210 620,380" fill="url(#mont1)"/>
+
+            <!-- Neblina de vale -->
+            <ellipse cx="300" cy="390" rx="340" ry="40" fill="white" opacity="0.18"/>
+
+            <!-- Casas enxaimel (fila na base) -->
+            <!-- Casa 1 -->
+            <g transform="translate(60, 300)">
+              <rect x="0" y="40" width="70" height="80" fill="#F5F0E8"/>
+              <polygon points="0,40 35,0 70,40" fill="#8B1A1A"/>
+              <rect x="10" y="60" width="18" height="22" fill="#B8D4E8" opacity="0.8"/>
+              <rect x="42" y="60" width="18" height="22" fill="#B8D4E8" opacity="0.8"/>
+              <rect x="22" y="88" width="26" height="32" fill="#6B4226"/>
+              <!-- Vigas enxaimel -->
+              <line x1="0" y1="70" x2="70" y2="70" stroke="#6B4226" stroke-width="2" opacity="0.5"/>
+              <line x1="0" y1="95" x2="70" y2="95" stroke="#6B4226" stroke-width="2" opacity="0.5"/>
+              <line x1="20" y1="40" x2="0" y2="120" stroke="#6B4226" stroke-width="2" opacity="0.4"/>
+              <line x1="50" y1="40" x2="70" y2="120" stroke="#6B4226" stroke-width="2" opacity="0.4"/>
+              <!-- Floreira -->
+              <rect x="0" y="58" width="70" height="5" fill="#8B1A1A" opacity="0.4"/>
+              <ellipse cx="35" cy="58" rx="32" ry="4" fill="#C84040" opacity="0.7"/>
+            </g>
+
+            <!-- Casa 2 (maior, central) -->
+            <g transform="translate(155, 280)">
+              <rect x="0" y="60" width="90" height="100" fill="#EDE6D6"/>
+              <polygon points="0,60 45,10 90,60" fill="#6B1212"/>
+              <rect x="10" y="80" width="22" height="28" fill="#B8D4E8" opacity="0.8"/>
+              <rect x="58" y="80" width="22" height="28" fill="#B8D4E8" opacity="0.8"/>
+              <rect x="28" y="108" width="34" height="52" fill="#5A3218"/>
+              <!-- Torre do relógio simulada -->
+              <rect x="34" y="-20" width="22" height="30" fill="#EDE6D6"/>
+              <polygon points="34,-20 45,-40 56,-20" fill="#6B1212"/>
+              <!-- Vigas -->
+              <line x1="0" y1="90" x2="90" y2="90" stroke="#5A3218" stroke-width="2" opacity="0.45"/>
+              <line x1="0" y1="118" x2="90" y2="118" stroke="#5A3218" stroke-width="2" opacity="0.45"/>
+              <line x1="25" y1="60" x2="0" y2="160" stroke="#5A3218" stroke-width="1.5" opacity="0.35"/>
+              <line x1="65" y1="60" x2="90" y2="160" stroke="#5A3218" stroke-width="1.5" opacity="0.35"/>
+              <!-- Floreira vermelha -->
+              <rect x="0" y="78" width="90" height="6" fill="#8B1A1A" opacity="0.35"/>
+              <ellipse cx="45" cy="78" rx="42" ry="5" fill="#C84040" opacity="0.65"/>
+            </g>
+
+            <!-- Casa 3 -->
+            <g transform="translate(270, 310)">
+              <rect x="0" y="30" width="60" height="70" fill="#F5F0E8"/>
+              <polygon points="0,30 30,0 60,30" fill="#8B1A1A"/>
+              <rect x="8" y="45" width="16" height="20" fill="#B8D4E8" opacity="0.8"/>
+              <rect x="36" y="45" width="16" height="20" fill="#B8D4E8" opacity="0.8"/>
+              <rect x="18" y="70" width="24" height="30" fill="#6B4226"/>
+              <line x1="0" y1="55" x2="60" y2="55" stroke="#6B4226" stroke-width="1.5" opacity="0.45"/>
+              <line x1="0" y1="72" x2="60" y2="72" stroke="#6B4226" stroke-width="1.5" opacity="0.45"/>
+              <ellipse cx="30" cy="44" rx="28" ry="4" fill="#C84040" opacity="0.6"/>
+            </g>
+
+            <!-- Casa 4 -->
+            <g transform="translate(355, 295)">
+              <rect x="0" y="50" width="80" height="90" fill="#EDE6D6"/>
+              <polygon points="0,50 40,5 80,50" fill="#6B1212"/>
+              <rect x="10" y="68" width="20" height="26" fill="#B8D4E8" opacity="0.8"/>
+              <rect x="50" y="68" width="20" height="26" fill="#B8D4E8" opacity="0.8"/>
+              <rect x="24" y="98" width="32" height="42" fill="#5A3218"/>
+              <line x1="0" y1="78" x2="80" y2="78" stroke="#5A3218" stroke-width="1.5" opacity="0.4"/>
+              <line x1="0" y1="100" x2="80" y2="100" stroke="#5A3218" stroke-width="1.5" opacity="0.4"/>
+              <line x1="22" y1="50" x2="0" y2="140" stroke="#5A3218" stroke-width="1.5" opacity="0.35"/>
+              <line x1="58" y1="50" x2="80" y2="140" stroke="#5A3218" stroke-width="1.5" opacity="0.35"/>
+              <ellipse cx="40" cy="65" rx="37" ry="4.5" fill="#C84040" opacity="0.65"/>
+            </g>
+
+            <!-- Casa 5 pequena -->
+            <g transform="translate(455, 315)">
+              <rect x="0" y="35" width="55" height="65" fill="#F5F0E8"/>
+              <polygon points="0,35 27,5 55,35" fill="#8B1A1A"/>
+              <rect x="7" y="50" width="15" height="18" fill="#B8D4E8" opacity="0.8"/>
+              <rect x="33" y="50" width="15" height="18" fill="#B8D4E8" opacity="0.8"/>
+              <rect x="17" y="72" width="21" height="28" fill="#6B4226"/>
+              <ellipse cx="27" cy="48" rx="25" ry="3.5" fill="#C84040" opacity="0.6"/>
+            </g>
+
+            <!-- Pinheiros à frente -->
+            <g fill="#1C4A14" opacity="0.9">
+              <!-- Esq -->
+              <polygon points="20,420 35,370 50,420"/>
+              <polygon points="15,430 35,365 55,430"/>
+              <polygon points="10,450 35,380 60,450"/>
+              <!-- Dir -->
+              <polygon points="540,410 555,360 570,410"/>
+              <polygon points="535,425 555,355 575,425"/>
+              <polygon points="530,445 555,368 580,445"/>
+            </g>
+
+            <!-- Chão / gramado -->
+            <rect x="0" y="430" width="600" height="70" fill="#2D4A1E"/>
+            <ellipse cx="300" cy="430" rx="320" ry="20" fill="#3D6428"/>
+
+            <!-- Faixa de nuvem/névoa sobreposição creme na borda inf para fundir com o layout -->
+            <linearGradient id="fade-baixo" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#F5F0E8" stop-opacity="0"/>
+              <stop offset="100%" stop-color="#F5F0E8" stop-opacity="0.25"/>
+            </linearGradient>
+            <rect x="0" y="350" width="600" height="150" fill="url(#fade-baixo)"/>
+
+            <!-- Label cidade -->
+            <text x="20" y="480" font-family="Inter, sans-serif" font-size="11" fill="white" opacity="0.65" font-weight="500" letter-spacing="1.5">TREZE TÍLIAS · SC</text>
+          </svg>
+
+        </div>
       </div>
     </section>
 
-    <section class="atalhos" aria-label="Acesso rápido">
-      <a class="atalho" href="explorar.html?categoria=gastronomia">
-        <span class="atalho__rotulo">Gastronomia</span>
-      </a>
-      <a class="atalho" href="explorar.html?categoria=compras">
-        <span class="atalho__rotulo">Compras</span>
-      </a>
-      <a class="atalho" href="explorar.html?categoria=historico">
-        <span class="atalho__rotulo">História</span>
-      </a>
-      <a class="atalho" href="eventos.html">
-        <span class="atalho__rotulo">Eventos</span>
-      </a>
+    <!-- ===== ORNAMENTO DIVISOR ===== -->
+    <div class="divisor-ornamental" aria-hidden="true">
+      <div class="divisor-ornamental__linha"></div>
+      <!-- Edelweiss pequena central -->
+      <svg width="28" height="28" viewBox="0 0 48 48" fill="none">
+        <ellipse cx="24" cy="10" rx="4" ry="8" fill="#C8943A" opacity="0.7"/>
+        <ellipse cx="24" cy="10" rx="4" ry="8" fill="#C8943A" opacity="0.7" transform="rotate(60 24 24)"/>
+        <ellipse cx="24" cy="10" rx="4" ry="8" fill="#C8943A" opacity="0.7" transform="rotate(120 24 24)"/>
+        <ellipse cx="24" cy="10" rx="4" ry="8" fill="#C8943A" opacity="0.5" transform="rotate(30 24 24)"/>
+        <ellipse cx="24" cy="10" rx="4" ry="8" fill="#C8943A" opacity="0.5" transform="rotate(90 24 24)"/>
+        <ellipse cx="24" cy="10" rx="4" ry="8" fill="#C8943A" opacity="0.5" transform="rotate(150 24 24)"/>
+        <circle cx="24" cy="24" r="5.5" fill="#8B1A1A"/>
+        <circle cx="24" cy="24" r="3" fill="#C8943A"/>
+      </svg>
+      <div class="divisor-ornamental__linha"></div>
+    </div>
+
+    <!-- ===== CATEGORIAS ===== -->
+    <section class="secao-categorias" aria-label="Descubra o que te espera">
+      <div class="secao-categorias__cabecalho">
+        <h2 class="secao-categorias__titulo">Descubra o que te espera</h2>
+        <p class="secao-categorias__subtitulo">História, cultura e sabores da nossa Áustria brasileira.</p>
+      </div>
+
+      <div class="grade-categorias">
+
+        <!-- Gastronomia -->
+        <a class="card-categoria" href="explorar.html?categoria=gastronomia">
+          <div class="card-categoria__icone card-categoria__icone--gastronomia">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C8943A" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
+              <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+              <line x1="6" y1="1" x2="6" y2="4"/>
+              <line x1="10" y1="1" x2="10" y2="4"/>
+              <line x1="14" y1="1" x2="14" y2="4"/>
+            </svg>
+          </div>
+          <h3 class="card-categoria__titulo">Gastronomia</h3>
+          <p class="card-categoria__descricao">Cafés, confeitarias, queijos, vinhos e sabores que aquecem. A culinária tirolesa que virou tradição catarinense.</p>
+          <span class="card-categoria__link">Explorar <span aria-hidden="true">→</span></span>
+        </a>
+
+        <!-- História -->
+        <a class="card-categoria" href="explorar.html?categoria=historico">
+          <div class="card-categoria__icone card-categoria__icone--historia">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4A6B9E" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+          </div>
+          <h3 class="card-categoria__titulo">História</h3>
+          <p class="card-categoria__descricao">Museus, igrejas e histórias que preservam nossas origens austríacas. Uma imigração que moldou uma cidade inteira.</p>
+          <span class="card-categoria__link">Explorar <span aria-hidden="true">→</span></span>
+        </a>
+
+        <!-- Natureza -->
+        <a class="card-categoria" href="explorar.html?categoria=natureza">
+          <div class="card-categoria__icone card-categoria__icone--natureza">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2D7A3A" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 8C8 10 5.9 16.17 3.82 22h3.28a25.17 25.17 0 0 1 1.4-2.5"/>
+              <path d="M10.46 7.26C10.2 4.17 7.9 1.3 5 1a17.94 17.94 0 0 1 5.4 5.9"/>
+              <path d="M14 22a16 16 0 0 1 .47-4"/>
+              <path d="M8 22a16 16 0 0 1 .47-4"/>
+              <path d="M9 8c0 3.5-2 6-2 6s5.8-.5 8-5c2.3-4.5 0-8-4-8-3 0-4 1.5-4 1.5"/>
+            </svg>
+          </div>
+          <h3 class="card-categoria__titulo">Natureza</h3>
+          <p class="card-categoria__descricao">Montanhas, trilhas, lagos e ar puro para renovar as energias. A natureza do Alto Vale catarinense.</p>
+          <span class="card-categoria__link">Explorar <span aria-hidden="true">→</span></span>
+        </a>
+
+        <!-- Eventos -->
+        <a class="card-categoria" href="eventos.html">
+          <div class="card-categoria__icone card-categoria__icone--eventos">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8B3A2A" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 18V5l12-2v13"/>
+              <circle cx="6" cy="18" r="3"/>
+              <circle cx="18" cy="16" r="3"/>
+            </svg>
+          </div>
+          <h3 class="card-categoria__titulo">Eventos</h3>
+          <p class="card-categoria__descricao">Festivais, música típica e tradições que mantêm nossa cultura viva. Do Tirol Festival às celebrações do ano.</p>
+          <span class="card-categoria__link">Explorar <span aria-hidden="true">→</span></span>
+        </a>
+
+      </div>
     </section>
+
+    <!-- ===== CTA SELOS ===== -->
+    <div class="secao-selos">
+      <!-- Ícone de caderneta/passaporte -->
+      <svg class="secao-selos__icone" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+        <rect x="8" y="6" width="40" height="52" rx="5" fill="rgba(255,255,255,0.15)"/>
+        <rect x="12" y="10" width="32" height="44" rx="3" fill="rgba(255,255,255,0.08)"/>
+        <circle cx="32" cy="28" r="8" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/>
+        <!-- Edelweiss no livro -->
+        <ellipse cx="32" cy="22" rx="2.5" ry="4.5" fill="rgba(200,148,58,0.8)"/>
+        <ellipse cx="32" cy="22" rx="2.5" ry="4.5" fill="rgba(200,148,58,0.8)" transform="rotate(60 32 28)"/>
+        <ellipse cx="32" cy="22" rx="2.5" ry="4.5" fill="rgba(200,148,58,0.8)" transform="rotate(120 32 28)"/>
+        <circle cx="32" cy="28" r="2.5" fill="rgba(200,148,58,0.95)"/>
+        <!-- Linha carimbo -->
+        <line x1="14" y1="42" x2="30" y2="42" stroke="rgba(255,255,255,0.35)" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="14" y1="46" x2="26" y2="46" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" stroke-linecap="round"/>
+        <!-- Carimbo oval -->
+        <ellipse cx="44" cy="48" rx="8" ry="6" fill="none" stroke="rgba(200,148,58,0.7)" stroke-width="1.5"/>
+        <line x1="38" y1="48" x2="50" y2="48" stroke="rgba(200,148,58,0.5)" stroke-width="1"/>
+      </svg>
+
+      <div class="secao-selos__textos">
+        <h2 class="secao-selos__titulo">Colecione memórias</h2>
+        <p class="secao-selos__descricao">Visite lugares, acumule selos e descubra novas experiências em Treze Tílias.</p>
+      </div>
+
+      <a class="botao" href="perfil.html">Ver meus selos</a>
+    </div>
+
   </main>
 
   <footer class="rodape">
     <p>Linde Guia · um projeto a serviço de quem visita Treze Tílias.</p>
+    <svg class="rodape__ornamento" width="24" height="24" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+      <ellipse cx="24" cy="10" rx="4" ry="8" fill="#C8943A"/>
+      <ellipse cx="24" cy="10" rx="4" ry="8" fill="#C8943A" transform="rotate(60 24 24)"/>
+      <ellipse cx="24" cy="10" rx="4" ry="8" fill="#C8943A" transform="rotate(120 24 24)"/>
+      <ellipse cx="24" cy="10" rx="4" ry="8" fill="#C8943A" opacity="0.6" transform="rotate(30 24 24)"/>
+      <ellipse cx="24" cy="10" rx="4" ry="8" fill="#C8943A" opacity="0.6" transform="rotate(90 24 24)"/>
+      <ellipse cx="24" cy="10" rx="4" ry="8" fill="#C8943A" opacity="0.6" transform="rotate(150 24 24)"/>
+      <circle cx="24" cy="24" r="5" fill="#8B1A1A"/>
+      <circle cx="24" cy="24" r="3" fill="#C8943A"/>
+    </svg>
   </footer>
 
   <script type="module" src="firebase-config.js"></script>
