@@ -1,33 +1,20 @@
 /**
- * admin-auth.js
- * Linde Guia — Painel administrativo
- *
- * Proteção por senha simples (sem Firebase Auth). Suficiente para esta
- * fase, em que os dados não são ultra-sensíveis e o objetivo é só evitar
- * acesso casual ao link.
- *
- * IMPORTANTE: esta senha fica visível para qualquer pessoa que olhe o
- * código-fonte da página (já que é tudo client-side, sem servidor).
- * TROQUE o valor abaixo antes de subir para produção.
+ * admin-auth.js — js/admin/admin-auth.js
  */
-
 const SENHA_ADMIN = "281223";
 const CHAVE_SESSAO = "linde-guia:linden";
 
 function iniciarAuth() {
-  // Se já autenticou nesta sessão do navegador, pula a tela de senha
   if (sessionStorage.getItem(CHAVE_SESSAO) === "true") {
     liberarAcesso();
     return;
   }
-
-  const form = document.getElementById("form-senha");
+  const form      = document.getElementById("form-senha");
   const inputSenha = document.getElementById("input-senha");
-  const erroEl = document.getElementById("erro-senha");
+  const erroEl    = document.getElementById("erro-senha");
 
-  form.addEventListener("submit", (evento) => {
-    evento.preventDefault();
-
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
     if (inputSenha.value === SENHA_ADMIN) {
       sessionStorage.setItem(CHAVE_SESSAO, "true");
       liberarAcesso();
@@ -46,3 +33,4 @@ function liberarAcesso() {
 }
 
 document.addEventListener("DOMContentLoaded", iniciarAuth);
+
