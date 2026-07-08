@@ -1037,33 +1037,11 @@
     </div>
   </div>
 
-  <!-- Captura de erros visível na tela (sem DevTools) -->
-  <div id="erro-global" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#8B1A1A;color:#fff;padding:1rem;font-family:monospace;font-size:.75rem;z-index:9999;max-height:40vh;overflow:auto;white-space:pre-wrap;"></div>
-  <script>
-    function mostrarErroGlobal(msg) {
-      const el = document.getElementById("erro-global");
-      el.style.display = "block";
-      el.textContent += msg + "\n\n";
-    }
-    // capture:true é essencial aqui — sem isso, falha de CARREGAMENTO de
-    // arquivo (404, path errado) não é pega, só erro de EXECUÇÃO do código.
-    window.addEventListener("error", (e) => {
-      if (e.target && (e.target.tagName === "SCRIPT" || e.target.tagName === "LINK")) {
-        mostrarErroGlobal(`[FALHA AO CARREGAR ARQUIVO] ${e.target.src || e.target.href}`);
-      } else {
-        mostrarErroGlobal(`[ERRO] ${e.message}\n${e.filename}:${e.lineno}`);
-      }
-    }, true);
-    window.addEventListener("unhandledrejection", (e) => {
-      mostrarErroGlobal(`[PROMISE REJEITADA] ${e.reason?.message || e.reason}`);
-    });
-  </script>
-
   <!-- Caminhos corrigidos para nova estrutura -->
-  <script type="module" src="../js/core/firebase-config.js" onload="mostrarErroGlobal('[OK] firebase-config.js carregou')" onerror="mostrarErroGlobal('[FALHOU] firebase-config.js NÃO carregou (path errado?)')"></script>
-  <script type="module" src="../js/admin/admin-auth.js" onload="mostrarErroGlobal('[OK] admin-auth.js carregou')" onerror="mostrarErroGlobal('[FALHOU] admin-auth.js NÃO carregou (path errado?)')"></script>
-  <script type="module" src="../js/admin/admin-estatisticas.js" onload="mostrarErroGlobal('[OK] admin-estatisticas.js carregou')" onerror="mostrarErroGlobal('[FALHOU] admin-estatisticas.js NÃO carregou (path errado?)')"></script>
-  <script type="module" src="../js/admin/admin-locais.js" onload="mostrarErroGlobal('[OK] admin-locais.js carregou')" onerror="mostrarErroGlobal('[FALHOU] admin-locais.js NÃO carregou (path errado?)')"></script>
+  <script type="module" src="../js/core/firebase-config.js"></script>
+  <script type="module" src="../js/admin/admin-auth.js"></script>
+  <script type="module" src="../js/admin/admin-estatisticas.js"></script>
+  <script type="module" src="../js/admin/admin-locais.js"></script>
 
 </body>
 </html>
