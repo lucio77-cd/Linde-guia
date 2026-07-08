@@ -13,17 +13,15 @@
 // Crie esse documento manualmente no Console depois que o primeiro admin
 // fizer login pela primeira vez.
 //
-// ATENÇÃO — PENDÊNCIA CONHECIDA: admin-auth.js autentica o painel só por
-// senha local (sessionStorage), SEM Firebase Auth. A função ehAdmin()
-// abaixo exige request.auth != null. Resultado: com o admin-auth.js
-// atual, NENHUMA chamada do painel (admin-locais.js, leitura de
-// rotas_criadas/checkins em admin-estatisticas.js) passa pelas regras —
-// tudo cai em "permission-denied", mesmo com a senha certa. Isso só se
-// resolve fazendo o painel autenticar de verdade no Firebase Auth (ex:
-// signInAnonymously() + checar o uid contra usuarios_admin, ou login
-// com email/senha de admin) antes de chamar getDocs/addDoc/etc. Esse
-// arquivo de regras já está pronto para esse cenário — falta o admin
-// passar a logar de verdade.
+// RESOLVIDO (era uma pendencia conhecida): admin-auth.js agora loga de
+// verdade no Firebase Auth (signInWithEmailAndPassword, uma unica conta
+// e-mail/senha compartilhada - ver comentario de setup em admin-auth.js).
+// Antes, o painel so autenticava com senha local em sessionStorage, entao
+// toda chamada de admin-locais.js/admin-estatisticas.js caia em
+// "permission-denied" contra a funcao ehAdmin() abaixo, mesmo com a senha
+// certa. Passo que falta pra funcionar de ponta a ponta: criar a conta no
+// Firebase Console (Authentication) e o documento correspondente em
+// usuarios_admin com o UID dessa conta - ver checklist em admin-auth.js.
 
 rules_version = '2';
 
