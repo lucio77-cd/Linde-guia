@@ -1037,6 +1037,22 @@
     </div>
   </div>
 
+  <!-- Captura de erros visível na tela (sem DevTools) -->
+  <div id="erro-global" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#8B1A1A;color:#fff;padding:1rem;font-family:monospace;font-size:.75rem;z-index:9999;max-height:40vh;overflow:auto;white-space:pre-wrap;"></div>
+  <script>
+    function mostrarErroGlobal(msg) {
+      const el = document.getElementById("erro-global");
+      el.style.display = "block";
+      el.textContent += msg + "\n\n";
+    }
+    window.addEventListener("error", (e) => {
+      mostrarErroGlobal(`[ERRO] ${e.message}\n${e.filename}:${e.lineno}`);
+    });
+    window.addEventListener("unhandledrejection", (e) => {
+      mostrarErroGlobal(`[PROMISE REJEITADA] ${e.reason?.message || e.reason}`);
+    });
+  </script>
+
   <!-- Caminhos corrigidos para nova estrutura -->
   <script type="module" src="../js/core/firebase-config.js"></script>
   <script type="module" src="../js/admin/admin-auth.js"></script>
