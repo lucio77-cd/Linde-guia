@@ -11,6 +11,24 @@ const NOME_COLECAO = "pois";
 let poisCache = [];
 let categoriaAtiva = "todos";
 
+// O formulário usa abreviações nos botões (data-dia="seg", "ter"...), mas
+// motor-rota.js e o restante do app esperam o nome completo do dia como
+// chave (obterDiaSemana() devolve "segunda", "terca", etc). Sem esse mapa,
+// tudo que o admin salvasse ficava com chaves que o motor nunca lia —
+// o POI virava "sempre fechado" na prática, silenciosamente.
+const DIA_ABREV_PARA_COMPLETO = {
+  dom: "domingo",
+  seg: "segunda",
+  ter: "terca",
+  qua: "quarta",
+  qui: "quinta",
+  sex: "sexta",
+  sab: "sabado",
+};
+const DIA_COMPLETO_PARA_ABREV = Object.fromEntries(
+  Object.entries(DIA_ABREV_PARA_COMPLETO).map(([abrev, completo]) => [completo, abrev])
+);
+
 function iniciarAdminLocais() {
   document.addEventListener("linde-guia:admin-autenticado", carregarLocais);
   configurarAbas();
@@ -70,14 +88,48 @@ function configurarDiasSemana() {
   });
 }
 
+// Retorna as abreviacoes marcadas no formulario (ex: ["seg","ter"])
 function getDiasSelecionados() {
   return Array.from(document.querySelectorAll(".dia-toggle.ativo")).map((b) => b.dataset.dia);
 }
 
-function setDiasSelecionados(dias = []) {
+// Recebe abreviacoes (ex: ["seg","ter"]) e marca os botoes correspondentes
+function setDiasSelecionados(diasAbrev = []) {
   document.querySelectorAll(".dia-toggle").forEach((btn) => {
-    btn.classList.toggle("ativo", dias.includes(btn.dataset.dia));
+    btn.classList.toggle("ativo", diasAbrev.includes(btn.dataset.dia));
   });
+}
+
+function montarHorarioFuncionamento(diasAbrev, abertura, fechamento) {
+  if (!diasAbrev || diasAbrev.length === 0) return null;
+
+  const horario = {};
+  diasAbrev.forEach((abrev) => {
+    const nomeCompleto = DIA_ABREV_PARA_COMPLETO[abrev];
+    if (nomeCompleto) {
+      horario[nomeCompleto] = { abre: abertura, fecha: fechamento };
+    }
+  });
+  return horario;
+}
+
+function extrairHorarioParaFormulario(horarioFuncionamento) {
+  if (!horarioFuncionamento || typeof horarioFuncionamento !== "object") {
+    return { diasSelecionados: [], abertura: "08:00", fechamento: "18:00" };
+  }
+
+  const diasCompletos = Object.keys(horarioFuncionamento);
+  const diasSelecionados = diasCompletos
+    .map((completo) => DIA_COMPLETO_PARA_ABREV[completo])
+    .filter(Boolean);
+
+  const primeiraJanela = horarioFuncionamento[diasCompletos[0]] || {};
+
+  return {
+    diasSelecionados,
+    abertura: primeiraJanela.abre || "08:00",
+    fechamento: primeiraJanela.fecha || "18:00",
+  };
 }
 
 // ============================================================
@@ -164,11 +216,16 @@ function abrirModal(poi) {
     document.getElementById("campo-duracao").value   = poi.duracaoMediaVisitaMin ?? poi.duracao_media_visita_min ?? 30;
     document.getElementById("campo-status").value    = poi.statusOperacional || poi.status_operacional || "ativo";
 
-    // Horário
-    const h = poi.horarioFuncionamento || {};
-    setDiasSelecionados(h.dias || []);
-    document.getElementById("campo-hora-abertura").value   = h.abertura  || "08:00";
-    document.getElementById("campo-hora-fechamento").value = h.fechamento || "18:00";
+    // Horário — poi.horarioFuncionamento vem no formato { segunda: {abre,fecha}, ... }
+    // (mesmo formato que motor-rota.js e pois-seed.json usam). O formulário só
+    // suporta um único par abertura/fechamento pra todos os dias marcados, então
+    // usamos o primeiro dia presente como referência pros dois campos de hora.
+    const { diasSelecionados, abertura, fechamento } = extrairHorarioParaFormulario(
+      poi.horarioFuncionamento
+    );
+    setDiasSelecionados(diasSelecionados);
+    document.getElementById("campo-hora-abertura").value   = abertura;
+    document.getElementById("campo-hora-fechamento").value = fechamento;
 
     // Prioridade gastronômica
     grupoPrio.hidden = poi.categoria !== "gastronomia";
@@ -215,11 +272,11 @@ async function salvarLocal(e) {
     precoEstimado:        Number(document.getElementById("campo-preco").value),
     duracaoMediaVisitaMin: Number(document.getElementById("campo-duracao").value),
     statusOperacional:    document.getElementById("campo-status").value,
-    horarioFuncionamento: {
-      dias:       getDiasSelecionados(),
-      abertura:   document.getElementById("campo-hora-abertura").value,
-      fechamento: document.getElementById("campo-hora-fechamento").value,
-    },
+    horarioFuncionamento: montarHorarioFuncionamento(
+      getDiasSelecionados(),
+      document.getElementById("campo-hora-abertura").value,
+      document.getElementById("campo-hora-fechamento").value
+    ),
   };
 
   if (categoria === "gastronomia") {
