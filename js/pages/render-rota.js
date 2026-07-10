@@ -130,16 +130,7 @@ function criarParadaCard(parada, indice) {
     <span>${parada.precoEstimado > 0 ? "R$" + parada.precoEstimado : "Grátis"}</span>
   `;
 
-  const acoes = document.createElement("div");
-  acoes.className = "parada-card__acoes";
-  const linkDetalhe = document.createElement("a");
-  linkDetalhe.href = `ponto.html?id=${parada.id}`;
-  linkDetalhe.className = "parada-card__trocar";
-  linkDetalhe.style.color = "var(--cor-marca)";
-  linkDetalhe.textContent = "Ver detalhes";
-  acoes.appendChild(linkDetalhe);
-
-  corpo.append(horario, nome, detalhes, acoes);
+  corpo.append(horario, nome, detalhes);
   li.append(numero, corpo);
 
   return li;

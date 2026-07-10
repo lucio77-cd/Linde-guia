@@ -15,9 +15,10 @@
  * locais visitados, horário, dia).
  */
 
-import { recalcularRota } from "./motor-rota.js";
+import { recalcularRota } from "../engine/motor-rota.js";
 import { lerRotaDoStorage, salvarRotaNoStorage, mostrarEstado } from "./render-rota.js";
-import { registrarCheckin, registrarRoteiroFinalizado } from "./registro-data.js";
+import { registrarCheckin, registrarRoteiroFinalizado } from "../data/registro-data.js";
+import { salvarSeloLocal } from "../core/selos-local.js";
 
 const CHAVE_INDEX = "linde-guia:parada-atual-index";
 
@@ -49,6 +50,7 @@ function avancarRota(acao) {
 
   if (acao === "chegou" && paradaAtual) {
     registrarCheckin(paradaAtual, "manual"); // não bloqueia o fluxo, falha silenciosa
+    salvarSeloLocal(paradaAtual); // guarda o selo no aparelho do visitante (ver perfil.html)
   }
 
   obterPosicaoEHorarioAtuais()
