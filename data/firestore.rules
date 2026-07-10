@@ -59,14 +59,21 @@ service cloud.firestore {
       allow delete: if ehAdmin();
 
       // Validação mínima: nunca aceitar POI sem nome, com preço negativo,
-      // ou com status_operacional fora do conjunto permitido.
+      // ou com statusOperacional fora do conjunto permitido.
+      //
+      // CORRIGIDO: a validação antes checava os campos em snake_case
+      // (preco_estimado / status_operacional), mas nenhum código do
+      // projeto escreve nesse formato — admin-locais.js e o seed usam
+      // camelCase (precoEstimado / statusOperacional). Isso fazia a
+      // validação nunca disparar de verdade (o campo checado nunca
+      // existia com aquele nome, então a condição sempre passava).
       function poiTemCamposValidos() {
         let dados = request.resource.data;
         return dados.nome is string && dados.nome.size() > 0
           && dados.categoria is string
-          && (!('preco_estimado' in dados) || dados.preco_estimado is number && dados.preco_estimado >= 0)
-          && (!('status_operacional' in dados) ||
-              dados.status_operacional in ['ativo', 'sazonal', 'em_reforma', 'fechado_temporariamente']);
+          && (!('precoEstimado' in dados) || dados.precoEstimado is number && dados.precoEstimado >= 0)
+          && (!('statusOperacional' in dados) ||
+              dados.statusOperacional in ['ativo', 'sazonal', 'em_reforma', 'fechado_temporariamente']);
       }
     }
 
@@ -79,6 +86,11 @@ service cloud.firestore {
       allow create, update: if ehAdmin() && eventoTemCamposValidos();
       allow delete: if ehAdmin();
 
+      // ATENÇÃO: ainda não existe um admin-eventos.js confirmado no projeto.
+      // Quando ele for criado, usar os MESMOS nomes de campo checados aqui
+      // (data_inicio / data_fim, snake_case) — senão essa validação cai no
+      // mesmo problema que a de "pois" tinha (checar um nome de campo que
+      // o app nunca escreve, e por isso nunca validar nada de verdade).
       function eventoTemCamposValidos() {
         let dados = request.resource.data;
         return dados.nome is string && dados.nome.size() > 0
