@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Explorar — Linde Guia</title>
+  <meta name="description" content="Todos os lugares de Treze Tílias: gastronomia, história, natureza e eventos." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --borde: #8B1A1A;
+      --borde-escuro: #6B1212;
+      --dourado: #C8943A;
+      --dourado-claro: #E5B96A;
+      --creme: #F5F0E8;
+      --creme-medio: #EDE6D6;
+      --creme-escuro: #DDD4C0;
+      --verde: #2D4A1E;
+      --verde-claro: #3D6428;
+      --tinta: #1C1714;
+      --tinta-suave: #4A3F38;
+      --branco: #FDFAF6;
+
+      --fonte-display: 'Playfair Display', Georgia, serif;
+      --fonte-corpo: 'Inter', system-ui, sans-serif;
+
+      --raio: 12px;
+      --raio-grande: 20px;
+      --transicao: 0.22s ease;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--fonte-corpo);
+      background: var(--creme);
+      color: var(--tinta);
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+    img { display: block; max-width: 100%; }
+
+    .topo {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--branco);
+      border-bottom: 1px solid var(--creme-escuro);
+      padding: 0 clamp(1.25rem, 5vw, 3rem);
+      display: flex; align-items: center; justify-content: space-between;
+      height: 64px;
+    }
+    .topo__marca { display: flex; align-items: center; gap: 0.625rem; }
+    .topo__flor { width: 32px; height: 32px; flex-shrink: 0; }
+    .topo__nome { font-family: var(--fonte-display); font-weight: 700; font-size: 1.0625rem; color: var(--tinta); }
+    .topo__nav { display: flex; align-items: center; gap: 0.25rem; }
+    .topo__nav a {
+      font-size: 0.875rem; font-weight: 500; color: var(--tinta-suave);
+      padding: 0.5rem 0.875rem; border-radius: 8px;
+      transition: background var(--transicao), color var(--transicao);
+    }
+    .topo__nav a:hover { background: var(--creme-medio); color: var(--tinta); }
+    .topo__nav a.destaque { background: var(--borde); color: var(--branco); }
+    .topo__nav a.destaque:hover { background: var(--borde-escuro); }
+    @media (max-width: 720px) { .topo__nav a:not(.destaque) { display: none; } }
+
+    .cabecalho-pagina {
+      padding: 2.5rem clamp(1.25rem, 5vw, 3rem) 1.5rem;
+      text-align: center;
+    }
+    .cabecalho-pagina__titulo {
+      font-family: var(--fonte-display);
+      font-size: clamp(1.75rem, 4vw, 2.5rem);
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    .cabecalho-pagina__subtitulo { color: var(--tinta-suave); font-size: 0.9375rem; }
+
+    .filtros {
+      display: flex; flex-wrap: wrap; gap: 0.625rem; justify-content: center;
+      padding: 0 clamp(1.25rem, 5vw, 3rem) 2rem;
+    }
+    .filtro-chip {
+      font-size: 0.875rem; font-weight: 600; color: var(--tinta-suave);
+      background: var(--branco); border: 1.5px solid var(--creme-escuro);
+      padding: 0.5rem 1.125rem; border-radius: 100px; cursor: pointer;
+      transition: all var(--transicao);
+    }
+    .filtro-chip:hover { border-color: var(--borde); color: var(--tinta); }
+    .filtro-chip[aria-pressed="true"] { background: var(--borde); border-color: var(--borde); color: var(--branco); }
+
+    main { padding: 0 clamp(1.25rem, 5vw, 3rem) 4rem; max-width: 1100px; margin: 0 auto; }
+
+    .grade-locais {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .card-local {
+      background: var(--branco);
+      border: 1.5px solid var(--creme-escuro);
+      border-radius: var(--raio-grande);
+      padding: 1.5rem;
+      display: flex; flex-direction: column; gap: 0.625rem;
+      transition: border-color var(--transicao), box-shadow var(--transicao), transform var(--transicao);
+    }
+    .card-local:hover { border-color: var(--borde); box-shadow: 0 8px 32px rgba(139,26,26,0.1); transform: translateY(-2px); }
+
+    .card-local__topo { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+    .card-local__nome { font-family: var(--fonte-display); font-size: 1.125rem; font-weight: 600; }
+    .card-local__status {
+      font-size: 0.6875rem; font-weight: 600; padding: 0.25rem 0.625rem;
+      border-radius: 100px; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.03em;
+    }
+    .status--ativo { background: #E8F5EC; color: #2D7A3A; }
+    .status--sazonal { background: #FDF0E8; color: #C8943A; }
+    .status--em_reforma { background: #F5EBE8; color: #8B3A2A; }
+    .status--fechado_temporariamente { background: var(--creme-escuro); color: var(--tinta-suave); }
+
+    .card-local__descricao { font-size: 0.875rem; color: var(--tinta-suave); line-height: 1.5; }
+
+    .card-local__rodape { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 0.5rem; }
+    .tag-categoria {
+      font-size: 0.75rem; font-weight: 600; padding: 0.25rem 0.625rem; border-radius: 8px;
+      background: var(--creme-medio); color: var(--tinta-suave); text-transform: capitalize;
+    }
+    .card-local__detalhe { font-size: 0.8125rem; color: var(--tinta-suave); }
+
+    .estado-vazio, .estado-carregando {
+      text-align: center; padding: 4rem 1rem; color: var(--tinta-suave); font-size: 0.9375rem;
+    }
+
+    footer.rodape {
+      padding: 2rem clamp(1.25rem, 5vw, 3rem); text-align: center;
+      color: var(--tinta-suave); font-size: 0.8125rem;
+    }
+
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
+    :focus-visible { outline: 3px solid var(--borde); outline-offset: 3px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+  <header class="topo">
+    <a href="../index.html" class="topo__marca">
+      <svg class="topo__flor" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+        <ellipse cx="24" cy="10" rx="4" ry="8" fill="#C8943A" opacity="0.9"/>
+        <ellipse cx="24" cy="10" rx="4" ry="8" fill="#C8943A" opacity="0.9" transform="rotate(90 24 24)"/>
+        <circle cx="24" cy="24" r="6" fill="#8B1A1A"/>
+        <circle cx="24" cy="24" r="3.5" fill="#C8943A"/>
+      </svg>
+      <span class="topo__nome">Linde Guia</span>
+    </a>
+    <nav class="topo__nav" aria-label="Navegação principal">
+      <a href="explorar.html">Explorar</a>
+      <a href="eventos.html">Eventos</a>
+      <a href="perfil.html">Perfil</a>
+      <a href="roteiro.html" class="destaque">Criar roteiro</a>
+    </nav>
+  </header>
+
+  <div class="cabecalho-pagina">
+    <h1 class="cabecalho-pagina__titulo">Tudo o que tem na cidade</h1>
+    <p class="cabecalho-pagina__subtitulo">Gastronomia, história, natureza e mais — filtre pelo que te interessa.</p>
+  </div>
+
+  <div class="filtros" id="filtros-categoria" role="group" aria-label="Filtrar por categoria">
+    <button class="filtro-chip" data-cat="todas" aria-pressed="true">Todas</button>
+    <button class="filtro-chip" data-cat="gastronomia" aria-pressed="false">Gastronomia</button>
+    <button class="filtro-chip" data-cat="historico" aria-pressed="false">História</button>
+    <button class="filtro-chip" data-cat="natureza" aria-pressed="false">Natureza</button>
+    <button class="filtro-chip" data-cat="lazer" aria-pressed="false">Lazer</button>
+    <button class="filtro-chip" data-cat="compras" aria-pressed="false">Compras</button>
+  </div>
+
+  <main>
+    <div id="estado-carregando" class="estado-carregando">Carregando locais…</div>
+    <div id="estado-vazio" class="estado-vazio" hidden>Nenhum local encontrado nessa categoria ainda.</div>
+    <div class="grade-locais" id="grade-locais"></div>
+  </main>
+
+  <footer class="rodape">
+    <p>Linde Guia · um projeto a serviço de quem visita Treze Tílias.</p>
+  </footer>
+
+  <script type="module" src="../js/core/firebase-config.js"></script>
+  <script type="module" src="../js/pages/explorar.js"></script>
+</body>
+</html>

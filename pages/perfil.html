@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meus selos — Linde Guia</title>
+  <meta name="description" content="Os lugares que você já visitou em Treze Tílias." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --borde: #8B1A1A; --borde-escuro: #6B1212;
+      --dourado: #C8943A; --dourado-claro: #E5B96A;
+      --creme: #F5F0E8; --creme-medio: #EDE6D6; --creme-escuro: #DDD4C0;
+      --verde: #2D4A1E; --verde-claro: #3D6428;
+      --tinta: #1C1714; --tinta-suave: #4A3F38; --branco: #FDFAF6;
+      --fonte-display: 'Playfair Display', Georgia, serif;
+      --fonte-corpo: 'Inter', system-ui, sans-serif;
+      --raio: 12px; --raio-grande: 20px; --transicao: 0.22s ease;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--fonte-corpo); background: var(--creme); color: var(--tinta); -webkit-font-smoothing: antialiased; }
+    a { color: inherit; text-decoration: none; }
+
+    .topo {
+      position: sticky; top: 0; z-index: 100; background: var(--branco);
+      border-bottom: 1px solid var(--creme-escuro); padding: 0 clamp(1.25rem, 5vw, 3rem);
+      display: flex; align-items: center; justify-content: space-between; height: 64px;
+    }
+    .topo__marca { display: flex; align-items: center; gap: 0.625rem; }
+    .topo__flor { width: 32px; height: 32px; }
+    .topo__nome { font-family: var(--fonte-display); font-weight: 700; font-size: 1.0625rem; }
+    .topo__nav { display: flex; align-items: center; gap: 0.25rem; }
+    .topo__nav a { font-size: 0.875rem; font-weight: 500; color: var(--tinta-suave); padding: 0.5rem 0.875rem; border-radius: 8px; transition: background var(--transicao), color var(--transicao); }
+    .topo__nav a:hover { background: var(--creme-medio); color: var(--tinta); }
+    .topo__nav a.destaque { background: var(--borde); color: var(--branco); }
+    .topo__nav a.destaque:hover { background: var(--borde-escuro); }
+    @media (max-width: 720px) { .topo__nav a:not(.destaque) { display: none; } }
+
+    .faixa-topo {
+      background: var(--verde); color: var(--branco);
+      padding: 2.5rem clamp(1.25rem, 5vw, 3rem); text-align: center;
+    }
+    .faixa-topo__icone { width: 48px; height: 48px; margin: 0 auto 0.75rem; }
+    .faixa-topo__titulo { font-family: var(--fonte-display); font-size: clamp(1.5rem, 3.5vw, 2rem); font-weight: 700; margin-bottom: 0.375rem; }
+    .faixa-topo__subtitulo { font-size: 0.9375rem; opacity: 0.85; }
+
+    main { padding: 2.5rem clamp(1.25rem, 5vw, 3rem) 4rem; max-width: 780px; margin: 0 auto; }
+
+    .contador {
+      text-align: center; margin-bottom: 2rem;
+    }
+    .contador__numero { font-family: var(--fonte-display); font-size: 2.5rem; font-weight: 700; color: var(--borde); }
+    .contador__label { font-size: 0.875rem; color: var(--tinta-suave); }
+
+    .lista-selos { display: flex; flex-direction: column; gap: 0.75rem; }
+
+    .card-selo {
+      background: var(--branco); border: 1.5px solid var(--creme-escuro);
+      border-radius: var(--raio); padding: 1rem 1.25rem;
+      display: flex; align-items: center; gap: 1rem;
+    }
+    .card-selo__icone {
+      width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+      background: var(--creme-medio); display: flex; align-items: center; justify-content: center;
+      font-size: 1.125rem;
+    }
+    .card-selo__corpo { flex: 1; }
+    .card-selo__nome { font-weight: 600; font-size: 0.9375rem; }
+    .card-selo__data { font-size: 0.8125rem; color: var(--tinta-suave); }
+
+    .estado-vazio {
+      text-align: center; padding: 3rem 1.5rem;
+      background: var(--branco); border: 1.5px dashed var(--creme-escuro); border-radius: var(--raio-grande);
+    }
+    .estado-vazio__titulo { font-family: var(--fonte-display); font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; }
+    .estado-vazio__texto { color: var(--tinta-suave); font-size: 0.9375rem; margin-bottom: 1.5rem; }
+
+    .botao {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+      font-family: var(--fonte-corpo); font-size: 0.9375rem; font-weight: 600;
+      padding: 0.875rem 1.75rem; border-radius: var(--raio); border: 2px solid transparent;
+      cursor: pointer; transition: all var(--transicao);
+    }
+    .botao--principal { background: var(--borde); color: var(--branco); border-color: var(--borde); }
+    .botao--principal:hover { background: var(--borde-escuro); border-color: var(--borde-escuro); }
+
+    footer.rodape { padding: 2rem clamp(1.25rem, 5vw, 3rem); text-align: center; color: var(--tinta-suave); font-size: 0.8125rem; }
+
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
+    :focus-visible { outline: 3px solid var(--borde); outline-offset: 3px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+  <header class="topo">
+    <a href="../index.html" class="topo__marca">
+      <svg class="topo__flor" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+        <ellipse cx="24" cy="10" rx="4" ry="8" fill="#C8943A" opacity="0.9"/>
+        <ellipse cx="24" cy="10" rx="4" ry="8" fill="#C8943A" opacity="0.9" transform="rotate(90 24 24)"/>
+        <circle cx="24" cy="24" r="6" fill="#8B1A1A"/>
+        <circle cx="24" cy="24" r="3.5" fill="#C8943A"/>
+      </svg>
+      <span class="topo__nome">Linde Guia</span>
+    </a>
+    <nav class="topo__nav" aria-label="Navegação principal">
+      <a href="explorar.html">Explorar</a>
+      <a href="eventos.html">Eventos</a>
+      <a href="perfil.html">Perfil</a>
+      <a href="roteiro.html" class="destaque">Criar roteiro</a>
+    </nav>
+  </header>
+
+  <div class="faixa-topo">
+    <svg class="faixa-topo__icone" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+      <rect x="8" y="6" width="40" height="52" rx="5" fill="rgba(255,255,255,0.15)"/>
+      <rect x="12" y="10" width="32" height="44" rx="3" fill="rgba(255,255,255,0.08)"/>
+      <circle cx="32" cy="28" r="8" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/>
+      <ellipse cx="32" cy="22" rx="2.5" ry="4.5" fill="rgba(200,148,58,0.8)"/>
+      <circle cx="32" cy="28" r="2.5" fill="rgba(200,148,58,0.95)"/>
+    </svg>
+    <h1 class="faixa-topo__titulo">Meus selos</h1>
+    <p class="faixa-topo__subtitulo">Cada lugar visitado vira uma lembrança da sua passagem por Treze Tílias.</p>
+  </div>
+
+  <main>
+    <div class="contador">
+      <div class="contador__numero" id="contador-numero">0</div>
+      <div class="contador__label" id="contador-label">selos coletados</div>
+    </div>
+
+    <div id="estado-vazio" class="estado-vazio" hidden>
+      <p class="estado-vazio__titulo">Ainda não tem nenhum selo</p>
+      <p class="estado-vazio__texto">Crie um roteiro e marque "Cheguei" em cada parada pra começar a colecionar.</p>
+      <a class="botao botao--principal" href="roteiro.html">Criar meu roteiro</a>
+    </div>
+
+    <ul class="lista-selos" id="lista-selos"></ul>
+  </main>
+
+  <footer class="rodape">
+    <p>Linde Guia · os selos ficam guardados neste aparelho.</p>
+  </footer>
+
+  <script type="module" src="../js/pages/perfil.js"></script>
+</body>
+</html>

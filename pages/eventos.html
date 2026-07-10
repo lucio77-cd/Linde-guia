@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eventos — Linde Guia</title>
+  <meta name="description" content="Festivais, música típica e tradições em Treze Tílias." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --borde: #8B1A1A; --borde-escuro: #6B1212;
+      --dourado: #C8943A; --dourado-claro: #E5B96A;
+      --creme: #F5F0E8; --creme-medio: #EDE6D6; --creme-escuro: #DDD4C0;
+      --verde: #2D4A1E; --verde-claro: #3D6428;
+      --tinta: #1C1714; --tinta-suave: #4A3F38; --branco: #FDFAF6;
+      --fonte-display: 'Playfair Display', Georgia, serif;
+      --fonte-corpo: 'Inter', system-ui, sans-serif;
+      --raio: 12px; --raio-grande: 20px; --transicao: 0.22s ease;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--fonte-corpo); background: var(--creme); color: var(--tinta); -webkit-font-smoothing: antialiased; }
+    a { color: inherit; text-decoration: none; }
+
+    .topo {
+      position: sticky; top: 0; z-index: 100; background: var(--branco);
+      border-bottom: 1px solid var(--creme-escuro); padding: 0 clamp(1.25rem, 5vw, 3rem);
+      display: flex; align-items: center; justify-content: space-between; height: 64px;
+    }
+    .topo__marca { display: flex; align-items: center; gap: 0.625rem; }
+    .topo__flor { width: 32px; height: 32px; }
+    .topo__nome { font-family: var(--fonte-display); font-weight: 700; font-size: 1.0625rem; }
+    .topo__nav { display: flex; align-items: center; gap: 0.25rem; }
+    .topo__nav a { font-size: 0.875rem; font-weight: 500; color: var(--tinta-suave); padding: 0.5rem 0.875rem; border-radius: 8px; transition: background var(--transicao), color var(--transicao); }
+    .topo__nav a:hover { background: var(--creme-medio); color: var(--tinta); }
+    .topo__nav a.destaque { background: var(--borde); color: var(--branco); }
+    .topo__nav a.destaque:hover { background: var(--borde-escuro); }
+    @media (max-width: 720px) { .topo__nav a:not(.destaque) { display: none; } }
+
+    .cabecalho-pagina { padding: 2.5rem clamp(1.25rem, 5vw, 3rem) 2rem; text-align: center; }
+    .cabecalho-pagina__titulo { font-family: var(--fonte-display); font-size: clamp(1.75rem, 4vw, 2.5rem); font-weight: 700; margin-bottom: 0.5rem; }
+    .cabecalho-pagina__subtitulo { color: var(--tinta-suave); font-size: 0.9375rem; }
+
+    main { padding: 0 clamp(1.25rem, 5vw, 3rem) 4rem; max-width: 780px; margin: 0 auto; }
+
+    .lista-eventos { display: flex; flex-direction: column; gap: 1rem; }
+
+    .card-evento {
+      background: var(--branco); border: 1.5px solid var(--creme-escuro);
+      border-radius: var(--raio-grande); padding: 1.5rem;
+      display: flex; gap: 1.25rem; align-items: flex-start;
+      transition: border-color var(--transicao), box-shadow var(--transicao);
+    }
+    .card-evento:hover { border-color: var(--dourado); box-shadow: 0 8px 32px rgba(200,148,58,0.14); }
+    .card-evento--ativo { border-color: var(--verde); background: #F5FAF3; }
+
+    .card-evento__data {
+      flex-shrink: 0; text-align: center; background: var(--creme-medio);
+      border-radius: var(--raio); padding: 0.625rem 0.875rem; min-width: 60px;
+    }
+    .card-evento__dia { font-family: var(--fonte-display); font-size: 1.375rem; font-weight: 700; line-height: 1; }
+    .card-evento__mes { font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tinta-suave); }
+
+    .card-evento__corpo { flex: 1; }
+    .card-evento__selo {
+      display: inline-block; font-size: 0.6875rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--verde-claro); margin-bottom: 0.375rem;
+    }
+    .card-evento__nome { font-family: var(--fonte-display); font-size: 1.1875rem; font-weight: 600; margin-bottom: 0.375rem; }
+    .card-evento__descricao { font-size: 0.875rem; color: var(--tinta-suave); line-height: 1.5; }
+
+    .estado-vazio, .estado-carregando { text-align: center; padding: 4rem 1rem; color: var(--tinta-suave); font-size: 0.9375rem; }
+
+    footer.rodape { padding: 2rem clamp(1.25rem, 5vw, 3rem); text-align: center; color: var(--tinta-suave); font-size: 0.8125rem; }
+
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
+    :focus-visible { outline: 3px solid var(--borde); outline-offset: 3px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+  <header class="topo">
+    <a href="../index.html" class="topo__marca">
+      <svg class="topo__flor" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+        <ellipse cx="24" cy="10" rx="4" ry="8" fill="#C8943A" opacity="0.9"/>
+        <ellipse cx="24" cy="10" rx="4" ry="8" fill="#C8943A" opacity="0.9" transform="rotate(90 24 24)"/>
+        <circle cx="24" cy="24" r="6" fill="#8B1A1A"/>
+        <circle cx="24" cy="24" r="3.5" fill="#C8943A"/>
+      </svg>
+      <span class="topo__nome">Linde Guia</span>
+    </a>
+    <nav class="topo__nav" aria-label="Navegação principal">
+      <a href="explorar.html">Explorar</a>
+      <a href="eventos.html">Eventos</a>
+      <a href="perfil.html">Perfil</a>
+      <a href="roteiro.html" class="destaque">Criar roteiro</a>
+    </nav>
+  </header>
+
+  <div class="cabecalho-pagina">
+    <h1 class="cabecalho-pagina__titulo">Eventos em Treze Tílias</h1>
+    <p class="cabecalho-pagina__subtitulo">Festivais, música típica e as tradições que mantêm nossa cultura viva.</p>
+  </div>
+
+  <main>
+    <div id="estado-carregando" class="estado-carregando">Carregando eventos…</div>
+    <div id="estado-vazio" class="estado-vazio" hidden>Nenhum evento cadastrado no momento. Volte em breve!</div>
+    <ul class="lista-eventos" id="lista-eventos"></ul>
+  </main>
+
+  <footer class="rodape">
+    <p>Linde Guia · um projeto a serviço de quem visita Treze Tílias.</p>
+  </footer>
+
+  <script type="module" src="../js/core/firebase-config.js"></script>
+  <script type="module" src="../js/pages/eventos.js"></script>
+</body>
+</html>
