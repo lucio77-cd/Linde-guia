@@ -12,7 +12,7 @@
  * Falha aqui é só log no console, silenciosa para a experiência do usuário.
  */
 
-import { db } from "./firebase-config.js";
+import { db } from "../core/firebase-config.js";
 import {
   collection,
   addDoc,
