@@ -6,7 +6,6 @@
     { "source": "/eventos",           "destination": "/pages/eventos.html" },
     { "source": "/perfil",            "destination": "/pages/perfil.html" },
     { "source": "/admin",             "destination": "/pages/admin.html" },
-    { "source": "/diagnostico",       "destination": "/pages/diagnostico.html" },
     { "source": "/corrigir-localizacao", "destination": "/pages/corrigir-localizacao.html" }
   ]
 }
