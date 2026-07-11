@@ -25,11 +25,13 @@ import { registrarRotaCriada }         from "../data/registro-data.js";
 const estado = {
   tempoDisponivelMin: 240,      // padrão = "Meio dia"
   horarioInicio: null,
+  horarioFim: null,             // opcional — "até que horas quero terminar"
   localizacaoPartida: null,
   enderecoManual: "",
   orcamentoFaixa: "moderado",   // padrão = "Moderado"
   composicaoGrupo: null,
   interesses: [],
+  refeicoesDesejadas: [],       // subconjunto de: cafeDaManha, almoco, tarde, janta
 };
 
 // ============================================================
@@ -74,11 +76,13 @@ function configurarChipsSelecaoMultipla() {
     chip.addEventListener("click", () => {
       const pressionado = chip.getAttribute("aria-pressed") === "true";
       chip.setAttribute("aria-pressed", String(!pressionado));
+      const campo = chip.dataset.campo;
       const valor = chip.dataset.valor;
+      if (!Array.isArray(estado[campo])) estado[campo] = [];
       if (!pressionado) {
-        estado.interesses.push(valor);
+        estado[campo].push(valor);
       } else {
-        estado.interesses = estado.interesses.filter((v) => v !== valor);
+        estado[campo] = estado[campo].filter((v) => v !== valor);
       }
     });
   });
@@ -109,6 +113,13 @@ function configurarHorarioPadrao() {
   input.addEventListener("change", () => {
     estado.horarioInicio = construirDataHoraDeHoje(input.value);
   });
+
+  const inputFim = document.getElementById("input-horario-fim");
+  if (inputFim) {
+    inputFim.addEventListener("change", () => {
+      estado.horarioFim = inputFim.value ? construirDataHoraDeHoje(inputFim.value) : null;
+    });
+  }
 }
 
 function construirDataHoraDeHoje(horaTexto) {
@@ -291,6 +302,9 @@ function validarEstado() {
   if (!estado.localizacaoPartida && !estado.enderecoManual.trim()) {
     return "A gente precisa saber de onde você está partindo — usa o GPS ou digita um endereço.";
   }
+  if (estado.horarioFim && new Date(estado.horarioFim).getTime() <= new Date(estado.horarioInicio).getTime()) {
+    return "O horário de término precisa ser depois do horário de início.";
+  }
   return null;
 }
 
@@ -308,14 +322,29 @@ function montarPerfilBusca() {
     localizacaoPartida = CENTRO_TREZE_TILIAS;
   }
 
+  // Se a pessoa informou até que horas quer terminar, o tempo disponível
+  // real é o menor entre o que ela escolheu nos chips (01) e a diferença
+  // entre início e fim — nunca deixa a rota estourar o horário de término.
+  let tempoDisponivelMin = estado.tempoDisponivelMin;
+  if (estado.horarioFim) {
+    const diffMin = Math.round(
+      (new Date(estado.horarioFim).getTime() - new Date(estado.horarioInicio).getTime()) / 60000
+    );
+    if (diffMin > 0) {
+      tempoDisponivelMin = Math.min(tempoDisponivelMin, diffMin);
+    }
+  }
+
   return {
     data: estado.horarioInicio,
     horarioInicio: estado.horarioInicio,
-    tempoDisponivelMin: estado.tempoDisponivelMin,
+    horarioFim: estado.horarioFim,
+    tempoDisponivelMin,
     localizacaoPartida,
     orcamentoFaixa: estado.orcamentoFaixa,
     composicaoGrupo: estado.composicaoGrupo,
     interesses: estado.interesses,
+    refeicoesDesejadas: estado.refeicoesDesejadas,
   };
 }
 
