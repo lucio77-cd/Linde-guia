@@ -11,29 +11,26 @@ const NOME_COLECAO = "pois";
 let poisCache = [];
 let categoriaAtiva = "todos";
 
-// O formulário usa abreviações nos botões (data-dia="seg", "ter"...), mas
-// motor-rota.js e o restante do app esperam o nome completo do dia como
-// chave (obterDiaSemana() devolve "segunda", "terca", etc). Sem esse mapa,
-// tudo que o admin salvasse ficava com chaves que o motor nunca lia —
-// o POI virava "sempre fechado" na prática, silenciosamente.
-const DIA_ABREV_PARA_COMPLETO = {
-  dom: "domingo",
-  seg: "segunda",
-  ter: "terca",
-  qua: "quarta",
-  qui: "quinta",
-  sex: "sexta",
-  sab: "sabado",
-};
-const DIA_COMPLETO_PARA_ABREV = Object.fromEntries(
-  Object.entries(DIA_ABREV_PARA_COMPLETO).map(([abrev, completo]) => [completo, abrev])
-);
+// Nomes completos na ordem da semana (domingo primeiro), formato usado por
+// motor-rota.js (obterDiaSemana) e por pois-seed.json.
+const DIAS_SEMANA = [
+  { chave: "domingo", label: "Domingo" },
+  { chave: "segunda", label: "Segunda" },
+  { chave: "terca",   label: "Terça" },
+  { chave: "quarta",  label: "Quarta" },
+  { chave: "quinta",  label: "Quinta" },
+  { chave: "sexta",   label: "Sexta" },
+  { chave: "sabado",  label: "Sábado" },
+];
+
+const REFEICOES = ["cafeDaManha", "almoco", "tarde", "janta"];
 
 function iniciarAdminLocais() {
   document.addEventListener("linde-guia:admin-autenticado", carregarLocais);
   configurarAbas();
   configurarFiltros();
-  configurarDiasSemana();
+  montarLinhasHorarioSemana();
+  configurarAtalhosHorario();
   configurarPrioridadeCondicional();
 
   document.getElementById("btn-novo-local").addEventListener("click", () => abrirModal(null));
@@ -80,66 +77,137 @@ function configurarFiltros() {
 }
 
 // ============================================================
-// DIAS DA SEMANA (toggle visual)
+// HORÁRIO POR DIA DA SEMANA — cada dia com seu próprio abre/fecha
 // ============================================================
-function configurarDiasSemana() {
-  document.querySelectorAll(".dia-toggle").forEach((btn) => {
-    btn.addEventListener("click", () => btn.classList.toggle("ativo"));
+// Monta as 7 linhas uma única vez (na inicialização da página, não a cada
+// abertura do modal) — abrirModal() só preenche os valores.
+function montarLinhasHorarioSemana() {
+  const container = document.getElementById("horarios-semana");
+  container.innerHTML = "";
+
+  DIAS_SEMANA.forEach(({ chave, label }) => {
+    const linha = document.createElement("div");
+    linha.className = "dia-linha";
+    linha.dataset.dia = chave;
+    linha.innerHTML = `
+      <label class="dia-linha__toggle">
+        <input type="checkbox" class="dia-linha__aberto" checked />
+        <span class="dia-linha__nome">${label}</span>
+      </label>
+      <input type="time" class="dia-linha__abre" value="08:00" />
+      <input type="time" class="dia-linha__fecha" value="18:00" />
+    `;
+    const checkbox = linha.querySelector(".dia-linha__aberto");
+    const inputAbre = linha.querySelector(".dia-linha__abre");
+    const inputFecha = linha.querySelector(".dia-linha__fecha");
+
+    checkbox.addEventListener("change", () => {
+      const aberto = checkbox.checked;
+      inputAbre.disabled = !aberto;
+      inputFecha.disabled = !aberto;
+      linha.classList.toggle("dia-linha--fechado", !aberto);
+    });
+
+    container.appendChild(linha);
   });
 }
 
-// Retorna as abreviacoes marcadas no formulario (ex: ["seg","ter"])
-function getDiasSelecionados() {
-  return Array.from(document.querySelectorAll(".dia-toggle.ativo")).map((b) => b.dataset.dia);
-}
-
-// Recebe abreviacoes (ex: ["seg","ter"]) e marca os botoes correspondentes
-function setDiasSelecionados(diasAbrev = []) {
-  document.querySelectorAll(".dia-toggle").forEach((btn) => {
-    btn.classList.toggle("ativo", diasAbrev.includes(btn.dataset.dia));
-  });
-}
-
-function montarHorarioFuncionamento(diasAbrev, abertura, fechamento) {
-  if (!diasAbrev || diasAbrev.length === 0) return null;
-
+// Lê as 7 linhas do formulário e monta o objeto que motor-rota.js espera:
+// { segunda: {abre, fecha, fechado}, terca: {...}, ... } — sempre com as
+// 7 chaves presentes (mesmo os dias fechados), pra facilitar reabrir e
+// editar depois sem perder o horário que já estava configurado ali.
+function lerHorarioSemanaDoFormulario() {
   const horario = {};
-  diasAbrev.forEach((abrev) => {
-    const nomeCompleto = DIA_ABREV_PARA_COMPLETO[abrev];
-    if (nomeCompleto) {
-      horario[nomeCompleto] = { abre: abertura, fecha: fechamento };
-    }
+  document.querySelectorAll(".dia-linha").forEach((linha) => {
+    const dia = linha.dataset.dia;
+    const aberto = linha.querySelector(".dia-linha__aberto").checked;
+    horario[dia] = {
+      abre: linha.querySelector(".dia-linha__abre").value || "08:00",
+      fecha: linha.querySelector(".dia-linha__fecha").value || "18:00",
+      fechado: !aberto,
+    };
   });
   return horario;
 }
 
-function extrairHorarioParaFormulario(horarioFuncionamento) {
-  if (!horarioFuncionamento || typeof horarioFuncionamento !== "object") {
-    return { diasSelecionados: [], abertura: "08:00", fechamento: "18:00" };
-  }
+// Preenche as 7 linhas a partir do horarioFuncionamento salvo no Firestore.
+// Dia ausente no dado salvo = tratado como fechado (mesma regra que
+// motor-rota.js usa: `if (!janela || janela.fechado) return false`).
+function preencherHorarioSemanaNoFormulario(horarioFuncionamento) {
+  const dados = horarioFuncionamento || {};
+  document.querySelectorAll(".dia-linha").forEach((linha) => {
+    const dia = linha.dataset.dia;
+    const janela = dados[dia];
+    const aberto = !!janela && !janela.fechado;
 
-  const diasCompletos = Object.keys(horarioFuncionamento);
-  const diasSelecionados = diasCompletos
-    .map((completo) => DIA_COMPLETO_PARA_ABREV[completo])
-    .filter(Boolean);
+    const checkbox = linha.querySelector(".dia-linha__aberto");
+    const inputAbre = linha.querySelector(".dia-linha__abre");
+    const inputFecha = linha.querySelector(".dia-linha__fecha");
 
-  const primeiraJanela = horarioFuncionamento[diasCompletos[0]] || {};
+    checkbox.checked = aberto;
+    inputAbre.value = janela?.abre || "08:00";
+    inputFecha.value = janela?.fecha || "18:00";
+    inputAbre.disabled = !aberto;
+    inputFecha.disabled = !aberto;
+    linha.classList.toggle("dia-linha--fechado", !aberto);
+  });
+}
 
-  return {
-    diasSelecionados,
-    abertura: primeiraJanela.abre || "08:00",
-    fechamento: primeiraJanela.fecha || "18:00",
-  };
+// Atalhos de preenchimento rápido — o caso mais comum é "segunda a sexta
+// igual, fim de semana diferente", então copiar em vez de digitar 7 vezes.
+function configurarAtalhosHorario() {
+  document.getElementById("btn-copiar-semana").addEventListener("click", () => {
+    const segunda = document.querySelector('.dia-linha[data-dia="segunda"]');
+    const abre = segunda.querySelector(".dia-linha__abre").value;
+    const fecha = segunda.querySelector(".dia-linha__fecha").value;
+    ["terca", "quarta", "quinta", "sexta"].forEach((dia) => {
+      const linha = document.querySelector(`.dia-linha[data-dia="${dia}"]`);
+      linha.querySelector(".dia-linha__aberto").checked = true;
+      linha.querySelector(".dia-linha__abre").value = abre;
+      linha.querySelector(".dia-linha__abre").disabled = false;
+      linha.querySelector(".dia-linha__fecha").value = fecha;
+      linha.querySelector(".dia-linha__fecha").disabled = false;
+      linha.classList.remove("dia-linha--fechado");
+    });
+  });
+
+  document.getElementById("btn-copiar-fds").addEventListener("click", () => {
+    const sabado = document.querySelector('.dia-linha[data-dia="sabado"]');
+    const domingo = document.querySelector('.dia-linha[data-dia="domingo"]');
+    domingo.querySelector(".dia-linha__aberto").checked = sabado.querySelector(".dia-linha__aberto").checked;
+    domingo.querySelector(".dia-linha__abre").value = sabado.querySelector(".dia-linha__abre").value;
+    domingo.querySelector(".dia-linha__fecha").value = sabado.querySelector(".dia-linha__fecha").value;
+    domingo.querySelector(".dia-linha__abre").disabled = !sabado.querySelector(".dia-linha__aberto").checked;
+    domingo.querySelector(".dia-linha__fecha").disabled = !sabado.querySelector(".dia-linha__aberto").checked;
+    domingo.classList.toggle("dia-linha--fechado", !sabado.querySelector(".dia-linha__aberto").checked);
+  });
 }
 
 // ============================================================
-// PRIORIDADE GASTRONÔMICA — aparece só para gastronomia
+// REFEIÇÕES SERVIDAS — aparece só para gastronomia
+// ============================================================
+function lerRefeicoesServidasDoFormulario() {
+  return Array.from(document.querySelectorAll('#refeicoes-servidas input[type="checkbox"]:checked'))
+    .map((el) => el.value);
+}
+
+function preencherRefeicoesServidasNoFormulario(refeicoesServidas = []) {
+  document.querySelectorAll('#refeicoes-servidas input[type="checkbox"]').forEach((el) => {
+    el.checked = refeicoesServidas.includes(el.value);
+  });
+}
+
+// ============================================================
+// PRIORIDADE GASTRONÔMICA + REFEIÇÕES SERVIDAS — só para gastronomia
 // ============================================================
 function configurarPrioridadeCondicional() {
   const select = document.getElementById("campo-categoria");
-  const grupo  = document.getElementById("grupo-prioridade-gastronomica");
+  const grupoPrioridade = document.getElementById("grupo-prioridade-gastronomica");
+  const grupoRefeicoes  = document.getElementById("grupo-refeicoes-servidas");
   select.addEventListener("change", () => {
-    grupo.hidden = select.value !== "gastronomia";
+    const ehGastronomia = select.value === "gastronomia";
+    grupoPrioridade.hidden = !ehGastronomia;
+    grupoRefeicoes.hidden  = !ehGastronomia;
   });
 }
 
@@ -201,6 +269,7 @@ function abrirModal(poi) {
   const btnExcl  = document.getElementById("btn-excluir-local");
   const erroEl   = document.getElementById("erro-form-local");
   const grupoPrio = document.getElementById("grupo-prioridade-gastronomica");
+  const grupoRefeicoesEl = document.getElementById("grupo-refeicoes-servidas");
 
   erroEl.hidden = true;
 
@@ -216,19 +285,15 @@ function abrirModal(poi) {
     document.getElementById("campo-duracao").value   = poi.duracaoMediaVisitaMin ?? poi.duracao_media_visita_min ?? 30;
     document.getElementById("campo-status").value    = poi.statusOperacional || poi.status_operacional || "ativo";
 
-    // Horário — poi.horarioFuncionamento vem no formato { segunda: {abre,fecha}, ... }
-    // (mesmo formato que motor-rota.js e pois-seed.json usam). O formulário só
-    // suporta um único par abertura/fechamento pra todos os dias marcados, então
-    // usamos o primeiro dia presente como referência pros dois campos de hora.
-    const { diasSelecionados, abertura, fechamento } = extrairHorarioParaFormulario(
-      poi.horarioFuncionamento
-    );
-    setDiasSelecionados(diasSelecionados);
-    document.getElementById("campo-hora-abertura").value   = abertura;
-    document.getElementById("campo-hora-fechamento").value = fechamento;
+    // Horário — poi.horarioFuncionamento vem no formato
+    // { segunda: {abre,fecha,fechado}, terca: {...}, ... }, com cada dia
+    // podendo ter um horário diferente (ex: sábado/domingo abrindo mais cedo).
+    preencherHorarioSemanaNoFormulario(poi.horarioFuncionamento);
+    preencherRefeicoesServidasNoFormulario(poi.refeicoesServidas || []);
 
-    // Prioridade gastronômica
+    // Prioridade gastronômica + refeições servidas
     grupoPrio.hidden = poi.categoria !== "gastronomia";
+    grupoRefeicoesEl.hidden = poi.categoria !== "gastronomia";
     document.getElementById("campo-prioridade-gastronomica").value = poi.prioridadeGastronomica ?? 0;
 
     btnExcl.hidden = false;
@@ -238,8 +303,10 @@ function abrirModal(poi) {
     document.getElementById("campo-id").value      = "";
     document.getElementById("campo-preco").value   = 0;
     document.getElementById("campo-duracao").value = 30;
-    setDiasSelecionados([]);
+    preencherHorarioSemanaNoFormulario(null);
+    preencherRefeicoesServidasNoFormulario([]);
     grupoPrio.hidden = true;
+    grupoRefeicoesEl.hidden = true;
     btnExcl.hidden = true;
   }
 
@@ -272,14 +339,11 @@ async function salvarLocal(e) {
     precoEstimado:        Number(document.getElementById("campo-preco").value),
     duracaoMediaVisitaMin: Number(document.getElementById("campo-duracao").value),
     statusOperacional:    document.getElementById("campo-status").value,
-    horarioFuncionamento: montarHorarioFuncionamento(
-      getDiasSelecionados(),
-      document.getElementById("campo-hora-abertura").value,
-      document.getElementById("campo-hora-fechamento").value
-    ),
+    horarioFuncionamento: lerHorarioSemanaDoFormulario(),
   };
 
   if (categoria === "gastronomia") {
+    dados.refeicoesServidas = lerRefeicoesServidasDoFormulario();
     dados.prioridadeGastronomica = Number(document.getElementById("campo-prioridade-gastronomica").value);
   }
 
