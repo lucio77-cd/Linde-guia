@@ -198,6 +198,20 @@ function preencherRefeicoesServidasNoFormulario(refeicoesServidas = []) {
 }
 
 // ============================================================
+// TAGS DE INTERESSE — disponível pra qualquer categoria, não só gastronomia
+// ============================================================
+function lerTagsDeInteresseDoFormulario() {
+  return Array.from(document.querySelectorAll('#tags-interesse input[type="checkbox"]:checked'))
+    .map((el) => el.value);
+}
+
+function preencherTagsDeInteresseNoFormulario(tagsDeInteresse = []) {
+  document.querySelectorAll('#tags-interesse input[type="checkbox"]').forEach((el) => {
+    el.checked = tagsDeInteresse.includes(el.value);
+  });
+}
+
+// ============================================================
 // PRIORIDADE GASTRONÔMICA + REFEIÇÕES SERVIDAS — só para gastronomia
 // ============================================================
 function configurarPrioridadeCondicional() {
@@ -290,6 +304,7 @@ function abrirModal(poi) {
     // podendo ter um horário diferente (ex: sábado/domingo abrindo mais cedo).
     preencherHorarioSemanaNoFormulario(poi.horarioFuncionamento);
     preencherRefeicoesServidasNoFormulario(poi.refeicoesServidas || []);
+    preencherTagsDeInteresseNoFormulario(poi.tagsDeInteresse || []);
 
     // Prioridade gastronômica + refeições servidas
     grupoPrio.hidden = poi.categoria !== "gastronomia";
@@ -305,6 +320,7 @@ function abrirModal(poi) {
     document.getElementById("campo-duracao").value = 30;
     preencherHorarioSemanaNoFormulario(null);
     preencherRefeicoesServidasNoFormulario([]);
+    preencherTagsDeInteresseNoFormulario([]);
     grupoPrio.hidden = true;
     grupoRefeicoesEl.hidden = true;
     btnExcl.hidden = true;
@@ -340,6 +356,7 @@ async function salvarLocal(e) {
     duracaoMediaVisitaMin: Number(document.getElementById("campo-duracao").value),
     statusOperacional:    document.getElementById("campo-status").value,
     horarioFuncionamento: lerHorarioSemanaDoFormulario(),
+    tagsDeInteresse:      lerTagsDeInteresseDoFormulario(),
   };
 
   if (categoria === "gastronomia") {
