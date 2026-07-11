@@ -40,6 +40,20 @@ const MARGEM_SEGURANCA_MIN = 10; // minutos de "colchão" entre paradas, pra nã
 // dentro do orçamento, cabe no tempo).
 const NIVEL_MINIMO_GARANTIA_GASTRONOMICA = 4;
 
+// Janelas de horário aproximadas de cada refeição — usadas para casar o que
+// o turista marcou no formulário ("quero almoço no roteiro") com o horário
+// em que o restaurante realmente serve aquela refeição. Isso é uma
+// aproximação por relógio (mesmo padrão já usado em estaAbertoNoHorario,
+// que também julga pelo horarioInicio informado, não pelo horário real de
+// chegada em cada parada — recalcularRota corrige isso depois, ver
+// calcularERevalidarAteEstabilizar).
+const REFEICAO_JANELAS = {
+  cafeDaManha: { inicio: "06:00", fim: "10:30" },
+  almoco:      { inicio: "11:00", fim: "14:30" },
+  tarde:       { inicio: "14:30", fim: "18:00" },
+  janta:       { inicio: "18:00", fim: "22:30" },
+};
+
 // ============================================================
 // FUNÇÃO PRINCIPAL — chamada pela tela "Criar Roteiro"
 // ============================================================
@@ -52,11 +66,14 @@ function gerarRota(pois, eventos, perfilBusca) {
     return rotaVazia(perfilBusca);
   }
 
-  const experienciaGarantida = escolherExperienciaGastronomicaGarantida(candidatosViaveis);
+  const experienciasGarantidas = escolherExperienciasGastronomicasGarantidas(
+    candidatosViaveis,
+    perfilBusca.refeicoesDesejadas
+  );
 
   const candidatosPontuados = pontuarCandidatos(candidatosViaveis, perfilBusca);
 
-  const rota = montarSequencia(candidatosPontuados, perfilBusca, experienciaGarantida);
+  const rota = montarSequencia(candidatosPontuados, perfilBusca, experienciasGarantidas);
 
   return rota;
 }
@@ -136,6 +153,63 @@ function injetarEventosAtivos(pois, eventos, dataReferencia) {
 // (campo "prioridadeGastronomica", 1-5, definido no painel admin). Se houver
 // um com nível >= NIVEL_MINIMO_GARANTIA_GASTRONOMICA, ele é RESERVADO —
 // monstarSequencia() vai garantir um lugar pra ele antes de otimizar o resto.
+// Entre os candidatos JÁ VIÁVEIS (abertos, no orçamento, cabem no tempo):
+//
+// - Se o turista marcou refeições específicas (café da manhã / almoço /
+//   tarde / janta), tenta GARANTIR uma parada gastronômica de alta
+//   prioridade para CADA refeição marcada (uma reserva de slot por
+//   refeição, não só uma no total). Um mesmo local não é reservado duas
+//   vezes ainda que sirva mais de uma refeição desejada.
+// - Se o turista não marcou nenhuma refeição, cai no comportamento antigo:
+//   garante só a experiência gastronômica de maior prioridade, sem ligar
+//   pra qual refeição é.
+function escolherExperienciasGastronomicasGarantidas(candidatosViaveis, refeicoesDesejadas) {
+  const semRefeicaoEspecifica = !refeicoesDesejadas || refeicoesDesejadas.length === 0;
+
+  if (semRefeicaoEspecifica) {
+    const unico = escolherExperienciaGastronomicaGarantida(candidatosViaveis);
+    return unico ? [unico] : [];
+  }
+
+  const jaReservadosIds = new Set();
+  const garantidas = [];
+
+  for (const refeicao of refeicoesDesejadas) {
+    const candidatosDaRefeicao = candidatosViaveis.filter(
+      (poi) =>
+        poi.categoria === "gastronomia" &&
+        !jaReservadosIds.has(poi.id) &&
+        (poi.prioridadeGastronomica || 0) >= NIVEL_MINIMO_GARANTIA_GASTRONOMICA &&
+        poiServeRefeicao(poi, refeicao)
+    );
+
+    if (candidatosDaRefeicao.length === 0) continue;
+
+    const melhor = [...candidatosDaRefeicao].sort(
+      (a, b) => (b.prioridadeGastronomica || 0) - (a.prioridadeGastronomica || 0)
+    )[0];
+
+    garantidas.push(melhor);
+    jaReservadosIds.add(melhor.id);
+  }
+
+  return garantidas;
+}
+
+// Sem dado de refeições cadastrado no admin (local antigo, ainda não
+// preenchido), assume que serve qualquer refeição — não pune cadastro
+// incompleto escondendo o local da rota.
+function poiServeRefeicao(poi, refeicao) {
+  if (!poi.refeicoesServidas || poi.refeicoesServidas.length === 0) return true;
+  return poi.refeicoesServidas.includes(refeicao);
+}
+
+function candidatoCombinaComRefeicoesDesejadas(poi, refeicoesDesejadas) {
+  if (poi.categoria !== "gastronomia") return true; // filtro de refeição só vale pra gastronomia
+  if (!refeicoesDesejadas || refeicoesDesejadas.length === 0) return true;
+  return refeicoesDesejadas.some((refeicao) => poiServeRefeicao(poi, refeicao));
+}
+
 function escolherExperienciaGastronomicaGarantida(candidatosViaveis) {
   const candidatosGastronomicos = candidatosViaveis.filter(
     (poi) => poi.categoria === "gastronomia" && (poi.prioridadeGastronomica || 0) >= NIVEL_MINIMO_GARANTIA_GASTRONOMICA
@@ -143,10 +217,6 @@ function escolherExperienciaGastronomicaGarantida(candidatosViaveis) {
 
   if (candidatosGastronomicos.length === 0) return null;
 
-  // Em caso de múltiplos candidatos de alta prioridade, prioriza o nível
-  // mais alto primeiro; em empate, não há critério de distância aqui
-  // ainda (a função não recebe a posição do usuário) — fica para
-  // montarSequencia, que já lida com ordenação geográfica do que sobrar.
   const ordenados = [...candidatosGastronomicos].sort(
     (a, b) => (b.prioridadeGastronomica || 0) - (a.prioridadeGastronomica || 0)
   );
@@ -159,6 +229,8 @@ function filtrarCandidatos(pois, perfilBusca) {
     if (poi.statusOperacional === "fechado_temporariamente") return false;
 
     if (!estaAbertoNoHorario(poi, perfilBusca.horarioInicio, perfilBusca.data)) return false;
+
+    if (!candidatoCombinaComRefeicoesDesejadas(poi, perfilBusca.refeicoesDesejadas)) return false;
 
     const limitePreco = FAIXA_ORCAMENTO[perfilBusca.orcamentoFaixa]?.max ?? Infinity;
     if (poi.precoEstimado > limitePreco) return false;
@@ -240,28 +312,27 @@ function normalizarMatchInteresse(tagsPoi, interessesUsuario) {
 // ============================================================
 // ETAPA 3 — MONTAGEM DA SEQUÊNCIA (combinação + ordem)
 // ============================================================
-function montarSequencia(candidatosPontuados, perfilBusca, experienciaGarantida) {
+function montarSequencia(candidatosPontuados, perfilBusca, experienciasGarantidas) {
   const selecionados = [];
   const descartados = [];
   let tempoUsadoMin = 0;
   let posicaoAtual = perfilBusca.localizacaoPartida;
 
-  // Reserva o slot da experiência gastronômica garantida ANTES de rodar a
-  // seleção normal por score — ela entra quase sempre, mesmo que um lugar
-  // mais conveniente perdesse para ela numa disputa por pontuação.
-  if (experienciaGarantida) {
-    const deslocamentoGarantido = estimarDeslocamentoMin(posicaoAtual, experienciaGarantida.localizacao);
-    const custoTempoGarantido = deslocamentoGarantido + experienciaGarantida.duracaoMediaVisitaMin + MARGEM_SEGURANCA_MIN;
+  // Reserva o slot de cada experiência gastronômica garantida (uma por
+  // refeição marcada, ou uma única no modo antigo sem refeição específica)
+  // ANTES de rodar a seleção normal por score — elas entram quase sempre,
+  // mesmo que um lugar mais conveniente perdesse pra elas numa disputa por
+  // pontuação. Reservas que não cabem mais no tempo restante são
+  // simplesmente puladas, sem alarde — o resto da rota segue normal.
+  for (const experiencia of experienciasGarantidas || []) {
+    const deslocamentoGarantido = estimarDeslocamentoMin(posicaoAtual, experiencia.localizacao);
+    const custoTempoGarantido = deslocamentoGarantido + experiencia.duracaoMediaVisitaMin + MARGEM_SEGURANCA_MIN;
 
-    if (custoTempoGarantido <= perfilBusca.tempoDisponivelMin) {
-      selecionados.push({ ...experienciaGarantida, deslocamentoMin: deslocamentoGarantido });
+    if (tempoUsadoMin + custoTempoGarantido <= perfilBusca.tempoDisponivelMin) {
+      selecionados.push({ ...experiencia, deslocamentoMin: deslocamentoGarantido });
       tempoUsadoMin += custoTempoGarantido;
-      posicaoAtual = experienciaGarantida.localizacao || posicaoAtual;
+      posicaoAtual = experiencia.localizacao || posicaoAtual;
     }
-    // Se nem reservando o slot sozinho ela couber no tempo total, é
-    // simplesmente impossível — sem alarde, ela não entra e o resto da
-    // rota segue normal (já passou pelo filtro duro, então isso só
-    // aconteceria com tempo disponível muito curto).
   }
 
   const idsJaSelecionados = new Set(selecionados.map((p) => p.id));
