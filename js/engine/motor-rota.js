@@ -66,10 +66,18 @@ function gerarRota(pois, eventos, perfilBusca) {
     return rotaVazia(perfilBusca);
   }
 
-  const experienciasGarantidas = escolherExperienciasGastronomicasGarantidas(
+  const idsReservados = new Set();
+  const experienciasGastronomicas = escolherExperienciasGastronomicasGarantidas(
     candidatosViaveis,
-    perfilBusca.refeicoesDesejadas
+    perfilBusca.refeicoesDesejadas,
+    idsReservados
   );
+  const experienciasDeInteresse = escolherExperienciasDeInteresseGarantidas(
+    candidatosViaveis,
+    perfilBusca.interesses,
+    idsReservados
+  );
+  const experienciasGarantidas = [...experienciasGastronomicas, ...experienciasDeInteresse];
 
   const candidatosPontuados = pontuarCandidatos(candidatosViaveis, perfilBusca);
 
@@ -163,22 +171,30 @@ function injetarEventosAtivos(pois, eventos, dataReferencia) {
 // - Se o turista não marcou nenhuma refeição, cai no comportamento antigo:
 //   garante só a experiência gastronômica de maior prioridade, sem ligar
 //   pra qual refeição é.
-function escolherExperienciasGastronomicasGarantidas(candidatosViaveis, refeicoesDesejadas) {
+//
+// Recebe idsReservados de FORA (Set compartilhado com a garantia de
+// interesses, ver escolherExperienciasDeInteresseGarantidas) — evita
+// reservar o mesmo local duas vezes se ele também bater com uma tag de
+// interesse marcada.
+function escolherExperienciasGastronomicasGarantidas(candidatosViaveis, refeicoesDesejadas, idsReservados) {
   const semRefeicaoEspecifica = !refeicoesDesejadas || refeicoesDesejadas.length === 0;
 
   if (semRefeicaoEspecifica) {
-    const unico = escolherExperienciaGastronomicaGarantida(candidatosViaveis);
-    return unico ? [unico] : [];
+    const unico = escolherExperienciaGastronomicaGarantida(
+      candidatosViaveis.filter((poi) => !idsReservados.has(poi.id))
+    );
+    if (!unico) return [];
+    idsReservados.add(unico.id);
+    return [unico];
   }
 
-  const jaReservadosIds = new Set();
   const garantidas = [];
 
   for (const refeicao of refeicoesDesejadas) {
     const candidatosDaRefeicao = candidatosViaveis.filter(
       (poi) =>
         poi.categoria === "gastronomia" &&
-        !jaReservadosIds.has(poi.id) &&
+        !idsReservados.has(poi.id) &&
         (poi.prioridadeGastronomica || 0) >= NIVEL_MINIMO_GARANTIA_GASTRONOMICA &&
         poiServeRefeicao(poi, refeicao)
     );
@@ -189,8 +205,44 @@ function escolherExperienciasGastronomicasGarantidas(candidatosViaveis, refeicoe
       (a, b) => (b.prioridadeGastronomica || 0) - (a.prioridadeGastronomica || 0)
     )[0];
 
-    garantidas.push(melhor);
-    jaReservadosIds.add(melhor.id);
+    garantidas.push({ ...melhor, refeicaoReservadaPara: refeicao });
+    idsReservados.add(melhor.id);
+  }
+
+  return garantidas;
+}
+
+// ============================================================
+// ETAPA 2b — GARANTIA DE EXPERIÊNCIA POR INTERESSE (história, natureza...)
+// ============================================================
+// Mesma ideia da garantia gastronômica, mas pra "interesses" (campo 07 do
+// formulário). Antes, interesse só dava um bônus pequeno na pontuação (10%
+// do peso) — um local de história podia nunca aparecer na rota mesmo tendo
+// vários cadastrados, se as paradas de maior score sozinhas já enchessem o
+// tempo disponível. Agora reserva 1 slot por interesse marcado, igual já
+// acontece com refeição.
+//
+// Critério de escolha: melhor avaliação (nota) entre os candidatos com a
+// tag — não existe um campo de "prioridade" pra história/natureza/etc como
+// existe pra gastronomia.
+function escolherExperienciasDeInteresseGarantidas(candidatosViaveis, interesses, idsReservados) {
+  if (!interesses || interesses.length === 0) return [];
+
+  const garantidas = [];
+
+  for (const interesse of interesses) {
+    const candidatosDoInteresse = candidatosViaveis.filter(
+      (poi) => !idsReservados.has(poi.id) && (poi.tagsDeInteresse || []).includes(interesse)
+    );
+
+    if (candidatosDoInteresse.length === 0) continue;
+
+    const melhor = [...candidatosDoInteresse].sort(
+      (a, b) => (b.avaliacao || 0) - (a.avaliacao || 0)
+    )[0];
+
+    garantidas.push({ ...melhor, interesseReservadoPara: interesse });
+    idsReservados.add(melhor.id);
   }
 
   return garantidas;
@@ -380,7 +432,8 @@ function calcularERevalidarAteEstabilizar(paradas, perfilBusca) {
   for (let i = 0; i <= atuais.length; i++) {
     const comHorario = calcularHorariosReais(atuais, perfilBusca.horarioInicio);
     const validas = comHorario.filter((parada) =>
-      estaAbertoNoHorario(parada, parada.horarioChegada, perfilBusca.data)
+      estaAbertoNoHorario(parada, parada.horarioChegada, perfilBusca.data) &&
+      respeitaJanelaDeRefeicao(parada, perfilBusca.refeicoesDesejadas)
     );
 
     if (validas.length === comHorario.length) {
@@ -395,6 +448,43 @@ function calcularERevalidarAteEstabilizar(paradas, perfilBusca) {
   }
 
   return atuais;
+}
+
+// Confere se o HORÁRIO REAL de chegada da parada (só existe depois de
+// calcularHorariosReais, por isso essa checagem não dá pra fazer lá em
+// filtrarCandidatos) bate com a janela de tempo da refeição que ela deveria
+// satisfazer. Sem essa checagem, um restaurante marcado como "reservado pro
+// almoço" podia acabar virando a primeira parada do dia às 9h da manhã —
+// serve almoço, mas ninguém almoça às 9h.
+//
+// Só valida paradas que foram reservadas para uma refeição específica
+// (refeicaoReservadaPara, ver escolherExperienciasGastronomicasGarantidas) ou
+// que são gastronomia e o turista pediu refeições — pontos turísticos comuns
+// e restaurantes fora do contexto de refeição passam direto.
+function respeitaJanelaDeRefeicao(parada, refeicoesDesejadas) {
+  if (parada.categoria !== "gastronomia") return true;
+
+  // Reservada explicitamente pra uma refeição — precisa cair na janela dela.
+  if (parada.refeicaoReservadaPara) {
+    return horarioDentroDaJanela(
+      parada.horarioChegada,
+      REFEICAO_JANELAS[parada.refeicaoReservadaPara].inicio,
+      REFEICAO_JANELAS[parada.refeicaoReservadaPara].fim
+    );
+  }
+
+  // Não reservada, mas o turista pediu refeições específicas e este lugar
+  // serve alguma delas — a parada só faz sentido se cair na janela de PELO
+  // MENOS UMA das refeições pedidas que o lugar realmente serve.
+  if (refeicoesDesejadas && refeicoesDesejadas.length > 0) {
+    const refeicoesRelevantes = refeicoesDesejadas.filter((refeicao) => poiServeRefeicao(parada, refeicao));
+    if (refeicoesRelevantes.length === 0) return true; // não serve nenhuma pedida, checagem não se aplica
+    return refeicoesRelevantes.some((refeicao) =>
+      horarioDentroDaJanela(parada.horarioChegada, REFEICAO_JANELAS[refeicao].inicio, REFEICAO_JANELAS[refeicao].fim)
+    );
+  }
+
+  return true;
 }
 
 function ordenarPorProximidadeGeografica(paradas, pontoPartida) {
