@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Criar Roteiro — Linde Guia</title>
-  <meta name="description" content="Diz quanto tempo você tem, de onde está partindo e quanto quer gastar. A gente monta o passeio por Treze Tílias." />
+  <meta name="description" content="Diz de onde você está e o que quer comer. A gente monta o próximo trecho do passeio por Treze Tílias." />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -75,12 +75,12 @@
     main {
       flex: 1;
       width: 100%;
-      max-width: 620px;
+      max-width: 560px;
       margin: 0 auto;
       padding: 3rem clamp(1.25rem, 5vw, 2rem) 5rem;
     }
 
-    .pagina__cabecalho { text-align: center; margin-bottom: 3rem; }
+    .pagina__cabecalho { text-align: center; margin-bottom: 2.5rem; }
     .pagina__eyebrow {
       font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
       color: var(--dourado); margin-bottom: 0.875rem; display: block;
@@ -92,7 +92,7 @@
     .pagina__titulo em { font-style: italic; color: var(--borde); }
     .pagina__subtitulo { font-size: 0.9375rem; color: var(--tinta-suave); font-weight: 300; line-height: 1.6; }
 
-    .divisor { display: flex; align-items: center; justify-content: center; gap: 0.875rem; margin: 2.5rem 0; }
+    .divisor { display: flex; align-items: center; justify-content: center; gap: 0.875rem; margin: 2rem 0; }
     .divisor__linha { flex: 1; height: 1px; background: linear-gradient(to right, transparent, var(--creme-escuro)); }
     .divisor__linha:last-child { background: linear-gradient(to left, transparent, var(--creme-escuro)); }
 
@@ -120,9 +120,7 @@
     .campo__input:focus { outline: none; border-color: var(--borde); box-shadow: 0 0 0 3px rgba(139,26,26,0.1); }
     input[type="time"].campo__input { max-width: 180px; }
 
-    .campo__linha-horarios { display: flex; align-items: flex-end; gap: 1.25rem; flex-wrap: wrap; }
-    .campo__grupo-horario { display: flex; flex-direction: column; gap: 0.375rem; }
-    .campo__grupo-horario label { font-size: 0.75rem; font-weight: 600; color: var(--tinta-suave); text-transform: uppercase; letter-spacing: 0.04em; }
+    .campo-condicional[hidden] { display: none; }
 
     .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
     .chip {
@@ -219,8 +217,8 @@
 
     <div class="pagina__cabecalho">
       <span class="pagina__eyebrow">Roteiro personalizado</span>
-      <h1 class="pagina__titulo">Vamos montar<br/>o seu <em>passeio</em></h1>
-      <p class="pagina__subtitulo">Quanto mais você contar, melhor a gente acerta a rota.</p>
+      <h1 class="pagina__titulo">Pra onde<br/>a gente te <em>leva</em>?</h1>
+      <p class="pagina__subtitulo">Só o essencial — a gente monta o próximo trecho do passeio pra você.</p>
     </div>
 
     <div class="divisor" aria-hidden="true">
@@ -240,39 +238,9 @@
 
     <form id="form-roteiro" class="form-roteiro" novalidate>
 
-      <!-- 1. Tempo disponível -->
-      <fieldset class="campo">
+      <!-- 1. Localização -->
+      <div class="campo">
         <span class="campo__numero">01</span>
-        <legend class="campo__rotulo">Quanto tempo você tem na cidade?</legend>
-        <div class="chips" role="radiogroup" aria-label="Tempo disponível">
-          <button type="button" class="chip" data-campo="tempoDisponivelMin" data-valor="120">2 horas</button>
-          <button type="button" class="chip" data-campo="tempoDisponivelMin" data-valor="240" aria-pressed="true">Meio dia</button>
-          <button type="button" class="chip" data-campo="tempoDisponivelMin" data-valor="540">1 dia</button>
-          <button type="button" class="chip" data-campo="tempoDisponivelMin" data-valor="1080">2 dias</button>
-          <button type="button" class="chip" data-campo="tempoDisponivelMin" data-valor="1620">3+ dias</button>
-        </div>
-      </fieldset>
-
-      <!-- 2. Horário de início e término -->
-      <div class="campo">
-        <span class="campo__numero">02</span>
-        <span class="campo__rotulo">A que horas você começa e termina o passeio?</span>
-        <div class="campo__linha-horarios">
-          <div class="campo__grupo-horario">
-            <label for="input-horario">Começo</label>
-            <input type="time" id="input-horario" name="horarioInicio" class="campo__input" required />
-          </div>
-          <div class="campo__grupo-horario">
-            <label for="input-horario-fim">Término <span class="campo__opcional-marca">opcional</span></label>
-            <input type="time" id="input-horario-fim" name="horarioFim" class="campo__input" />
-          </div>
-        </div>
-        <p class="campo__ajuda">Mostramos só lugares que já vão estar abertos no horário de início. Se você marcar um horário de término, a rota não passa disso.</p>
-      </div>
-
-      <!-- 3. Localização -->
-      <div class="campo">
-        <span class="campo__numero">03</span>
         <span class="campo__rotulo">De onde você está partindo?</span>
         <div class="localizacao">
           <button type="button" id="btn-usar-localizacao" class="btn-gps">
@@ -293,20 +261,23 @@
         <p class="campo__ajuda">Digite um endereço ou ponto de referência e pressione Enter para buscar.</p>
       </div>
 
-      <!-- 4. Orçamento -->
-      <fieldset class="campo">
-        <span class="campo__numero">04</span>
-        <legend class="campo__rotulo">Quanto você quer gastar?</legend>
-        <div class="chips" role="radiogroup" aria-label="Faixa de orçamento">
-          <button type="button" class="chip" data-campo="orcamentoFaixa" data-valor="economico">Econômico</button>
-          <button type="button" class="chip" data-campo="orcamentoFaixa" data-valor="moderado" aria-pressed="true">Moderado</button>
-          <button type="button" class="chip" data-campo="orcamentoFaixa" data-valor="sem_limite">Sem limite</button>
+      <!-- 2. Quando -->
+      <div class="campo">
+        <span class="campo__numero">02</span>
+        <span class="campo__rotulo">Quando você quer passear?</span>
+        <div class="chips" role="radiogroup" aria-label="Quando">
+          <button type="button" class="chip" data-campo="quando" data-valor="agora" aria-pressed="true">Agora</button>
+          <button type="button" class="chip" data-campo="quando" data-valor="agendado">Escolher horário</button>
         </div>
-      </fieldset>
+        <div class="campo-condicional" id="grupo-horario-agendado" hidden>
+          <input type="time" id="input-horario-agendado" name="horarioAgendado" class="campo__input" />
+          <p class="campo__ajuda">Pra montar o passeio de um outro dia com antecedência.</p>
+        </div>
+      </div>
 
-      <!-- 5. Refeições desejadas (opcional, múltipla) -->
+      <!-- 3. Refeições desejadas (opcional, múltipla) -->
       <fieldset class="campo">
-        <span class="campo__numero">05</span>
+        <span class="campo__numero">03</span>
         <legend class="campo__rotulo">
           Quer incluir alguma refeição no passeio?
           <span class="campo__opcional-marca">opcional · pode marcar mais de uma</span>
@@ -320,24 +291,9 @@
         <p class="campo__ajuda">A gente só sugere restaurantes que servem a refeição marcada no horário certo.</p>
       </fieldset>
 
-      <!-- 6. Grupo (opcional) -->
+      <!-- 4. Interesses (opcional, múltipla) -->
       <fieldset class="campo">
-        <span class="campo__numero">06</span>
-        <legend class="campo__rotulo">
-          Quem vai com você?
-          <span class="campo__opcional-marca">opcional</span>
-        </legend>
-        <div class="chips" role="radiogroup" aria-label="Composição do grupo">
-          <button type="button" class="chip" data-campo="composicaoGrupo" data-valor="sozinho">Sozinho</button>
-          <button type="button" class="chip" data-campo="composicaoGrupo" data-valor="casal">Casal</button>
-          <button type="button" class="chip" data-campo="composicaoGrupo" data-valor="familia">Família com crianças</button>
-          <button type="button" class="chip" data-campo="composicaoGrupo" data-valor="amigos">Grupo de amigos</button>
-        </div>
-      </fieldset>
-
-      <!-- 7. Interesses (opcional, múltipla) -->
-      <fieldset class="campo">
-        <span class="campo__numero">07</span>
+        <span class="campo__numero">04</span>
         <legend class="campo__rotulo">
           O que você mais gosta?
           <span class="campo__opcional-marca">opcional · pode marcar mais de um</span>
@@ -361,7 +317,7 @@
           <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
           <circle cx="12" cy="9" r="2.5"/>
         </svg>
-        Montar minha rota
+        Montar meu passeio
       </button>
 
     </form>

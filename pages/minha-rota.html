@@ -204,6 +204,19 @@
       <div id="aviso-recalculo" class="aviso-recalculo" hidden aria-live="polite"></div>
     </section>
 
+    <!-- ===== SUB-VISTA: pergunta entre capítulos ===== -->
+    <section id="vista-continuar" class="estado-vazio" hidden>
+      <h1 id="vista-continuar__titulo">Terminou por aqui — quer continuar o passeio?</h1>
+      <p id="vista-continuar__texto">A gente monta o próximo trecho a partir de onde você está agora.</p>
+      <div id="vista-continuar__carregando" class="estado-vazio" hidden>
+        <p>Montando o próximo trecho...</p>
+      </div>
+      <div id="vista-continuar__acoes" class="vista-finalizada__acoes">
+        <button id="btn-nao-continuar" type="button" class="botao botao--secundario">Não, finalizar por aqui</button>
+        <button id="btn-sim-continuar" type="button" class="botao botao--principal">Sim, continuar</button>
+      </div>
+    </section>
+
     <section id="vista-finalizada" class="vista-finalizada" hidden>
       <h1>Foi um prazer te mostrar a nossa Treze Tílias</h1>
       <p>Esperamos que tenha sido um passeio bem gostoso. Volta sempre, hein?</p>
