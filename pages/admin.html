@@ -11,9 +11,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
   <style>
-    /* ============================================================
-       TOKENS
-    ============================================================ */
     :root {
       --borde: #8B1A1A;
       --borde-escuro: #6B1212;
@@ -28,7 +25,6 @@
       --branco: #FDFAF6;
       --cinza-fundo: #F0EDE8;
 
-      /* categorias */
       --cat-gastronomia-fundo: #FDF0E8; --cat-gastronomia-texto: #8B4A1A;
       --cat-historico-fundo:   #E8EDF5; --cat-historico-texto:   #1A2D8B;
       --cat-natureza-fundo:    #E8F5EC; --cat-natureza-texto:    #1A6B2D;
@@ -43,9 +39,6 @@
       --transicao: 0.2s ease;
     }
 
-    /* ============================================================
-       RESET
-    ============================================================ */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
     body {
@@ -58,9 +51,6 @@
     a { color: inherit; text-decoration: none; }
     button { font-family: var(--fonte-corpo); }
 
-    /* ============================================================
-       TELA DE SENHA
-    ============================================================ */
     .tela-senha {
       min-height: 100svh;
       display: flex;
@@ -69,7 +59,6 @@
       padding: 1.5rem;
       background: var(--creme);
     }
-
     .tela-senha[hidden] { display: none; }
 
     .form-senha {
@@ -82,674 +71,225 @@
       text-align: center;
       box-shadow: 0 4px 24px rgba(28,23,20,0.08);
     }
-
-    .form-senha__flor {
-      margin: 0 auto 1.25rem;
-      display: block;
-    }
-
-    .form-senha h1 {
-      font-family: var(--fonte-display);
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--tinta);
-      margin-bottom: 0.375rem;
-    }
-
-    .form-senha p {
-      font-size: 0.875rem;
-      color: var(--tinta-suave);
-      margin-bottom: 1.75rem;
-      font-weight: 300;
-    }
-
+    .form-senha__flor { margin: 0 auto 1.25rem; display: block; }
+    .form-senha h1 { font-family: var(--fonte-display); font-size: 1.5rem; font-weight: 700; color: var(--tinta); margin-bottom: 0.375rem; }
+    .form-senha p { font-size: 0.875rem; color: var(--tinta-suave); margin-bottom: 1.75rem; font-weight: 300; }
     .form-senha input {
-      width: 100%;
-      padding: 0.875rem 1rem;
-      border: 1.5px solid var(--creme-escuro);
-      border-radius: var(--raio);
-      font-size: 0.9375rem;
-      font-family: var(--fonte-corpo);
-      color: var(--tinta);
-      background: var(--creme);
-      margin-bottom: 1rem;
-      transition: border-color var(--transicao);
-      text-align: center;
-      letter-spacing: 0.25em;
+      width: 100%; padding: 0.875rem 1rem; border: 1.5px solid var(--creme-escuro);
+      border-radius: var(--raio); font-size: 0.9375rem; font-family: var(--fonte-corpo);
+      color: var(--tinta); background: var(--creme); margin-bottom: 1rem;
+      transition: border-color var(--transicao); text-align: center; letter-spacing: 0.25em;
     }
-
-    .form-senha input:focus {
-      outline: none;
-      border-color: var(--borde);
-    }
-
-    .erro-senha {
-      color: var(--borde);
-      font-size: 0.8125rem;
-      margin-top: 0.75rem;
-    }
-
+    .form-senha input:focus { outline: none; border-color: var(--borde); }
+    .erro-senha { color: var(--borde); font-size: 0.8125rem; margin-top: 0.75rem; }
     .erro-senha[hidden] { display: none; }
 
-    /* ============================================================
-       LAYOUT DO PAINEL
-    ============================================================ */
     .conteudo-admin[hidden] { display: none; }
 
-    /* Sidebar fixa + conteúdo principal */
-    .painel {
-      display: grid;
-      grid-template-columns: 220px 1fr;
-      min-height: 100svh;
-    }
+    .painel { display: grid; grid-template-columns: 220px 1fr; min-height: 100svh; }
 
-    /* ============================================================
-       SIDEBAR
-    ============================================================ */
     .sidebar {
-      background: var(--branco);
-      border-right: 1px solid var(--creme-escuro);
-      padding: 1.5rem 1rem 2rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      position: sticky;
-      top: 0;
-      height: 100svh;
-      overflow-y: auto;
+      background: var(--branco); border-right: 1px solid var(--creme-escuro);
+      padding: 1.5rem 1rem 2rem; display: flex; flex-direction: column; gap: 0.5rem;
+      position: sticky; top: 0; height: 100svh; overflow-y: auto;
     }
-
     .sidebar__marca {
-      display: flex;
-      align-items: center;
-      gap: 0.625rem;
-      padding: 0 0.5rem 1.25rem;
-      border-bottom: 1px solid var(--creme-escuro);
-      margin-bottom: 0.75rem;
+      display: flex; align-items: center; gap: 0.625rem;
+      padding: 0 0.5rem 1.25rem; border-bottom: 1px solid var(--creme-escuro); margin-bottom: 0.75rem;
     }
-
     .sidebar__flor { width: 30px; height: 30px; flex-shrink: 0; }
-
     .sidebar__textos { line-height: 1.2; }
-
-    .sidebar__nome {
-      font-family: var(--fonte-display);
-      font-size: 0.9375rem;
-      font-weight: 700;
-      color: var(--tinta);
-      display: block;
-    }
-
-    .sidebar__badge {
-      font-size: 0.6rem;
-      font-weight: 600;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--borde);
-    }
-
+    .sidebar__nome { font-family: var(--fonte-display); font-size: 0.9375rem; font-weight: 700; color: var(--tinta); display: block; }
+    .sidebar__badge { font-size: 0.6rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--borde); }
     .sidebar__secao-titulo {
-      font-size: 0.625rem;
-      font-weight: 600;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--tinta-suave);
-      opacity: 0.5;
-      padding: 0.75rem 0.5rem 0.25rem;
+      font-size: 0.625rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--tinta-suave); opacity: 0.5; padding: 0.75rem 0.5rem 0.25rem;
     }
-
     .aba-nav {
-      display: flex;
-      align-items: center;
-      gap: 0.625rem;
-      width: 100%;
-      padding: 0.625rem 0.75rem;
-      border-radius: 10px;
-      border: none;
-      background: transparent;
-      color: var(--tinta-suave);
-      font-size: 0.875rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background var(--transicao), color var(--transicao);
-      text-align: left;
+      display: flex; align-items: center; gap: 0.625rem; width: 100%;
+      padding: 0.625rem 0.75rem; border-radius: 10px; border: none; background: transparent;
+      color: var(--tinta-suave); font-size: 0.875rem; font-weight: 500; cursor: pointer;
+      transition: background var(--transicao), color var(--transicao); text-align: left;
     }
-
     .aba-nav:hover { background: var(--creme-medio); color: var(--tinta); }
-
-    .aba-nav.ativa {
-      background: var(--borde);
-      color: var(--branco);
-    }
-
+    .aba-nav.ativa { background: var(--borde); color: var(--branco); }
     .aba-nav svg { flex-shrink: 0; opacity: 0.8; }
     .aba-nav.ativa svg { opacity: 1; }
 
-    /* ============================================================
-       CONTEÚDO PRINCIPAL
-    ============================================================ */
-    .painel__conteudo {
-      padding: 2rem clamp(1.25rem, 3vw, 2.5rem) 4rem;
-      max-width: 960px;
-    }
-
+    .painel__conteudo { padding: 2rem clamp(1.25rem, 3vw, 2.5rem) 4rem; max-width: 960px; }
     .aba-conteudo[hidden] { display: none; }
 
-    /* Cabeçalho de seção */
-    .secao-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 1.75rem;
-      gap: 1rem;
-      flex-wrap: wrap;
-    }
+    .secao-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.75rem; gap: 1rem; flex-wrap: wrap; }
+    .secao-header h1 { font-family: var(--fonte-display); font-size: 1.625rem; font-weight: 700; color: var(--tinta); }
+    .secao-header p { font-size: 0.875rem; color: var(--tinta-suave); font-weight: 300; margin-top: 0.25rem; }
 
-    .secao-header h1 {
-      font-family: var(--fonte-display);
-      font-size: 1.625rem;
-      font-weight: 700;
-      color: var(--tinta);
-    }
-
-    .secao-header p {
-      font-size: 0.875rem;
-      color: var(--tinta-suave);
-      font-weight: 300;
-      margin-top: 0.25rem;
-    }
-
-    /* ============================================================
-       CARTÕES DE RESUMO (KPIs)
-    ============================================================ */
-    .kpis {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 1rem;
-      margin-bottom: 1.75rem;
-    }
-
-    .kpi-card {
-      background: var(--branco);
-      border: 1px solid var(--creme-escuro);
-      border-radius: var(--raio-grande);
-      padding: 1.25rem 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.375rem;
-    }
-
-    .kpi-card__label {
-      font-size: 0.75rem;
-      font-weight: 500;
-      color: var(--tinta-suave);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-
-    .kpi-card__valor {
-      font-family: var(--fonte-display);
-      font-size: 2rem;
-      font-weight: 700;
-      color: var(--tinta);
-      line-height: 1;
-    }
-
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.75rem; }
+    .kpi-card { background: var(--branco); border: 1px solid var(--creme-escuro); border-radius: var(--raio-grande); padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 0.375rem; }
+    .kpi-card__label { font-size: 0.75rem; font-weight: 500; color: var(--tinta-suave); text-transform: uppercase; letter-spacing: 0.06em; }
+    .kpi-card__valor { font-family: var(--fonte-display); font-size: 2rem; font-weight: 700; color: var(--tinta); line-height: 1; }
     .kpi-card__valor--destaque { color: var(--borde); }
 
-    /* ============================================================
-       CARDS DE GRÁFICO
-    ============================================================ */
-    .grafico-card {
-      background: var(--branco);
-      border: 1px solid var(--creme-escuro);
-      border-radius: var(--raio-grande);
-      padding: 1.5rem;
-      margin-bottom: 1.25rem;
-    }
-
-    .grafico-card h2 {
-      font-family: var(--fonte-display);
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--tinta);
-      margin-bottom: 1.25rem;
-    }
-
+    .grafico-card { background: var(--branco); border: 1px solid var(--creme-escuro); border-radius: var(--raio-grande); padding: 1.5rem; margin-bottom: 1.25rem; }
+    .grafico-card h2 { font-family: var(--fonte-display); font-size: 1rem; font-weight: 600; color: var(--tinta); margin-bottom: 1.25rem; }
     .grafico-card canvas { max-height: 260px; }
 
-    /* ============================================================
-       TABELA
-    ============================================================ */
-    .tabela-card {
-      background: var(--branco);
-      border: 1px solid var(--creme-escuro);
-      border-radius: var(--raio-grande);
-      padding: 1.5rem;
-      overflow-x: auto;
-    }
-
-    .tabela-card h2 {
-      font-family: var(--fonte-display);
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--tinta);
-      margin-bottom: 1.25rem;
-    }
-
+    .tabela-card { background: var(--branco); border: 1px solid var(--creme-escuro); border-radius: var(--raio-grande); padding: 1.5rem; overflow-x: auto; }
+    .tabela-card h2 { font-family: var(--fonte-display); font-size: 1rem; font-weight: 600; color: var(--tinta); margin-bottom: 1.25rem; }
     table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-
-    th, td {
-      text-align: left;
-      padding: 0.625rem 0.875rem;
-      border-bottom: 1px solid var(--creme-escuro);
-    }
-
-    th {
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--tinta-suave);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      background: var(--creme);
-    }
-
+    th, td { text-align: left; padding: 0.625rem 0.875rem; border-bottom: 1px solid var(--creme-escuro); }
+    th { font-size: 0.75rem; font-weight: 600; color: var(--tinta-suave); text-transform: uppercase; letter-spacing: 0.06em; background: var(--creme); }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: var(--creme); }
 
-    /* ============================================================
-       ABA LOCAIS — lista com categorias
-    ============================================================ */
-    .locais-filtros {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-bottom: 1.5rem;
-    }
-
+    .locais-filtros { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
     .filtro-cat {
-      font-size: 0.8125rem;
-      font-weight: 500;
-      padding: 0.375rem 0.875rem;
-      border-radius: 999px;
-      border: 1.5px solid var(--creme-escuro);
-      background: var(--branco);
-      color: var(--tinta-suave);
-      cursor: pointer;
-      transition: all var(--transicao);
+      font-size: 0.8125rem; font-weight: 500; padding: 0.375rem 0.875rem; border-radius: 999px;
+      border: 1.5px solid var(--creme-escuro); background: var(--branco); color: var(--tinta-suave);
+      cursor: pointer; transition: all var(--transicao);
     }
-
     .filtro-cat:hover { border-color: var(--borde); color: var(--borde); }
     .filtro-cat.ativo { background: var(--borde); border-color: var(--borde); color: var(--branco); }
 
-    /* Grid de locais */
-    .lista-locais-admin {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 1rem;
-    }
-
+    .lista-locais-admin { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
     .local-admin-card {
-      background: var(--branco);
-      border: 1.5px solid var(--creme-escuro);
-      border-radius: var(--raio-grande);
-      padding: 1.25rem;
-      cursor: pointer;
-      transition: border-color var(--transicao), box-shadow var(--transicao), transform var(--transicao);
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
+      background: var(--branco); border: 1.5px solid var(--creme-escuro); border-radius: var(--raio-grande);
+      padding: 1.25rem; cursor: pointer; transition: border-color var(--transicao), box-shadow var(--transicao), transform var(--transicao);
+      display: flex; flex-direction: column; gap: 0.75rem;
     }
-
-    .local-admin-card:hover {
-      border-color: var(--borde);
-      box-shadow: 0 4px 16px rgba(139,26,26,0.1);
-      transform: translateY(-2px);
-    }
-
-    .local-admin-card__topo {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 0.5rem;
-    }
-
-    .local-admin-card__nome {
-      font-family: var(--fonte-display);
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--tinta);
-      line-height: 1.3;
-    }
-
-    .local-admin-card__status {
-      flex-shrink: 0;
-      font-size: 0.6875rem;
-      font-weight: 600;
-      padding: 0.2rem 0.625rem;
-      border-radius: 999px;
-      white-space: nowrap;
-    }
-
+    .local-admin-card:hover { border-color: var(--borde); box-shadow: 0 4px 16px rgba(139,26,26,0.1); transform: translateY(-2px); }
+    .local-admin-card__topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
+    .local-admin-card__nome { font-family: var(--fonte-display); font-size: 1rem; font-weight: 600; color: var(--tinta); line-height: 1.3; }
+    .local-admin-card__status { flex-shrink: 0; font-size: 0.6875rem; font-weight: 600; padding: 0.2rem 0.625rem; border-radius: 999px; white-space: nowrap; }
     .status--ativo               { background: #DCF0E0; color: #1A5C2A; }
     .status--sazonal             { background: #FDF0D5; color: #7A5A10; }
     .status--em_reforma          { background: #FDF0E8; color: #8B4A1A; }
     .status--fechado_temporariamente { background: #F7DADA; color: #6B1212; }
-
-    .local-admin-card__rodape {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
-
-    .tag-categoria {
-      font-size: 0.6875rem;
-      font-weight: 600;
-      padding: 0.2rem 0.625rem;
-      border-radius: 999px;
-      text-transform: capitalize;
-    }
-
+    .local-admin-card__rodape { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .tag-categoria { font-size: 0.6875rem; font-weight: 600; padding: 0.2rem 0.625rem; border-radius: 999px; text-transform: capitalize; }
     .tag-categoria--gastronomia { background: var(--cat-gastronomia-fundo); color: var(--cat-gastronomia-texto); }
     .tag-categoria--historico   { background: var(--cat-historico-fundo);   color: var(--cat-historico-texto); }
     .tag-categoria--natureza    { background: var(--cat-natureza-fundo);    color: var(--cat-natureza-texto); }
     .tag-categoria--compras     { background: var(--cat-compras-fundo);     color: var(--cat-compras-texto); }
     .tag-categoria--lazer       { background: var(--cat-lazer-fundo);       color: var(--cat-lazer-texto); }
     .tag-categoria--cultura     { background: var(--cat-cultura-fundo);     color: var(--cat-cultura-texto); }
+    .local-admin-card__detalhe { font-size: 0.8125rem; color: var(--tinta-suave); }
 
-    .local-admin-card__detalhe {
-      font-size: 0.8125rem;
-      color: var(--tinta-suave);
-    }
+    .lista-vazia { grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; color: var(--tinta-suave); font-size: 0.9375rem; }
 
-    /* Vazio */
-    .lista-vazia {
-      grid-column: 1 / -1;
-      text-align: center;
-      padding: 3rem 1rem;
-      color: var(--tinta-suave);
-      font-size: 0.9375rem;
-    }
-
-    /* ============================================================
-       BOTÕES
-    ============================================================ */
     .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.4rem;
-      font-family: var(--fonte-corpo);
-      font-size: 0.875rem;
-      font-weight: 600;
-      padding: 0.625rem 1.25rem;
-      border-radius: var(--raio);
-      border: 1.5px solid transparent;
-      cursor: pointer;
-      transition: all var(--transicao);
-      line-height: 1;
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+      font-family: var(--fonte-corpo); font-size: 0.875rem; font-weight: 600;
+      padding: 0.625rem 1.25rem; border-radius: var(--raio); border: 1.5px solid transparent;
+      cursor: pointer; transition: all var(--transicao); line-height: 1;
     }
+    .btn--principal { background: var(--borde); border-color: var(--borde); color: var(--branco); }
+    .btn--principal:hover { background: var(--borde-escuro); border-color: var(--borde-escuro); }
+    .btn--secundario { background: var(--branco); border-color: var(--creme-escuro); color: var(--tinta-suave); }
+    .btn--secundario:hover { border-color: var(--tinta-suave); color: var(--tinta); }
+    .btn--excluir { background: transparent; border-color: var(--borde); color: var(--borde); }
+    .btn--excluir:hover { background: var(--borde); color: var(--branco); }
+    .btn--mini { padding: 0.3rem 0.625rem; font-size: 0.75rem; }
 
-    .btn--principal {
-      background: var(--borde);
-      border-color: var(--borde);
-      color: var(--branco);
-    }
-
-    .btn--principal:hover {
-      background: var(--borde-escuro);
-      border-color: var(--borde-escuro);
-    }
-
-    .btn--secundario {
-      background: var(--branco);
-      border-color: var(--creme-escuro);
-      color: var(--tinta-suave);
-    }
-
-    .btn--secundario:hover {
-      border-color: var(--tinta-suave);
-      color: var(--tinta);
-    }
-
-    .btn--excluir {
-      background: transparent;
-      border-color: var(--borde);
-      color: var(--borde);
-    }
-
-    .btn--excluir:hover {
-      background: var(--borde);
-      color: var(--branco);
-    }
-
-    /* ============================================================
-       MODAL DE EDIÇÃO
-    ============================================================ */
     .modal-local {
-      position: fixed;
-      inset: 0;
-      background: rgba(28,23,20,0.55);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1.25rem;
-      z-index: 200;
-      backdrop-filter: blur(3px);
+      position: fixed; inset: 0; background: rgba(28,23,20,0.55);
+      display: flex; align-items: center; justify-content: center; padding: 1.25rem;
+      z-index: 200; backdrop-filter: blur(3px);
     }
-
     .modal-local[hidden] { display: none; }
-
     .modal-local__caixa {
-      background: var(--branco);
-      border-radius: var(--raio-grande);
-      padding: 2rem;
-      max-width: 520px;
-      width: 100%;
-      max-height: 92svh;
-      overflow-y: auto;
+      background: var(--branco); border-radius: var(--raio-grande); padding: 2rem;
+      max-width: 560px; width: 100%; max-height: 92svh; overflow-y: auto;
       box-shadow: 0 12px 48px rgba(28,23,20,0.18);
     }
-
-    .modal-local__header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 1.5rem;
-    }
-
-    .modal-local__header h2 {
-      font-family: var(--fonte-display);
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: var(--tinta);
-    }
-
+    .modal-local__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+    .modal-local__header h2 { font-family: var(--fonte-display); font-size: 1.25rem; font-weight: 700; color: var(--tinta); }
     .modal-local__fechar {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      border: none;
-      background: var(--creme-medio);
-      color: var(--tinta-suave);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.125rem;
-      transition: background var(--transicao);
+      width: 32px; height: 32px; border-radius: 50%; border: none; background: var(--creme-medio);
+      color: var(--tinta-suave); cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 1.125rem; transition: background var(--transicao);
     }
-
     .modal-local__fechar:hover { background: var(--creme-escuro); }
 
-    /* Form dentro do modal */
-    #form-local {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
+    #form-local { display: flex; flex-direction: column; gap: 1rem; }
+    .form-grupo { display: flex; flex-direction: column; gap: 0.375rem; }
+    .form-grupo label { font-size: 0.8125rem; font-weight: 600; color: var(--tinta-suave); text-transform: uppercase; letter-spacing: 0.06em; }
+    .form-grupo input, .form-grupo select, .form-grupo textarea {
+      font-family: var(--fonte-corpo); font-size: 0.9375rem; padding: 0.75rem 0.875rem;
+      border: 1.5px solid var(--creme-escuro); border-radius: var(--raio); background: var(--creme);
+      color: var(--tinta); transition: border-color var(--transicao); width: 100%;
     }
-
-    .form-grupo {
-      display: flex;
-      flex-direction: column;
-      gap: 0.375rem;
-    }
-
-    .form-grupo label {
-      font-size: 0.8125rem;
-      font-weight: 600;
-      color: var(--tinta-suave);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-
-    .form-grupo input,
-    .form-grupo select,
-    .form-grupo textarea {
-      font-family: var(--fonte-corpo);
-      font-size: 0.9375rem;
-      padding: 0.75rem 0.875rem;
-      border: 1.5px solid var(--creme-escuro);
-      border-radius: var(--raio);
-      background: var(--creme);
-      color: var(--tinta);
-      transition: border-color var(--transicao);
-      width: 100%;
-    }
-
-    .form-grupo input:focus,
-    .form-grupo select:focus,
-    .form-grupo textarea:focus {
-      outline: none;
-      border-color: var(--borde);
-    }
-
+    .form-grupo input:focus, .form-grupo select:focus, .form-grupo textarea:focus { outline: none; border-color: var(--borde); }
     .form-grupo textarea { resize: vertical; min-height: 80px; }
-
-    .form-linha {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.875rem;
-    }
-
-    .form-ajuda {
-      font-size: 0.75rem;
-      color: var(--tinta-suave);
-      font-weight: 300;
-    }
-
+    .form-linha { display: grid; grid-template-columns: 1fr 1fr; gap: 0.875rem; }
+    .form-ajuda { font-size: 0.75rem; color: var(--tinta-suave); font-weight: 300; }
     .campo-condicional[hidden] { display: none; }
+    .form-divisor { height: 1px; background: var(--creme-escuro); margin: 0.5rem 0; }
+    .form-secao-titulo { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dourado); display: flex; align-items: center; justify-content: space-between; }
 
-    .form-divisor {
-      height: 1px;
-      background: var(--creme-escuro);
-      margin: 0.5rem 0;
-    }
-
-    .form-secao-titulo {
-      font-size: 0.6875rem;
-      font-weight: 600;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--dourado);
-    }
-
-    .modal-local__acoes {
-      display: flex;
-      gap: 0.625rem;
-      margin-top: 1.25rem;
-      flex-wrap: wrap;
-    }
-
+    .modal-local__acoes { display: flex; gap: 0.625rem; margin-top: 1.25rem; flex-wrap: wrap; }
     .modal-local__acoes .btn { flex: 1; min-width: 100px; }
 
     .erro-form {
-      font-size: 0.8125rem;
-      color: var(--borde);
-      background: #FEF2F2;
-      border: 1px solid var(--creme-escuro);
-      border-left: 3px solid var(--borde);
-      padding: 0.625rem 0.875rem;
-      border-radius: var(--raio);
+      font-size: 0.8125rem; color: var(--borde); background: #FEF2F2; border: 1px solid var(--creme-escuro);
+      border-left: 3px solid var(--borde); padding: 0.625rem 0.875rem; border-radius: var(--raio);
     }
-
     .erro-form[hidden] { display: none; }
 
-    /* ============================================================
-       DIAS DA SEMANA (horário de funcionamento)
-    ============================================================ */
-    .dias-semana {
-      display: flex;
-      gap: 0.375rem;
-      flex-wrap: wrap;
-    }
-
-    .dia-toggle {
-      font-size: 0.75rem;
-      font-weight: 600;
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      border: 1.5px solid var(--creme-escuro);
-      background: var(--branco);
-      color: var(--tinta-suave);
-      cursor: pointer;
-      transition: all var(--transicao);
-      display: flex;
+    /* ===== Horário por dia da semana — cada dia com seu próprio abre/fecha ===== */
+    .horarios-semana { display: flex; flex-direction: column; gap: 0.5rem; }
+    .dia-linha {
+      display: grid;
+      grid-template-columns: auto 1fr 1fr;
       align-items: center;
-      justify-content: center;
+      gap: 0.625rem;
+      padding: 0.5rem 0.625rem;
+      border: 1.5px solid var(--creme-escuro);
+      border-radius: var(--raio);
+      background: var(--creme);
     }
-
-    .dia-toggle.ativo {
-      background: var(--verde);
-      border-color: var(--verde);
-      color: var(--branco);
+    .dia-linha--fechado { opacity: 0.55; }
+    .dia-linha__toggle { display: flex; align-items: center; gap: 0.5rem; min-width: 84px; cursor: pointer; }
+    .dia-linha__toggle input { width: auto; margin: 0; }
+    .dia-linha__nome { font-size: 0.8125rem; font-weight: 600; color: var(--tinta); }
+    .dia-linha input[type="time"] {
+      padding: 0.5rem 0.625rem; font-size: 0.8125rem; background: var(--branco);
     }
+    .dia-linha input[type="time"]:disabled { opacity: 0.5; cursor: not-allowed; }
+    .horarios-semana__atalhos { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.25rem; }
 
-    /* ============================================================
-       RESPONSIVO
-    ============================================================ */
+    /* ===== Refeições servidas ===== */
+    .refeicoes-servidas { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .refeicao-check {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-size: 0.8125rem; font-weight: 500; color: var(--tinta-suave);
+      padding: 0.5rem 0.875rem; border-radius: 999px; border: 1.5px solid var(--creme-escuro);
+      background: var(--branco); cursor: pointer; transition: all var(--transicao);
+    }
+    .refeicao-check:has(input:checked) { background: var(--verde); border-color: var(--verde); color: var(--branco); }
+    .refeicao-check input { margin: 0; }
+
+
     @media (max-width: 768px) {
       .painel { grid-template-columns: 1fr; }
-
       .sidebar {
-        position: static;
-        height: auto;
-        flex-direction: row;
-        align-items: center;
-        flex-wrap: wrap;
-        padding: 0.875rem 1rem;
-        gap: 0.375rem;
-        border-right: none;
-        border-bottom: 1px solid var(--creme-escuro);
+        position: static; height: auto; flex-direction: row; align-items: center; flex-wrap: wrap;
+        padding: 0.875rem 1rem; gap: 0.375rem; border-right: none; border-bottom: 1px solid var(--creme-escuro);
         overflow-x: auto;
       }
-
       .sidebar__marca { border-bottom: none; padding-bottom: 0; margin-bottom: 0; border-right: 1px solid var(--creme-escuro); padding-right: 0.875rem; margin-right: 0.25rem; }
       .sidebar__secao-titulo { display: none; }
-
       .painel__conteudo { padding: 1.5rem 1rem 3rem; }
-
       .form-linha { grid-template-columns: 1fr; }
-
       .lista-locais-admin { grid-template-columns: 1fr; }
+      .dia-linha { grid-template-columns: 1fr; gap: 0.375rem; }
     }
 
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { transition: none !important; }
-    }
-
-    :focus-visible {
-      outline: 3px solid var(--borde);
-      outline-offset: 3px;
-      border-radius: 4px;
-    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
+    :focus-visible { outline: 3px solid var(--borde); outline-offset: 3px; border-radius: 4px; }
   </style>
 </head>
 <body>
 
-  <!-- ===== TELA DE SENHA ===== -->
   <div id="tela-senha" class="tela-senha">
     <form id="form-senha" class="form-senha">
       <svg class="form-senha__flor" width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
@@ -772,12 +312,9 @@
     </form>
   </div>
 
-  <!-- ===== PAINEL PRINCIPAL ===== -->
   <div id="conteudo-admin" class="conteudo-admin" hidden>
-
     <div class="painel">
 
-      <!-- SIDEBAR -->
       <aside class="sidebar">
         <div class="sidebar__marca">
           <svg class="sidebar__flor" viewBox="0 0 48 48" fill="none" aria-hidden="true">
@@ -797,19 +334,16 @@
         </div>
 
         <span class="sidebar__secao-titulo">Visão geral</span>
-
         <button class="aba-nav ativa" data-aba="aba-dashboard">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
           Dashboard
         </button>
 
         <span class="sidebar__secao-titulo">Conteúdo</span>
-
         <button class="aba-nav" data-aba="aba-locais">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
           Locais
         </button>
-
         <button class="aba-nav" data-aba="aba-estatisticas">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           Estatísticas
@@ -823,10 +357,8 @@
         </div>
       </aside>
 
-      <!-- CONTEÚDO -->
       <main class="painel__conteudo">
 
-        <!-- ===== ABA: DASHBOARD ===== -->
         <section id="aba-dashboard" class="aba-conteudo">
           <div class="secao-header">
             <div>
@@ -861,15 +393,12 @@
           <div class="tabela-card">
             <h2>Check-ins recentes</h2>
             <table id="tabela-checkins">
-              <thead>
-                <tr><th>Local</th><th>Categoria</th><th>Data</th><th>Horário</th><th>Origem</th></tr>
-              </thead>
+              <thead><tr><th>Local</th><th>Categoria</th><th>Data</th><th>Horário</th><th>Origem</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
         </section>
 
-        <!-- ===== ABA: LOCAIS ===== -->
         <section id="aba-locais" class="aba-conteudo" hidden>
           <div class="secao-header">
             <div>
@@ -882,7 +411,6 @@
             </button>
           </div>
 
-          <!-- Filtros por categoria -->
           <div class="locais-filtros" id="filtros-categoria">
             <button class="filtro-cat ativo" data-cat="todos">Todos</button>
             <button class="filtro-cat" data-cat="gastronomia">Gastronomia</button>
@@ -896,7 +424,6 @@
           <div id="lista-locais-admin" class="lista-locais-admin"></div>
         </section>
 
-        <!-- ===== ABA: ESTATÍSTICAS ===== -->
         <section id="aba-estatisticas" class="aba-conteudo" hidden>
           <div class="secao-header">
             <div>
@@ -984,30 +511,29 @@
         </div>
 
         <div class="form-divisor"></div>
-        <span class="form-secao-titulo">📅 Horário de funcionamento</span>
+        <span class="form-secao-titulo">
+          📅 Horário de funcionamento
+        </span>
+        <p class="form-ajuda">Cada dia pode ter um horário diferente — útil quando abre mais cedo ou fecha mais tarde no fim de semana.</p>
 
-        <div class="form-grupo">
-          <label>Dias da semana</label>
-          <div class="dias-semana" id="dias-semana">
-            <button type="button" class="dia-toggle" data-dia="dom">Dom</button>
-            <button type="button" class="dia-toggle" data-dia="seg">Seg</button>
-            <button type="button" class="dia-toggle" data-dia="ter">Ter</button>
-            <button type="button" class="dia-toggle" data-dia="qua">Qua</button>
-            <button type="button" class="dia-toggle" data-dia="qui">Qui</button>
-            <button type="button" class="dia-toggle" data-dia="sex">Sex</button>
-            <button type="button" class="dia-toggle" data-dia="sab">Sáb</button>
-          </div>
+        <div class="horarios-semana" id="horarios-semana"></div>
+
+        <div class="horarios-semana__atalhos">
+          <button type="button" class="btn btn--secundario btn--mini" id="btn-copiar-semana">Copiar segunda p/ todos os dias úteis</button>
+          <button type="button" class="btn btn--secundario btn--mini" id="btn-copiar-fds">Copiar sábado p/ domingo</button>
         </div>
 
-        <div class="form-linha">
-          <div class="form-grupo">
-            <label for="campo-hora-abertura">Abertura</label>
-            <input type="time" id="campo-hora-abertura" value="08:00" />
+        <!-- Refeições servidas (aparece só para gastronomia) -->
+        <div class="form-grupo campo-condicional" id="grupo-refeicoes-servidas" hidden>
+          <div class="form-divisor"></div>
+          <span class="form-secao-titulo">🍽 Refeições servidas</span>
+          <div class="refeicoes-servidas" id="refeicoes-servidas">
+            <label class="refeicao-check"><input type="checkbox" value="cafeDaManha" /> Café da manhã</label>
+            <label class="refeicao-check"><input type="checkbox" value="almoco" /> Almoço</label>
+            <label class="refeicao-check"><input type="checkbox" value="tarde" /> Lanche da tarde</label>
+            <label class="refeicao-check"><input type="checkbox" value="janta" /> Janta</label>
           </div>
-          <div class="form-grupo">
-            <label for="campo-hora-fechamento">Fechamento</label>
-            <input type="time" id="campo-hora-fechamento" value="18:00" />
-          </div>
+          <p class="form-ajuda">Só sugerimos este local pro turista se ele pedir uma dessas refeições no roteiro.</p>
         </div>
 
         <!-- Prioridade gastronômica (aparece só para gastronomia) -->
@@ -1023,7 +549,7 @@
             <option value="4">4 — Garante slot na rota</option>
             <option value="5">5 — Máxima prioridade</option>
           </select>
-          <p class="form-ajuda">Nível 4 ou 5 garante que este local entre quase sempre no roteiro gastronômico.</p>
+          <p class="form-ajuda">Nível 4 ou 5 garante que este local entre quase sempre no roteiro gastronômico, na refeição que ele servir.</p>
         </div>
 
         <p id="erro-form-local" class="erro-form" hidden></p>
@@ -1037,7 +563,6 @@
     </div>
   </div>
 
-  <!-- Caminhos corrigidos para nova estrutura -->
   <script type="module" src="../js/core/firebase-config.js"></script>
   <script type="module" src="../js/admin/admin-auth.js"></script>
   <script type="module" src="../js/admin/admin-estatisticas.js"></script>
