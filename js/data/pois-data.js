@@ -189,6 +189,10 @@ function normalizarPoi(id, dadosFirestore) {
     prioridadeGastronomica: Number(
       dadosFirestore.prioridade_gastronomica ?? dadosFirestore.prioridadeGastronomica ?? 0
     ),
+    // Só relevante para categoria === "gastronomia". Subconjunto de
+    // ["cafeDaManha","almoco","tarde","janta"]. Vazio/ausente = motor-rota.js
+    // trata como "serve tudo" (não esconde local antigo ainda não preenchido).
+    refeicoesServidas: dadosFirestore.refeicoesServidas || dadosFirestore.refeicoes_servidas || [],
   };
 }
 
