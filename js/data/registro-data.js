@@ -25,18 +25,16 @@ const COLECAO_CHECKINS = "checkins";
 // ============================================================
 // REGISTRAR ROTA CRIADA — chamado quando o formulário gera uma rota
 // ============================================================
-async function registrarRotaCriada(perfilBusca, rota) {
+async function registrarRotaCriada(perfilBusca, capitulo) {
   try {
     await addDoc(collection(db, COLECAO_ROTAS_CRIADAS), {
       criadoEm: serverTimestamp(),
       horarioInicioEscolhido: perfilBusca.horarioInicio,
-      tempoDisponivelMin: perfilBusca.tempoDisponivelMin,
-      orcamentoFaixa: perfilBusca.orcamentoFaixa || null,
-      composicaoGrupo: perfilBusca.composicaoGrupo || null,
+      refeicoesDesejadas: perfilBusca.refeicoesDesejadas || [],
       interesses: perfilBusca.interesses || [],
-      quantidadeParadas: rota.paradas.length,
-      paradasNomes: rota.paradas.map((p) => p.nome),
-      rotaVazia: !!rota.vazia,
+      quantidadeParadas: capitulo.paradas.length,
+      paradasNomes: capitulo.paradas.map((p) => p.nome),
+      capituloVazio: !!capitulo.vazio,
     });
   } catch (erro) {
     console.warn("[registro-data] Falha ao registrar rota criada (não afeta o usuário):", erro);
