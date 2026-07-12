@@ -10,30 +10,30 @@
  * card da parada ativa durante o passeio (mesmo formato visual).
  */
 
-const CHAVE_SESSION_STORAGE = "linde-guia:rota-gerada";
+const CHAVE_SESSION_STORAGE = "linde-guia:capitulo-atual";
 
 // ============================================================
 // INICIALIZAÇÃO
 // ============================================================
 function iniciarRenderRota() {
-  const rota = lerRotaDoStorage();
+  const capitulo = lerRotaDoStorage();
 
   esconderTodosOsEstados();
 
-  if (!rota) {
+  if (!capitulo) {
     mostrarEstado("estado-sem-rota");
     return;
   }
 
-  if (rota.vazia || rota.paradas.length === 0) {
+  if (capitulo.vazio || capitulo.paradas.length === 0) {
     mostrarEstado("estado-rota-vazia");
     return;
   }
 
   mostrarEstado("vista-resultado");
-  renderizarResultado(rota);
+  renderizarResultado(capitulo);
 
-  configurarBotaoIniciar(rota);
+  configurarBotaoIniciar(capitulo);
 }
 
 document.addEventListener("DOMContentLoaded", iniciarRenderRota);
@@ -65,6 +65,7 @@ const IDS_ESTADOS = [
   "estado-rota-vazia",
   "vista-resultado",
   "vista-em-rota",
+  "vista-continuar",
   "vista-finalizada",
 ];
 
@@ -84,24 +85,32 @@ function mostrarEstado(id) {
 // ============================================================
 // RENDERIZAÇÃO DA LISTA DE PARADAS
 // ============================================================
-function renderizarResultado(rota) {
+function renderizarResultado(capitulo) {
   const resumoEl = document.getElementById("resumo-texto");
-  resumoEl.textContent = montarTextoResumo(rota);
+  resumoEl.textContent = montarTextoResumo(capitulo);
 
   const listaEl = document.getElementById("lista-paradas");
   listaEl.innerHTML = "";
 
-  rota.paradas.forEach((parada, indice) => {
+  capitulo.paradas.forEach((parada, indice) => {
     listaEl.appendChild(criarParadaCard(parada, indice));
   });
 }
 
-function montarTextoResumo(rota) {
-  const horas = Math.floor(rota.tempoTotalEstimadoMin / 60);
-  const minutos = rota.tempoTotalEstimadoMin % 60;
+// Capítulo não carrega mais uma duração total pronta (não existe mais
+// "tempo disponível" como conceito) — calcula a partir da diferença entre
+// o horário de início do capítulo e a saída da última parada.
+function montarTextoResumo(capitulo) {
+  const ultimaParada = capitulo.paradas[capitulo.paradas.length - 1];
+  const inicio = new Date(capitulo.perfilOriginal.horarioInicio);
+  const fim = ultimaParada ? new Date(ultimaParada.horarioSaida) : inicio;
+  const tempoTotalMin = Math.max(0, Math.round((fim.getTime() - inicio.getTime()) / 60000));
+
+  const horas = Math.floor(tempoTotalMin / 60);
+  const minutos = tempoTotalMin % 60;
   const tempoTexto = horas > 0 ? `${horas}h${minutos > 0 ? minutos + "min" : ""}` : `${minutos}min`;
 
-  return `${rota.paradas.length} ${rota.paradas.length === 1 ? "parada" : "paradas"} · ${tempoTexto}`;
+  return `${capitulo.paradas.length} ${capitulo.paradas.length === 1 ? "parada" : "paradas"} · ${tempoTexto}`;
 }
 
 function criarParadaCard(parada, indice) {
@@ -166,4 +175,6 @@ export {
   lerRotaDoStorage,
   salvarRotaNoStorage,
   mostrarEstado,
+  renderizarResultado,
+  configurarBotaoIniciar,
 };

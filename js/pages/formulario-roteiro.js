@@ -2,34 +2,34 @@
  * formulario-roteiro.js
  * Linde Guia — Treze Tílias
  *
- * Lógica da tela "Criar Roteiro" (pages/roteiro.html).
- * Lê os campos do formulário, monta o PerfilBusca, chama motor-rota.js,
- * guarda o resultado no sessionStorage e redireciona para minha-rota.html.
+ * Lógica da tela "Criar Roteiro" (pages/roteiro.html) — versão minimalista.
+ * Formulário reduzido a: localização, quando (agora/agendado), refeições
+ * desejadas e interesses. Tempo disponível, orçamento, horário de término
+ * e composição do grupo foram removidos — ver motor-rota.js (comentário de
+ * arquitetura no topo) pra entender por quê: aquele conjunto de campos
+ * permitia pedidos fisicamente contraditórios (ex: "quero janta" numa janela
+ * de 4h que termina de manhã) que quebravam a geração da rota.
  *
- * Caminhos atualizados para nova estrutura:
- *   js/pages/formulario-roteiro.js
- *   js/engine/motor-rota.js
- *   js/data/pois-data.js
- *   js/data/eventos-data.js
- *   js/data/registro-data.js
+ * Lê os campos do formulário, monta o PerfilBusca, chama motor-rota.js pra
+ * gerar o PRIMEIRO CAPÍTULO (não o passeio inteiro), guarda no
+ * sessionStorage e redireciona pra minha-rota.html — que decide se pede
+ * mais capítulos conforme a pessoa avança.
  */
 
-import { gerarRota }                  from "../engine/motor-rota.js";
+import { gerarCapitulo }               from "../engine/motor-rota.js";
 import { buscarPoisAtivos }            from "../data/pois-data.js";
 import { buscarEventosAtivosNaData }   from "../data/eventos-data.js";
 import { registrarRotaCriada }         from "../data/registro-data.js";
+import { lerSelos }                    from "../core/selos-local.js";
 
 // ============================================================
 // ESTADO DO FORMULÁRIO
 // ============================================================
 const estado = {
-  tempoDisponivelMin: 240,      // padrão = "Meio dia"
+  quando: "agora",              // "agora" | "agendado"
   horarioInicio: null,
-  horarioFim: null,             // opcional — "até que horas quero terminar"
   localizacaoPartida: null,
   enderecoManual: "",
-  orcamentoFaixa: "moderado",   // padrão = "Moderado"
-  composicaoGrupo: null,
   interesses: [],
   refeicoesDesejadas: [],       // subconjunto de: cafeDaManha, almoco, tarde, janta
 };
@@ -40,7 +40,7 @@ const estado = {
 function iniciarFormularioRoteiro() {
   configurarChipsSelecaoUnica();
   configurarChipsSelecaoMultipla();
-  configurarHorarioPadrao();
+  configurarQuando();
   configurarBotaoLocalizacao();
   configurarSubmit();
 }
@@ -48,7 +48,7 @@ function iniciarFormularioRoteiro() {
 document.addEventListener("DOMContentLoaded", iniciarFormularioRoteiro);
 
 // ============================================================
-// CHIPS — seleção única (tempo, orçamento, grupo)
+// CHIPS — seleção única (hoje só sobrou "quando": agora/agendado)
 // ============================================================
 function configurarChipsSelecaoUnica() {
   const grupos = agruparChipsPorCampo(".chip:not(.chip--multipla)");
@@ -58,15 +58,18 @@ function configurarChipsSelecaoUnica() {
       chip.addEventListener("click", () => {
         chips.forEach((c) => c.setAttribute("aria-pressed", "false"));
         chip.setAttribute("aria-pressed", "true");
-        const valor = chip.dataset.valor;
-        estado[campo] = isNaN(Number(valor)) ? valor : Number(valor);
+        estado[campo] = chip.dataset.valor;
+
+        if (campo === "quando") {
+          alternarCampoHorarioAgendado(chip.dataset.valor === "agendado");
+        }
       });
     });
   }
 }
 
 // ============================================================
-// CHIPS — seleção múltipla (interesses)
+// CHIPS — seleção múltipla (refeições, interesses)
 // ============================================================
 function configurarChipsSelecaoMultipla() {
   const chips = document.querySelectorAll(".chip--multipla");
@@ -100,26 +103,36 @@ function agruparChipsPorCampo(seletor) {
 }
 
 // ============================================================
-// HORÁRIO — pré-preenche com hora atual do device
+// QUANDO — "agora" usa hora real do device; "agendado" libera um campo
+// de horário opcional (pra montar o passeio de um outro dia com antecedência)
 // ============================================================
-function configurarHorarioPadrao() {
-  const input = document.getElementById("input-horario");
-  const agora = new Date();
-  const horas   = String(agora.getHours()).padStart(2, "0");
-  const minutos = String(agora.getMinutes()).padStart(2, "0");
-  input.value = `${horas}:${minutos}`;
-  estado.horarioInicio = construirDataHoraDeHoje(input.value);
+function configurarQuando() {
+  atualizarHorarioParaAgora(); // valor inicial: agora mesmo
 
-  input.addEventListener("change", () => {
-    estado.horarioInicio = construirDataHoraDeHoje(input.value);
+  const inputAgendado = document.getElementById("input-horario-agendado");
+  inputAgendado.addEventListener("change", () => {
+    if (inputAgendado.value) {
+      estado.horarioInicio = construirDataHoraDeHoje(inputAgendado.value);
+    }
   });
+}
 
-  const inputFim = document.getElementById("input-horario-fim");
-  if (inputFim) {
-    inputFim.addEventListener("change", () => {
-      estado.horarioFim = inputFim.value ? construirDataHoraDeHoje(inputFim.value) : null;
-    });
+function alternarCampoHorarioAgendado(mostrar) {
+  const grupo = document.getElementById("grupo-horario-agendado");
+  grupo.hidden = !mostrar;
+
+  if (mostrar) {
+    const inputAgendado = document.getElementById("input-horario-agendado");
+    if (inputAgendado.value) {
+      estado.horarioInicio = construirDataHoraDeHoje(inputAgendado.value);
+    }
+  } else {
+    atualizarHorarioParaAgora(); // voltou pra "Agora" — usa hora real de novo
   }
+}
+
+function atualizarHorarioParaAgora() {
+  estado.horarioInicio = new Date().toISOString();
 }
 
 function construirDataHoraDeHoje(horaTexto) {
@@ -279,10 +292,10 @@ function configurarSubmit() {
         buscarEventosAtivosNaData(perfilBusca.data),
       ]);
 
-      const rota = gerarRota(pois, eventos, perfilBusca);
+      const capitulo = gerarCapitulo(pois, eventos, perfilBusca);
 
-      sessionStorage.setItem("linde-guia:rota-gerada", JSON.stringify(rota));
-      registrarRotaCriada(perfilBusca, rota); // falha silenciosa, não bloqueia redirect
+      sessionStorage.setItem("linde-guia:capitulo-atual", JSON.stringify(capitulo));
+      registrarRotaCriada(perfilBusca, capitulo); // falha silenciosa, não bloqueia redirect
 
       // Redireciona para minha-rota (mesmo nível em pages/)
       window.location.href = "../pages/minha-rota.html";
@@ -297,17 +310,18 @@ function configurarSubmit() {
 
 function validarEstado() {
   if (!estado.horarioInicio) {
-    return "Diz a que horas você começa o passeio.";
+    return "Diz a que horas você quer começar o passeio.";
   }
   if (!estado.localizacaoPartida && !estado.enderecoManual.trim()) {
     return "A gente precisa saber de onde você está partindo — usa o GPS ou digita um endereço.";
   }
-  if (estado.horarioFim && new Date(estado.horarioFim).getTime() <= new Date(estado.horarioInicio).getTime()) {
-    return "O horário de término precisa ser depois do horário de início.";
-  }
   return null;
 }
 
+// Monta o PerfilBusca pro PRIMEIRO capítulo. idsExcluidos entra aqui com o
+// histórico de "selos" salvo localmente no aparelho (ver core/selos-local.js)
+// — assim a rota nunca sugere de novo um lugar que essa pessoa já visitou
+// nesse aparelho, em nenhum passeio anterior.
 function montarPerfilBusca() {
   const CENTRO_TREZE_TILIAS   = { lat: -27.0026, lng: -51.4084 };
   const RAIO_MAXIMO_RAZOAVEL_KM = 15;
@@ -322,29 +336,17 @@ function montarPerfilBusca() {
     localizacaoPartida = CENTRO_TREZE_TILIAS;
   }
 
-  // Se a pessoa informou até que horas quer terminar, o tempo disponível
-  // real é o menor entre o que ela escolheu nos chips (01) e a diferença
-  // entre início e fim — nunca deixa a rota estourar o horário de término.
-  let tempoDisponivelMin = estado.tempoDisponivelMin;
-  if (estado.horarioFim) {
-    const diffMin = Math.round(
-      (new Date(estado.horarioFim).getTime() - new Date(estado.horarioInicio).getTime()) / 60000
-    );
-    if (diffMin > 0) {
-      tempoDisponivelMin = Math.min(tempoDisponivelMin, diffMin);
-    }
-  }
+  const idsJaVisitados = lerSelos()
+    .map((selo) => selo.poiId)
+    .filter(Boolean);
 
   return {
     data: estado.horarioInicio,
     horarioInicio: estado.horarioInicio,
-    horarioFim: estado.horarioFim,
-    tempoDisponivelMin,
     localizacaoPartida,
-    orcamentoFaixa: estado.orcamentoFaixa,
-    composicaoGrupo: estado.composicaoGrupo,
     interesses: estado.interesses,
     refeicoesDesejadas: estado.refeicoesDesejadas,
+    idsExcluidos: idsJaVisitados,
   };
 }
 
