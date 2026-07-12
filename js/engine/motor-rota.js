@@ -4,49 +4,62 @@
  *
  * O CÉREBRO do app. Não toca DOM, não importa HTML, não fala com Firebase direto.
  * Recebe: lista de POIs (+ eventos) e um Perfil de Busca.
- * Devolve: uma Rota (lista ordenada de paradas com horários e custo estimado).
+ * Devolve: um CAPÍTULO da rota (não o "dia inteiro") — ver nota de arquitetura abaixo.
+ *
+ * ============================================================
+ * POR QUE "CAPÍTULO" E NÃO MAIS "TEMPO DISPONÍVEL / ORÇAMENTO / GRUPO"
+ * ============================================================
+ * Versão anterior deste motor recebia duração total (ex: "meio dia" = 240min),
+ * orçamento e horário de término, e tentava montar o DIA INTEIRO de uma vez.
+ * Isso quebrava sempre que a combinação de campos era fisicamente impossível
+ * (ex: pedir "janta" numa janela de 4h que termina às 13h) — o motor tentava
+ * reservar slot pra algo inviável, gastava esforço nisso, e o resultado final
+ * podia ficar vazio ou incoerente.
+ *
+ * A decisão (registrada em conversa com o cliente) foi trocar pelo modelo que
+ * apps de navegação e itinerário de referência usam: nunca promete o dia
+ * inteiro de uma vez. Gera um CAPÍTULO — um grupo curto e coerente de
+ * paradas — e pergunta se a pessoa quer continuar. Cada capítulo:
+ *   - fecha quando bate a próxima refeição desejada (fronteira natural), OU
+ *   - fecha ao atingir MAX_PARADAS_POR_CAPITULO, OU
+ *   - fecha por falta de candidato viável.
+ * Isso elimina a classe inteira de bug de "não achei nada" por conflito de
+ * horário, porque nunca tenta prometer mais do que cabe fisicamente.
  *
  * Etapas (na ordem que são executadas):
- *   1. filtrarCandidatos()          -> remove o que é IMPOSSÍVEL (fechado, sem orçamento, sem tempo)
- *   2. garantirExperienciaGastronomica() -> reserva um slot pro restaurante de alta prioridade (admin)
- *   3. pontuarCandidatos()          -> dá nota pra cada POI restante
- *   4. montarSequencia()            -> escolhe a combinação + ordem que cabe no tempo e flui geograficamente
+ *   1. filtrarCandidatos()          -> remove o que é IMPOSSÍVEL (fechado, já visitado, refeição não bate)
+ *   2. garantias de refeição/interesse -> reserva slots pros itens mais importantes deste capítulo
+ *   3. pontuarCandidatos()          -> dá nota pra cada POI restante (distância, avaliação, interesse)
+ *   4. montarCapitulo()             -> escolhe a combinação + ordem, fecha o capítulo na fronteira certa
  *   5. recalcularRota()             -> usado durante o passeio, quando o usuário marca "Cheguei" ou "Pula essa"
  */
 
 // ============================================================
-// 1. PESOS DO MOTOR — ajustar aqui sem tocar na lógica abaixo
+// 1. CONSTANTES DO MOTOR
 // ============================================================
 const PESOS = {
-  distancia: 0.35,    // cidade pequena: o que está mais perto pesa MUITO
-  tempo: 0.25,         // encaixar bem no tempo restante do dia
-  custo: 0.15,         // aderência ao orçamento escolhido
-  avaliacao: 0.15,     // nota/qualidade do lugar
-  interesse: 0.10,     // match com interesses marcados (se o usuário preencheu)
-};
-
-const FAIXA_ORCAMENTO = {
-  economico: { max: 30 },     // R$ por pessoa, por parada
-  moderado: { max: 80 },
-  sem_limite: { max: Infinity },
+  distancia: 0.5,     // cidade pequena: o que está mais perto pesa MUITO
+  avaliacao: 0.3,      // nota/qualidade do lugar
+  interesse: 0.2,      // match com interesses marcados (se o usuário preencheu)
 };
 
 const MARGEM_SEGURANCA_MIN = 10; // minutos de "colchão" entre paradas, pra não estourar horário por atraso
 
+// Tamanho máximo de um capítulo quando não há refeição marcando a fronteira
+// natural. Não é um número arbitrário: é o range que estudos de memória de
+// curto prazo (regra de Miller, 7±2, com trabalhos mais recentes apontando
+// 3-5 como o ponto ideal pra sensação de "grupo completo") apontam como o
+// tamanho que uma pessoa processa como um bloco fechado sem se perder.
+const MAX_PARADAS_POR_CAPITULO = 4;
+
 // Nível mínimo de prioridade gastronômica (definido no admin, escala 1-5)
-// que GARANTE o lugar na rota — não é só um bônus de pontuação, é uma
-// reserva de slot. Critério combinado nesta sessão: nível 4 ou 5 entra
-// quase sempre, desde que já tenha passado pelo filtro duro (aberto,
-// dentro do orçamento, cabe no tempo).
+// que GARANTE o lugar no capítulo — não é só um bônus de pontuação, é uma
+// reserva de slot.
 const NIVEL_MINIMO_GARANTIA_GASTRONOMICA = 4;
 
-// Janelas de horário aproximadas de cada refeição — usadas para casar o que
-// o turista marcou no formulário ("quero almoço no roteiro") com o horário
-// em que o restaurante realmente serve aquela refeição. Isso é uma
-// aproximação por relógio (mesmo padrão já usado em estaAbertoNoHorario,
-// que também julga pelo horarioInicio informado, não pelo horário real de
-// chegada em cada parada — recalcularRota corrige isso depois, ver
-// calcularERevalidarAteEstabilizar).
+// Janelas de horário aproximadas de cada refeição — usadas tanto pra achar
+// qual é a "próxima fronteira" quanto pra casar o horário real de chegada
+// com a refeição que a parada deveria satisfazer.
 const REFEICAO_JANELAS = {
   cafeDaManha: { inicio: "06:00", fim: "10:30" },
   almoco:      { inicio: "11:00", fim: "14:30" },
@@ -55,21 +68,38 @@ const REFEICAO_JANELAS = {
 };
 
 // ============================================================
-// FUNÇÃO PRINCIPAL — chamada pela tela "Criar Roteiro"
+// FUNÇÃO PRINCIPAL — chamada pela tela "Criar Roteiro" e também pra gerar
+// cada capítulo seguinte (a tela "Minha Rota" chama de novo com uma nova
+// posição/horário/lista de refeições restantes — ver comentário no topo).
 // ============================================================
-function gerarRota(pois, eventos, perfilBusca) {
+// perfilBusca esperado:
+//   localizacaoPartida: { lat, lng }
+//   horarioInicio: ISO datetime (agora, ou o horário agendado pelo turista)
+//   data: ISO date (pra checar dia da semana e eventos ativos)
+//   refeicoesDesejadas: array de refeições AINDA NÃO atendidas (o chamador
+//     é responsável por tirar da lista o que já foi satisfeito em capítulos
+//     anteriores)
+//   interesses: array de tags de interesse marcadas (não muda entre capítulos)
+//   idsExcluidos: array de ids de POI que NÃO podem entrar — já visitados
+//     nesta rota (capítulos anteriores) ou já visitados historicamente no
+//     aparelho (ver core/selos-local.js)
+function gerarCapitulo(pois, eventos, perfilBusca) {
   const candidatosIniciais = injetarEventosAtivos(pois, eventos, perfilBusca.data);
+  const idsExcluidos = new Set(perfilBusca.idsExcluidos || []);
+  const candidatosDisponiveis = candidatosIniciais.filter((poi) => !idsExcluidos.has(poi.id));
 
-  const candidatosViaveis = filtrarCandidatos(candidatosIniciais, perfilBusca);
+  const candidatosViaveis = filtrarCandidatos(candidatosDisponiveis, perfilBusca);
 
   if (candidatosViaveis.length === 0) {
-    return rotaVazia(perfilBusca);
+    return capituloVazio(perfilBusca);
   }
+
+  const refeicaoFronteira = proximaRefeicaoFronteira(perfilBusca.refeicoesDesejadas);
 
   const idsReservados = new Set();
   const experienciasGastronomicas = escolherExperienciasGastronomicasGarantidas(
     candidatosViaveis,
-    perfilBusca.refeicoesDesejadas,
+    refeicaoFronteira ? [refeicaoFronteira] : [],
     idsReservados
   );
   const experienciasDeInteresse = escolherExperienciasDeInteresseGarantidas(
@@ -81,46 +111,47 @@ function gerarRota(pois, eventos, perfilBusca) {
 
   const candidatosPontuados = pontuarCandidatos(candidatosViaveis, perfilBusca);
 
-  const rota = montarSequencia(candidatosPontuados, perfilBusca, experienciasGarantidas);
+  return montarCapitulo(candidatosPontuados, perfilBusca, experienciasGarantidas, refeicaoFronteira);
+}
 
-  return rota;
+// Entre as refeições ainda não atendidas, qual é a próxima cronologicamente
+// (pela janela de horário)? É essa que vai fechar o capítulo atual quando
+// for satisfeita. null se não sobrou nenhuma refeição desejada.
+function proximaRefeicaoFronteira(refeicoesDesejadas) {
+  if (!refeicoesDesejadas || refeicoesDesejadas.length === 0) return null;
+  return [...refeicoesDesejadas].sort(
+    (a, b) => REFEICAO_JANELAS[a].inicio.localeCompare(REFEICAO_JANELAS[b].inicio)
+  )[0];
 }
 
 // ============================================================
-// FUNÇÃO DE RECÁLCULO — chamada pelo "modo Em Rota"
+// FUNÇÃO DE RECÁLCULO — chamada pelo "modo Em Rota" (Cheguei / Pular)
 // ============================================================
+// Diferente da versão que tentava um dia inteiro, capítulos são curtos
+// (no máximo 4 paradas) — então recalcular não precisa reotimizar do zero
+// nem trazer candidatos de reserva. Só reordena geograficamente a partir
+// da posição atual e revalida horário de funcionamento.
 function recalcularRota(rotaAtual, paradaAtualIndex, acao, horarioAtual, posicaoAtual) {
-  // acao: "chegou" | "pular"
   const paradasRestantes = rotaAtual.paradas.slice(paradaAtualIndex + 1);
 
   if (acao === "pular") {
-    paradasRestantes.shift(); // remove a próxima parada da lista
+    paradasRestantes.shift();
   }
 
   if (paradasRestantes.length === 0) {
     return { ...rotaAtual, paradas: rotaAtual.paradas.slice(0, paradaAtualIndex + 1), finalizada: true };
   }
 
-  // Reaproveita os candidatos descartados na geração original (não refaz pontuação do zero)
-  const candidatosDeReserva = rotaAtual.alternativasDescartadas || [];
-
-  const perfilAtualizado = {
-    ...rotaAtual.perfilOriginal,
-    localizacaoPartida: posicaoAtual,
-    horarioInicio: horarioAtual,
-    tempoDisponivelMin: calcularTempoRestante(rotaAtual.perfilOriginal, horarioAtual),
-  };
-
-  const todosCandidatos = [...paradasRestantes, ...candidatosDeReserva];
-  const candidatosViaveis = filtrarCandidatos(todosCandidatos, perfilAtualizado);
-  const candidatosPontuados = pontuarCandidatos(candidatosViaveis, perfilAtualizado);
-  const novaSequenciaRestante = montarSequencia(candidatosPontuados, perfilAtualizado);
+  const reordenadas = ordenarPorProximidadeGeografica(paradasRestantes, posicaoAtual);
+  const comHorario = calcularHorariosReais(reordenadas, horarioAtual);
+  const validas = comHorario.filter((p) =>
+    estaAbertoNoHorario(p, p.horarioChegada, rotaAtual.perfilOriginal.data)
+  );
 
   return {
     ...rotaAtual,
-    paradas: [...rotaAtual.paradas.slice(0, paradaAtualIndex + 1), ...novaSequenciaRestante.paradas],
-    custoTotalEstimado: rotaAtual.custoTotalEstimado, // recalculado de fato na renderização
-    alternativasDescartadas: novaSequenciaRestante.alternativasDescartadas,
+    paradas: [...rotaAtual.paradas.slice(0, paradaAtualIndex + 1), ...validas],
+    finalizada: validas.length === 0,
   };
 }
 
@@ -153,44 +184,43 @@ function injetarEventosAtivos(pois, eventos, dataReferencia) {
 // ============================================================
 // ETAPA 1 — FILTRO DURO
 // ============================================================
+// Sem orçamento e sem "tempo disponível" nesta versão — o único corte duro
+// agora é: está aberto? bate com a refeição pedida (se pedida)? Já foi
+// excluído por já ter sido visitado? (exclusão acontece antes de chamar
+// esta função, ver gerarCapitulo)
+function filtrarCandidatos(pois, perfilBusca) {
+  return pois.filter((poi) => {
+    if (poi.statusOperacional === "fechado_temporariamente") return false;
+    if (!estaAbertoNoHorario(poi, perfilBusca.horarioInicio, perfilBusca.data)) return false;
+    if (!candidatoCombinaComRefeicoesDesejadas(poi, perfilBusca.refeicoesDesejadas)) return false;
+    return true;
+  });
+}
+
+function estaAbertoNoHorario(poi, horarioInicio, dataReferencia) {
+  if (!poi.horarioFuncionamento) return true; // sem dado de horário, assume aberto (POI 24h, ex: praça)
+
+  const diaSemana = obterDiaSemana(dataReferencia);
+  const janela = poi.horarioFuncionamento[diaSemana];
+
+  if (!janela || janela.fechado) return false;
+
+  return horarioDentroDaJanela(horarioInicio, janela.abre, janela.fecha);
+}
+
 // ============================================================
 // ETAPA 2 — GARANTIA DE EXPERIÊNCIA GASTRONÔMICA (definida no admin)
 // ============================================================
-// Entre os candidatos JÁ VIÁVEIS (abertos, no orçamento, cabem no tempo),
-// procura o restaurante/bar/café com maior nível de prioridade gastronômica
-// (campo "prioridadeGastronomica", 1-5, definido no painel admin). Se houver
-// um com nível >= NIVEL_MINIMO_GARANTIA_GASTRONOMICA, ele é RESERVADO —
-// monstarSequencia() vai garantir um lugar pra ele antes de otimizar o resto.
-// Entre os candidatos JÁ VIÁVEIS (abertos, no orçamento, cabem no tempo):
-//
-// - Se o turista marcou refeições específicas (café da manhã / almoço /
-//   tarde / janta), tenta GARANTIR uma parada gastronômica de alta
-//   prioridade para CADA refeição marcada (uma reserva de slot por
-//   refeição, não só uma no total). Um mesmo local não é reservado duas
-//   vezes ainda que sirva mais de uma refeição desejada.
-// - Se o turista não marcou nenhuma refeição, cai no comportamento antigo:
-//   garante só a experiência gastronômica de maior prioridade, sem ligar
-//   pra qual refeição é.
-//
-// Recebe idsReservados de FORA (Set compartilhado com a garantia de
-// interesses, ver escolherExperienciasDeInteresseGarantidas) — evita
-// reservar o mesmo local duas vezes se ele também bater com uma tag de
-// interesse marcada.
-function escolherExperienciasGastronomicasGarantidas(candidatosViaveis, refeicoesDesejadas, idsReservados) {
-  const semRefeicaoEspecifica = !refeicoesDesejadas || refeicoesDesejadas.length === 0;
-
-  if (semRefeicaoEspecifica) {
-    const unico = escolherExperienciaGastronomicaGarantida(
-      candidatosViaveis.filter((poi) => !idsReservados.has(poi.id))
-    );
-    if (!unico) return [];
-    idsReservados.add(unico.id);
-    return [unico];
-  }
+// Só tenta garantir a refeição-FRONTEIRA deste capítulo (a próxima
+// cronologicamente), nunca todas as refeições restantes de uma vez — é
+// isso que evita o motor tentar (inutilmente) encaixar janta num capítulo
+// que só tem tempo físico pra ir até o almoço.
+function escolherExperienciasGastronomicasGarantidas(candidatosViaveis, refeicoesFronteira, idsReservados) {
+  if (!refeicoesFronteira || refeicoesFronteira.length === 0) return [];
 
   const garantidas = [];
 
-  for (const refeicao of refeicoesDesejadas) {
+  for (const refeicao of refeicoesFronteira) {
     const candidatosDaRefeicao = candidatosViaveis.filter(
       (poi) =>
         poi.categoria === "gastronomia" &&
@@ -215,16 +245,9 @@ function escolherExperienciasGastronomicasGarantidas(candidatosViaveis, refeicoe
 // ============================================================
 // ETAPA 2b — GARANTIA DE EXPERIÊNCIA POR INTERESSE (história, natureza...)
 // ============================================================
-// Mesma ideia da garantia gastronômica, mas pra "interesses" (campo 07 do
-// formulário). Antes, interesse só dava um bônus pequeno na pontuação (10%
-// do peso) — um local de história podia nunca aparecer na rota mesmo tendo
-// vários cadastrados, se as paradas de maior score sozinhas já enchessem o
-// tempo disponível. Agora reserva 1 slot por interesse marcado, igual já
-// acontece com refeição.
-//
-// Critério de escolha: melhor avaliação (nota) entre os candidatos com a
-// tag — não existe um campo de "prioridade" pra história/natureza/etc como
-// existe pra gastronomia.
+// Reserva 1 slot por interesse marcado, entre os candidatos deste capítulo.
+// Critério de escolha: melhor avaliação (nota) — não existe campo de
+// "prioridade" pra história/natureza/etc como existe pra gastronomia.
 function escolherExperienciasDeInteresseGarantidas(candidatosViaveis, interesses, idsReservados) {
   if (!interesses || interesses.length === 0) return [];
 
@@ -262,65 +285,17 @@ function candidatoCombinaComRefeicoesDesejadas(poi, refeicoesDesejadas) {
   return refeicoesDesejadas.some((refeicao) => poiServeRefeicao(poi, refeicao));
 }
 
-function escolherExperienciaGastronomicaGarantida(candidatosViaveis) {
-  const candidatosGastronomicos = candidatosViaveis.filter(
-    (poi) => poi.categoria === "gastronomia" && (poi.prioridadeGastronomica || 0) >= NIVEL_MINIMO_GARANTIA_GASTRONOMICA
-  );
-
-  if (candidatosGastronomicos.length === 0) return null;
-
-  const ordenados = [...candidatosGastronomicos].sort(
-    (a, b) => (b.prioridadeGastronomica || 0) - (a.prioridadeGastronomica || 0)
-  );
-
-  return ordenados[0];
-}
-
-function filtrarCandidatos(pois, perfilBusca) {
-  return pois.filter((poi) => {
-    if (poi.statusOperacional === "fechado_temporariamente") return false;
-
-    if (!estaAbertoNoHorario(poi, perfilBusca.horarioInicio, perfilBusca.data)) return false;
-
-    if (!candidatoCombinaComRefeicoesDesejadas(poi, perfilBusca.refeicoesDesejadas)) return false;
-
-    const limitePreco = FAIXA_ORCAMENTO[perfilBusca.orcamentoFaixa]?.max ?? Infinity;
-    if (poi.precoEstimado > limitePreco) return false;
-
-    const tempoNecessario =
-      poi.duracaoMediaVisitaMin + estimarDeslocamentoMin(perfilBusca.localizacaoPartida, poi.localizacao);
-    if (tempoNecessario > perfilBusca.tempoDisponivelMin) return false;
-
-    return true;
-  });
-}
-
-function estaAbertoNoHorario(poi, horarioInicio, dataReferencia) {
-  if (!poi.horarioFuncionamento) return true; // sem dado de horário, assume aberto (POI 24h, ex: praça)
-
-  const diaSemana = obterDiaSemana(dataReferencia);
-  const janela = poi.horarioFuncionamento[diaSemana];
-
-  if (!janela || janela.fechado) return false;
-
-  return horarioDentroDaJanela(horarioInicio, janela.abre, janela.fecha);
-}
-
 // ============================================================
-// ETAPA 2 — PONTUAÇÃO
+// ETAPA 3 — PONTUAÇÃO
 // ============================================================
 function pontuarCandidatos(pois, perfilBusca) {
   return pois.map((poi) => {
     const distanciaScore = normalizarProximidade(poi.localizacao, perfilBusca.localizacaoPartida);
-    const tempoScore = normalizarEncaixeTempo(poi, perfilBusca.tempoDisponivelMin);
-    const custoScore = normalizarAdequacaoOrcamento(poi.precoEstimado, perfilBusca.orcamentoFaixa);
     const avaliacaoScore = normalizarAvaliacao(poi.avaliacao);
     const interesseScore = normalizarMatchInteresse(poi.tagsDeInteresse, perfilBusca.interesses);
 
     const score =
       PESOS.distancia * distanciaScore +
-      PESOS.tempo * tempoScore +
-      PESOS.custo * custoScore +
       PESOS.avaliacao * avaliacaoScore +
       PESOS.interesse * interesseScore +
       (poi.pesoInstitucional || 0) * 0.05; // bônus pequeno, não domina o score
@@ -336,19 +311,6 @@ function normalizarProximidade(localizacaoPoi, localizacaoPartida) {
   return Math.max(0, 1 - distanciaKm / distanciaMaximaRelevanteKm);
 }
 
-function normalizarEncaixeTempo(poi, tempoDisponivelMin) {
-  const proporcaoUsada = poi.duracaoMediaVisitaMin / tempoDisponivelMin;
-  // penaliza paradas que sozinhas consomem quase todo o tempo disponível
-  return Math.max(0, 1 - proporcaoUsada);
-}
-
-function normalizarAdequacaoOrcamento(preco, faixa) {
-  const limite = FAIXA_ORCAMENTO[faixa]?.max ?? Infinity;
-  if (limite === Infinity) return 1;
-  if (preco === 0) return 1; // grátis sempre pontua bem
-  return Math.max(0, 1 - preco / limite);
-}
-
 function normalizarAvaliacao(avaliacao) {
   if (!avaliacao) return 0.5;
   return Math.min(1, avaliacao / 5);
@@ -362,28 +324,29 @@ function normalizarMatchInteresse(tagsPoi, interessesUsuario) {
 }
 
 // ============================================================
-// ETAPA 3 — MONTAGEM DA SEQUÊNCIA (combinação + ordem)
+// ETAPA 4 — MONTAGEM DO CAPÍTULO
 // ============================================================
-function montarSequencia(candidatosPontuados, perfilBusca, experienciasGarantidas) {
+// Fecha o capítulo em uma das 3 condições, o que vier primeiro:
+//   a) acabou de incluir a parada que satisfaz a refeição-fronteira
+//   b) atingiu MAX_PARADAS_POR_CAPITULO
+//   c) não sobrou candidato viável
+function montarCapitulo(candidatosPontuados, perfilBusca, experienciasGarantidas, refeicaoFronteira) {
   const selecionados = [];
-  const descartados = [];
-  let tempoUsadoMin = 0;
   let posicaoAtual = perfilBusca.localizacaoPartida;
+  let fechouPelaFronteira = false;
 
-  // Reserva o slot de cada experiência gastronômica garantida (uma por
-  // refeição marcada, ou uma única no modo antigo sem refeição específica)
-  // ANTES de rodar a seleção normal por score — elas entram quase sempre,
+  // Reservas (refeição-fronteira + interesses) entram primeiro, sempre —
   // mesmo que um lugar mais conveniente perdesse pra elas numa disputa por
-  // pontuação. Reservas que não cabem mais no tempo restante são
-  // simplesmente puladas, sem alarde — o resto da rota segue normal.
+  // pontuação. Ainda respeitam o teto de paradas do capítulo.
   for (const experiencia of experienciasGarantidas || []) {
-    const deslocamentoGarantido = estimarDeslocamentoMin(posicaoAtual, experiencia.localizacao);
-    const custoTempoGarantido = deslocamentoGarantido + experiencia.duracaoMediaVisitaMin + MARGEM_SEGURANCA_MIN;
+    if (selecionados.length >= MAX_PARADAS_POR_CAPITULO) break;
 
-    if (tempoUsadoMin + custoTempoGarantido <= perfilBusca.tempoDisponivelMin) {
-      selecionados.push({ ...experiencia, deslocamentoMin: deslocamentoGarantido });
-      tempoUsadoMin += custoTempoGarantido;
-      posicaoAtual = experiencia.localizacao || posicaoAtual;
+    const deslocamento = estimarDeslocamentoMin(posicaoAtual, experiencia.localizacao);
+    selecionados.push({ ...experiencia, deslocamentoMin: deslocamento });
+    posicaoAtual = experiencia.localizacao || posicaoAtual;
+
+    if (refeicaoFronteira && experiencia.refeicaoReservadaPara === refeicaoFronteira) {
+      fechouPelaFronteira = true;
     }
   }
 
@@ -393,42 +356,82 @@ function montarSequencia(candidatosPontuados, perfilBusca, experienciasGarantida
     .sort((a, b) => b.score - a.score);
 
   for (const candidato of ordenadosPorScore) {
-    const deslocamentoMin = estimarDeslocamentoMin(posicaoAtual, candidato.localizacao);
-    const custoTempoTotal = deslocamentoMin + candidato.duracaoMediaVisitaMin + MARGEM_SEGURANCA_MIN;
+    if (fechouPelaFronteira) break;
+    if (selecionados.length >= MAX_PARADAS_POR_CAPITULO) break;
 
-    if (tempoUsadoMin + custoTempoTotal <= perfilBusca.tempoDisponivelMin) {
-      selecionados.push({ ...candidato, deslocamentoMin });
-      tempoUsadoMin += custoTempoTotal;
-      posicaoAtual = candidato.localizacao || posicaoAtual;
-    } else {
-      descartados.push(candidato);
+    const deslocamento = estimarDeslocamentoMin(posicaoAtual, candidato.localizacao);
+    selecionados.push({ ...candidato, deslocamentoMin: deslocamento });
+    posicaoAtual = candidato.localizacao || posicaoAtual;
+
+    if (refeicaoFronteira && candidato.categoria === "gastronomia" && poiServeRefeicao(candidato, refeicaoFronteira)) {
+      fechouPelaFronteira = true;
     }
   }
 
   const sequenciaOtimizada = ordenarPorProximidadeGeografica(selecionados, perfilBusca.localizacaoPartida);
-
   const paradasFinais = calcularERevalidarAteEstabilizar(sequenciaOtimizada, perfilBusca);
+
+  return montarResultadoCapitulo(paradasFinais, perfilBusca);
+}
+
+// Monta o objeto de retorno do capítulo: paradas + o que precisa pro
+// PRÓXIMO capítulo (refeições ainda restantes, de onde e que horas
+// continuar) — ver comentário de arquitetura no topo do arquivo.
+function montarResultadoCapitulo(paradasFinais, perfilBusca) {
+  const refeicoesAtendidas = new Set();
+  for (const parada of paradasFinais) {
+    if (parada.categoria !== "gastronomia") continue;
+    for (const refeicao of perfilBusca.refeicoesDesejadas || []) {
+      if (
+        poiServeRefeicao(parada, refeicao) &&
+        horarioDentroDaJanela(parada.horarioChegada, REFEICAO_JANELAS[refeicao].inicio, REFEICAO_JANELAS[refeicao].fim)
+      ) {
+        refeicoesAtendidas.add(refeicao);
+      }
+    }
+  }
+
+  const refeicoesRestantes = (perfilBusca.refeicoesDesejadas || []).filter(
+    (r) => !refeicoesAtendidas.has(r)
+  );
+
+  const ultimaParada = paradasFinais[paradasFinais.length - 1];
 
   return {
     paradas: paradasFinais,
-    tempoTotalEstimadoMin: tempoUsadoMin,
+    refeicoesAtendidas: [...refeicoesAtendidas],
+    refeicoesRestantes,
+    horarioFinal: ultimaParada ? ultimaParada.horarioSaida : new Date(perfilBusca.horarioInicio),
+    posicaoFinal: ultimaParada ? ultimaParada.localizacao || perfilBusca.localizacaoPartida : perfilBusca.localizacaoPartida,
     custoTotalEstimado: paradasFinais.reduce((soma, p) => soma + (p.precoEstimado || 0), 0),
-    alternativasDescartadas: descartados,
     perfilOriginal: perfilBusca,
+    vazio: paradasFinais.length === 0,
   };
 }
 
-// Calcula horários reais e remove paradas que ficariam fechadas no horário
-// calculado. Como remover uma parada do meio muda o horário de TODAS as
-// que vêm depois dela, repete o ciclo (calcular -> filtrar) até nada mais
-// precisar ser removido. Isso evita o "buraco" de horário que aparecia
-// quando uma parada cortada no meio deixava o cursor de tempo desalinhado
-// para as paradas seguintes.
+function capituloVazio(perfilBusca) {
+  return {
+    paradas: [],
+    refeicoesAtendidas: [],
+    refeicoesRestantes: perfilBusca.refeicoesDesejadas || [],
+    horarioFinal: new Date(perfilBusca.horarioInicio),
+    posicaoFinal: perfilBusca.localizacaoPartida,
+    custoTotalEstimado: 0,
+    perfilOriginal: perfilBusca,
+    vazio: true,
+  };
+}
+
+// ============================================================
+// Calcula horários reais e remove paradas inválidas (fechada no horário
+// real de chegada, ou fora da janela da refeição que deveria satisfazer).
+// Como remover uma parada do meio muda o horário de TODAS as que vêm
+// depois dela, repete o ciclo (calcular -> filtrar) até nada mais precisar
+// ser removido.
+// ============================================================
 function calcularERevalidarAteEstabilizar(paradas, perfilBusca) {
   let atuais = paradas;
 
-  // Limite de segurança: nunca mais iterações do que paradas existem,
-  // já que cada iteração remove pelo menos uma parada ou estabiliza.
   for (let i = 0; i <= atuais.length; i++) {
     const comHorario = calcularHorariosReais(atuais, perfilBusca.horarioInicio);
     const validas = comHorario.filter((parada) =>
@@ -450,21 +453,13 @@ function calcularERevalidarAteEstabilizar(paradas, perfilBusca) {
   return atuais;
 }
 
-// Confere se o HORÁRIO REAL de chegada da parada (só existe depois de
-// calcularHorariosReais, por isso essa checagem não dá pra fazer lá em
-// filtrarCandidatos) bate com a janela de tempo da refeição que ela deveria
-// satisfazer. Sem essa checagem, um restaurante marcado como "reservado pro
-// almoço" podia acabar virando a primeira parada do dia às 9h da manhã —
-// serve almoço, mas ninguém almoça às 9h.
-//
-// Só valida paradas que foram reservadas para uma refeição específica
-// (refeicaoReservadaPara, ver escolherExperienciasGastronomicasGarantidas) ou
-// que são gastronomia e o turista pediu refeições — pontos turísticos comuns
-// e restaurantes fora do contexto de refeição passam direto.
+// Confere se o HORÁRIO REAL de chegada da parada bate com a janela de tempo
+// da refeição que ela deveria satisfazer. Sem essa checagem, um restaurante
+// marcado como "reservado pro almoço" podia acabar virando a primeira
+// parada do capítulo de manhã cedo — serve almoço, mas ninguém almoça às 9h.
 function respeitaJanelaDeRefeicao(parada, refeicoesDesejadas) {
   if (parada.categoria !== "gastronomia") return true;
 
-  // Reservada explicitamente pra uma refeição — precisa cair na janela dela.
   if (parada.refeicaoReservadaPara) {
     return horarioDentroDaJanela(
       parada.horarioChegada,
@@ -473,12 +468,9 @@ function respeitaJanelaDeRefeicao(parada, refeicoesDesejadas) {
     );
   }
 
-  // Não reservada, mas o turista pediu refeições específicas e este lugar
-  // serve alguma delas — a parada só faz sentido se cair na janela de PELO
-  // MENOS UMA das refeições pedidas que o lugar realmente serve.
   if (refeicoesDesejadas && refeicoesDesejadas.length > 0) {
     const refeicoesRelevantes = refeicoesDesejadas.filter((refeicao) => poiServeRefeicao(parada, refeicao));
-    if (refeicoesRelevantes.length === 0) return true; // não serve nenhuma pedida, checagem não se aplica
+    if (refeicoesRelevantes.length === 0) return true;
     return refeicoesRelevantes.some((refeicao) =>
       horarioDentroDaJanela(parada.horarioChegada, REFEICAO_JANELAS[refeicao].inicio, REFEICAO_JANELAS[refeicao].fim)
     );
@@ -488,7 +480,7 @@ function respeitaJanelaDeRefeicao(parada, refeicoesDesejadas) {
 }
 
 function ordenarPorProximidadeGeografica(paradas, pontoPartida) {
-  // Algoritmo simples do "vizinho mais próximo" — suficiente pra cidade pequena com poucas paradas por rota
+  // Algoritmo simples do "vizinho mais próximo" — suficiente pra cidade pequena com poucas paradas por capítulo
   const restantes = [...paradas];
   const ordenadas = [];
   let posicaoAtual = pontoPartida;
@@ -500,10 +492,6 @@ function ordenarPorProximidadeGeografica(paradas, pontoPartida) {
     );
     const proxima = restantes.shift();
 
-    // CORREÇÃO: o deslocamentoMin calculado em montarSequencia() reflete a
-    // ordem por SCORE, não a ordem geográfica final. Sem recalcular aqui,
-    // o horário da parada herda a distância de uma posição anterior errada,
-    // criando saltos artificiais de horas entre paradas vizinhas no mapa.
     const deslocamentoMinReal = estimarDeslocamentoMin(posicaoAtual, proxima.localizacao);
 
     ordenadas.push({ ...proxima, deslocamentoMin: deslocamentoMinReal });
@@ -524,24 +512,6 @@ function calcularHorariosReais(paradas, horarioInicio) {
 
     return { ...parada, horarioChegada: chegada, horarioSaida: saida };
   });
-}
-
-// Recheck final: evita o caso "a 3ª parada fecha antes da rota chegar lá"
-// (substituída por calcularERevalidarAteEstabilizar, que recalcula o
-// cursor de horário a cada remoção em vez de só filtrar no final)
-
-// ============================================================
-// ROTA VAZIA (nenhum candidato viável)
-// ============================================================
-function rotaVazia(perfilBusca) {
-  return {
-    paradas: [],
-    tempoTotalEstimadoMin: 0,
-    custoTotalEstimado: 0,
-    alternativasDescartadas: [],
-    perfilOriginal: perfilBusca,
-    vazia: true,
-  };
 }
 
 // ============================================================
@@ -597,18 +567,12 @@ function dataEstaNoIntervalo(data, inicio, fim) {
   return d >= new Date(inicio).getTime() && d <= new Date(fim).getTime();
 }
 
-function calcularTempoRestante(perfilOriginal, horarioAtual) {
-  const fimPrevisto = adicionarMinutos(new Date(perfilOriginal.horarioInicio), perfilOriginal.tempoDisponivelMin);
-  const diffMs = fimPrevisto.getTime() - new Date(horarioAtual).getTime();
-  return Math.max(0, Math.round(diffMs / 60000));
-}
-
 // ============================================================
 // EXPORTAÇÃO
 // ============================================================
 export {
-  gerarRota,
+  gerarCapitulo,
   recalcularRota,
   PESOS,
-  FAIXA_ORCAMENTO,
+  MAX_PARADAS_POR_CAPITULO,
 };
