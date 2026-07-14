@@ -204,8 +204,17 @@ function estaAbertoNoHorario(poi, horarioInicio, dataReferencia) {
   const janela = poi.horarioFuncionamento[diaSemana];
 
   if (!janela || janela.fechado) return false;
+  if (!horarioDentroDaJanela(horarioInicio, janela.abre, janela.fecha)) return false;
 
-  return horarioDentroDaJanela(horarioInicio, janela.abre, janela.fecha);
+  // Fecha pro almoço: mesmo dentro do intervalo abre-fecha do dia, o
+  // horário pode cair bem no meio da pausa (ex: local abre 6h-18h mas
+  // fecha 12h-13h pro almoço) — nesse caso está tecnicamente "no horário
+  // comercial" mas de portas fechadas mesmo assim.
+  if (janela.pausaAlmoco && horarioDentroDaJanela(horarioInicio, janela.pausaAlmoco.inicio, janela.pausaAlmoco.fim)) {
+    return false;
+  }
+
+  return true;
 }
 
 // ============================================================
