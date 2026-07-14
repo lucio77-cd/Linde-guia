@@ -9,6 +9,7 @@
  * certa.
  */
 import { buscarTodosPois } from "../data/pois-data.js";
+import { estaAbertoNoHorario } from "../engine/motor-rota.js";
 
 let todosPois = [];
 let categoriaAtiva = "todas";
@@ -98,13 +99,13 @@ function criarCardLocal(poi) {
   const card = document.createElement("article");
   card.className = "card-local";
 
-  const status = poi.statusOperacional || "ativo";
+  const status = calcularStatusExibicao(poi);
   const preco = poi.precoEstimado > 0 ? `R$${poi.precoEstimado}` : "Grátis";
 
   card.innerHTML = `
     <div class="card-local__topo">
       <h3 class="card-local__nome">${escaparHtml(poi.nome)}</h3>
-      <span class="card-local__status status--${status}">${formatarStatus(status)}</span>
+      <span class="card-local__status status--${status.chave}">${status.texto}</span>
     </div>
     <p class="card-local__descricao">${escaparHtml(poi.descricaoCurta || "")}</p>
     <div class="card-local__rodape">
@@ -113,6 +114,29 @@ function criarCardLocal(poi) {
     </div>
   `;
   return card;
+}
+
+// O card precisa combinar DUAS informações que são independentes uma da
+// outra: o status manual do admin (Ativo/Sazonal/Em reforma/Fechado — um
+// estado de médio/longo prazo) e se o local está de fato aberto NESTE
+// exato momento pelo horário configurado por dia da semana. Antes, o card
+// só olhava o status manual — então marcar um dia como "fechado" no
+// horário, ou um horário de fechamento que já passou, não mudava nada na
+// tela: o local continuava aparecendo como "Aberto" porque o status
+// manual continuava "ativo".
+function calcularStatusExibicao(poi) {
+  // Status manual não-ativo (sazonal, em reforma) tem prioridade — é uma
+  // decisão explícita do admin que vale mais que o horário automático.
+  if (poi.statusOperacional && poi.statusOperacional !== "ativo") {
+    return { chave: poi.statusOperacional, texto: formatarStatus(poi.statusOperacional) };
+  }
+
+  const agora = new Date();
+  const abertoAgora = estaAbertoNoHorario(poi, agora, agora);
+
+  return abertoAgora
+    ? { chave: "ativo", texto: "Aberto agora" }
+    : { chave: "fechado_agora", texto: "Fechado agora" };
 }
 
 function formatarStatus(status) {

@@ -246,6 +246,10 @@ function desenharParadaAtual(rota, indice) {
          target="_blank" rel="noopener">
         Navegar (Waze)
       </a>
+      <a class="botao botao--secundario"
+         href="ponto.html?id=${parada.id}">
+        Ver detalhes
+      </a>
     </div>
   `;
 
