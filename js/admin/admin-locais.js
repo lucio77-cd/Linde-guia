@@ -2,12 +2,10 @@
  * admin-locais.js — js/admin/admin-locais.js
  * CRUD de POIs + filtro por categoria + dias de funcionamento
  */
-import { db } from "../core/firebase-config.js";
 import {
-  collection, getDocs, doc, addDoc, updateDoc, deleteDoc,
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  buscarTodosPois, criarPoi, atualizarPoi, removerPoi,
+} from "../data/pois-data.js";
 
-const NOME_COLECAO = "pois";
 let poisCache = [];
 let categoriaAtiva = "todos";
 
@@ -32,6 +30,7 @@ function iniciarAdminLocais() {
   montarLinhasHorarioSemana();
   configurarAtalhosHorario();
   configurarPrioridadeCondicional();
+  configurarBuscaEndereco();
 
   document.getElementById("btn-novo-local").addEventListener("click", () => abrirModal(null));
   document.getElementById("btn-cancelar-local").addEventListener("click", fecharModal);
@@ -226,12 +225,54 @@ function configurarPrioridadeCondicional() {
 }
 
 // ============================================================
+// BUSCA DE ENDEREÇO — preenche lat/lng automaticamente (Nominatim/OSM,
+// mesmo serviço já usado em formulario-roteiro.js pro turista)
+// ============================================================
+function configurarBuscaEndereco() {
+  const botao = document.getElementById("btn-buscar-endereco");
+  const input = document.getElementById("campo-endereco");
+  const statusEl = document.getElementById("endereco-status");
+
+  botao.addEventListener("click", async () => {
+    const texto = input.value.trim();
+    if (!texto) {
+      statusEl.textContent = "Digita um endereço primeiro.";
+      return;
+    }
+
+    statusEl.textContent = "Buscando...";
+
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?` + new URLSearchParams({
+        q: `${texto}, Treze Tílias, SC, Brasil`,
+        format: "json", limit: "1", countrycodes: "br",
+      });
+      const resposta = await fetch(url, {
+        headers: { "Accept-Language": "pt-BR", "User-Agent": "LindeGuia/1.0 (admin)" },
+      });
+      const dados = await resposta.json();
+
+      if (dados.length === 0) {
+        statusEl.textContent = "Não encontrei esse endereço — confere a latitude/longitude na mão.";
+        return;
+      }
+
+      document.getElementById("campo-lat").value = dados[0].lat;
+      document.getElementById("campo-lng").value = dados[0].lon;
+      statusEl.textContent = "Encontrado! Latitude e longitude preenchidas.";
+    } catch (erro) {
+      console.error("[admin-locais] Erro ao buscar endereço:", erro);
+      statusEl.textContent = "Erro ao buscar — confere a latitude/longitude na mão.";
+    }
+  });
+}
+
+// ============================================================
 // CARREGAR E LISTAR
 // ============================================================
 async function carregarLocais() {
   try {
-    const snapshot = await getDocs(collection(db, NOME_COLECAO));
-    poisCache = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+    poisCache = await buscarTodosPois({ forcarAtualizacao: true });
     renderizarListaLocais();
   } catch (erro) {
     console.error("[admin-locais] Erro ao carregar locais:", erro);
@@ -298,6 +339,11 @@ function abrirModal(poi) {
     document.getElementById("campo-preco").value     = poi.precoEstimado ?? poi.preco_estimado ?? 0;
     document.getElementById("campo-duracao").value   = poi.duracaoMediaVisitaMin ?? poi.duracao_media_visita_min ?? 30;
     document.getElementById("campo-status").value    = poi.statusOperacional || poi.status_operacional || "ativo";
+    document.getElementById("campo-endereco").value  = poi.endereco || "";
+    document.getElementById("campo-sobre").value     = poi.descricaoLonga || poi.descricao_longa || "";
+    document.getElementById("campo-instagram").value = poi.instagram || "";
+    document.getElementById("campo-whatsapp").value  = poi.whatsapp || "";
+    document.getElementById("endereco-status").textContent = "";
 
     // Horário — poi.horarioFuncionamento vem no formato
     // { segunda: {abre,fecha,fechado}, terca: {...}, ... }, com cada dia
@@ -321,6 +367,11 @@ function abrirModal(poi) {
     preencherHorarioSemanaNoFormulario(null);
     preencherRefeicoesServidasNoFormulario([]);
     preencherTagsDeInteresseNoFormulario([]);
+    document.getElementById("campo-endereco").value  = "";
+    document.getElementById("campo-sobre").value     = "";
+    document.getElementById("campo-instagram").value = "";
+    document.getElementById("campo-whatsapp").value  = "";
+    document.getElementById("endereco-status").textContent = "";
     grupoPrio.hidden = true;
     grupoRefeicoesEl.hidden = true;
     btnExcl.hidden = true;
@@ -357,6 +408,10 @@ async function salvarLocal(e) {
     statusOperacional:    document.getElementById("campo-status").value,
     horarioFuncionamento: lerHorarioSemanaDoFormulario(),
     tagsDeInteresse:      lerTagsDeInteresseDoFormulario(),
+    endereco:             document.getElementById("campo-endereco").value.trim(),
+    descricaoLonga:       document.getElementById("campo-sobre").value.trim(),
+    instagram:            document.getElementById("campo-instagram").value.trim().replace(/^@/, ""),
+    whatsapp:             document.getElementById("campo-whatsapp").value.trim().replace(/\D/g, ""),
   };
 
   if (categoria === "gastronomia") {
@@ -377,9 +432,9 @@ async function salvarLocal(e) {
 
   try {
     if (id) {
-      await updateDoc(doc(db, NOME_COLECAO, id), dados);
+      await atualizarPoi(id, dados);
     } else {
-      await addDoc(collection(db, NOME_COLECAO), dados);
+      await criarPoi(dados);
     }
     fecharModal();
     await carregarLocais();
@@ -399,7 +454,7 @@ async function excluirLocalAtual() {
   if (!id) return;
   if (!confirm(`Excluir "${nome}"? Essa ação não pode ser desfeita.`)) return;
   try {
-    await deleteDoc(doc(db, NOME_COLECAO, id));
+    await removerPoi(id);
     fecharModal();
     await carregarLocais();
   } catch (erro) {
