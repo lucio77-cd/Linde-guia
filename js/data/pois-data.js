@@ -141,7 +141,7 @@ async function criarPoi(dadosPoi) {
 
 async function atualizarPoi(id, dadosParciais) {
   try {
-    await updateDoc(doc(db, NOME_COLECAO, id), desnormalizarPoi(dadosParciais, { parcial: true }));
+    await updateDoc(doc(db, NOME_COLECAO, id), desnormalizarPoi(dadosParciais));
     invalidarCache();
   } catch (erro) {
     console.error(`[pois-data] Erro ao atualizar POI ${id}:`, erro);
@@ -175,6 +175,9 @@ function normalizarPoi(id, dadosFirestore) {
     subcategoria: dadosFirestore.subcategoria || null,
     descricaoCurta: dadosFirestore.descricao_curta || dadosFirestore.descricaoCurta || "",
     descricaoLonga: dadosFirestore.descricao_longa || dadosFirestore.descricaoLonga || "",
+    endereco: dadosFirestore.endereco || "",
+    instagram: dadosFirestore.instagram || "",
+    whatsapp: dadosFirestore.whatsapp || "",
     fotos: dadosFirestore.fotos || [],
     localizacao: normalizarLocalizacao(dadosFirestore.localizacao),
     horarioFuncionamento: dadosFirestore.horario_funcionamento || dadosFirestore.horarioFuncionamento || null,
@@ -208,13 +211,16 @@ function normalizarLocalizacao(localizacao) {
 // ============================================================
 // DESNORMALIZAÇÃO — formato interno do app -> Firestore
 // ============================================================
-function desnormalizarPoi(poi, { parcial = false } = {}) {
+function desnormalizarPoi(poi) {
   const mapa = {
     nome: poi.nome,
     categoria: poi.categoria,
     subcategoria: poi.subcategoria,
     descricao_curta: poi.descricaoCurta,
     descricao_longa: poi.descricaoLonga,
+    endereco: poi.endereco,
+    instagram: poi.instagram,
+    whatsapp: poi.whatsapp,
     fotos: poi.fotos,
     localizacao: poi.localizacao,
     horario_funcionamento: poi.horarioFuncionamento,
@@ -227,9 +233,9 @@ function desnormalizarPoi(poi, { parcial = false } = {}) {
     prioridade_gastronomica: poi.prioridadeGastronomica,
   };
 
-  if (!parcial) return mapa;
-
-  // Em atualização parcial, só manda os campos que vieram preenchidos
+  // O Firestore rejeita a escrita inteira se qualquer campo vier `undefined`
+  // (ex: local novo, sem "sobre" preenchido ainda) — filtra sempre, não só
+  // em atualização parcial, pra criarPoi() nunca quebrar por campo ausente.
   return Object.fromEntries(Object.entries(mapa).filter(([, valor]) => valor !== undefined));
 }
 
