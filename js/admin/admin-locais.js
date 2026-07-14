@@ -95,16 +95,33 @@ function montarLinhasHorarioSemana() {
       </label>
       <input type="time" class="dia-linha__abre" value="08:00" />
       <input type="time" class="dia-linha__fecha" value="18:00" />
+      <label class="dia-linha__pausa-toggle">
+        <input type="checkbox" class="dia-linha__tem-pausa" />
+        Fecha pro almoço
+      </label>
+      <input type="time" class="dia-linha__pausa-inicio" value="12:00" disabled />
+      <input type="time" class="dia-linha__pausa-fim" value="13:00" disabled />
     `;
     const checkbox = linha.querySelector(".dia-linha__aberto");
     const inputAbre = linha.querySelector(".dia-linha__abre");
     const inputFecha = linha.querySelector(".dia-linha__fecha");
+    const checkboxPausa = linha.querySelector(".dia-linha__tem-pausa");
+    const inputPausaInicio = linha.querySelector(".dia-linha__pausa-inicio");
+    const inputPausaFim = linha.querySelector(".dia-linha__pausa-fim");
 
     checkbox.addEventListener("change", () => {
       const aberto = checkbox.checked;
       inputAbre.disabled = !aberto;
       inputFecha.disabled = !aberto;
+      checkboxPausa.disabled = !aberto;
+      inputPausaInicio.disabled = !aberto || !checkboxPausa.checked;
+      inputPausaFim.disabled = !aberto || !checkboxPausa.checked;
       linha.classList.toggle("dia-linha--fechado", !aberto);
+    });
+
+    checkboxPausa.addEventListener("change", () => {
+      inputPausaInicio.disabled = !checkboxPausa.checked;
+      inputPausaFim.disabled = !checkboxPausa.checked;
     });
 
     container.appendChild(linha);
@@ -112,18 +129,29 @@ function montarLinhasHorarioSemana() {
 }
 
 // Lê as 7 linhas do formulário e monta o objeto que motor-rota.js espera:
-// { segunda: {abre, fecha, fechado}, terca: {...}, ... } — sempre com as
-// 7 chaves presentes (mesmo os dias fechados), pra facilitar reabrir e
-// editar depois sem perder o horário que já estava configurado ali.
+// { segunda: {abre, fecha, fechado, pausaAlmoco: {inicio, fim} | null}, ... }
+// — sempre com as 7 chaves presentes (mesmo os dias fechados), pra
+// facilitar reabrir e editar depois sem perder o horário que já estava
+// configurado ali. pausaAlmoco só existe quando "Fecha pro almoço" está
+// marcado — dia sem pausa não tem essa chave (undefined), pra não confundir
+// com um horário de pausa zerado.
 function lerHorarioSemanaDoFormulario() {
   const horario = {};
   document.querySelectorAll(".dia-linha").forEach((linha) => {
     const dia = linha.dataset.dia;
     const aberto = linha.querySelector(".dia-linha__aberto").checked;
+    const temPausa = linha.querySelector(".dia-linha__tem-pausa").checked;
+
     horario[dia] = {
       abre: linha.querySelector(".dia-linha__abre").value || "08:00",
       fecha: linha.querySelector(".dia-linha__fecha").value || "18:00",
       fechado: !aberto,
+      pausaAlmoco: temPausa
+        ? {
+            inicio: linha.querySelector(".dia-linha__pausa-inicio").value || "12:00",
+            fim: linha.querySelector(".dia-linha__pausa-fim").value || "13:00",
+          }
+        : null,
     };
   });
   return horario;
@@ -138,16 +166,28 @@ function preencherHorarioSemanaNoFormulario(horarioFuncionamento) {
     const dia = linha.dataset.dia;
     const janela = dados[dia];
     const aberto = !!janela && !janela.fechado;
+    const pausa = janela?.pausaAlmoco || null;
 
     const checkbox = linha.querySelector(".dia-linha__aberto");
     const inputAbre = linha.querySelector(".dia-linha__abre");
     const inputFecha = linha.querySelector(".dia-linha__fecha");
+    const checkboxPausa = linha.querySelector(".dia-linha__tem-pausa");
+    const inputPausaInicio = linha.querySelector(".dia-linha__pausa-inicio");
+    const inputPausaFim = linha.querySelector(".dia-linha__pausa-fim");
 
     checkbox.checked = aberto;
     inputAbre.value = janela?.abre || "08:00";
     inputFecha.value = janela?.fecha || "18:00";
     inputAbre.disabled = !aberto;
     inputFecha.disabled = !aberto;
+
+    checkboxPausa.checked = !!pausa;
+    checkboxPausa.disabled = !aberto;
+    inputPausaInicio.value = pausa?.inicio || "12:00";
+    inputPausaFim.value = pausa?.fim || "13:00";
+    inputPausaInicio.disabled = !aberto || !pausa;
+    inputPausaFim.disabled = !aberto || !pausa;
+
     linha.classList.toggle("dia-linha--fechado", !aberto);
   });
 }
@@ -159,6 +199,10 @@ function configurarAtalhosHorario() {
     const segunda = document.querySelector('.dia-linha[data-dia="segunda"]');
     const abre = segunda.querySelector(".dia-linha__abre").value;
     const fecha = segunda.querySelector(".dia-linha__fecha").value;
+    const temPausa = segunda.querySelector(".dia-linha__tem-pausa").checked;
+    const pausaInicio = segunda.querySelector(".dia-linha__pausa-inicio").value;
+    const pausaFim = segunda.querySelector(".dia-linha__pausa-fim").value;
+
     ["terca", "quarta", "quinta", "sexta"].forEach((dia) => {
       const linha = document.querySelector(`.dia-linha[data-dia="${dia}"]`);
       linha.querySelector(".dia-linha__aberto").checked = true;
@@ -166,6 +210,12 @@ function configurarAtalhosHorario() {
       linha.querySelector(".dia-linha__abre").disabled = false;
       linha.querySelector(".dia-linha__fecha").value = fecha;
       linha.querySelector(".dia-linha__fecha").disabled = false;
+      linha.querySelector(".dia-linha__tem-pausa").checked = temPausa;
+      linha.querySelector(".dia-linha__tem-pausa").disabled = false;
+      linha.querySelector(".dia-linha__pausa-inicio").value = pausaInicio;
+      linha.querySelector(".dia-linha__pausa-inicio").disabled = !temPausa;
+      linha.querySelector(".dia-linha__pausa-fim").value = pausaFim;
+      linha.querySelector(".dia-linha__pausa-fim").disabled = !temPausa;
       linha.classList.remove("dia-linha--fechado");
     });
   });
@@ -173,12 +223,23 @@ function configurarAtalhosHorario() {
   document.getElementById("btn-copiar-fds").addEventListener("click", () => {
     const sabado = document.querySelector('.dia-linha[data-dia="sabado"]');
     const domingo = document.querySelector('.dia-linha[data-dia="domingo"]');
-    domingo.querySelector(".dia-linha__aberto").checked = sabado.querySelector(".dia-linha__aberto").checked;
+    const abertoSabado = sabado.querySelector(".dia-linha__aberto").checked;
+    const temPausaSabado = sabado.querySelector(".dia-linha__tem-pausa").checked;
+
+    domingo.querySelector(".dia-linha__aberto").checked = abertoSabado;
     domingo.querySelector(".dia-linha__abre").value = sabado.querySelector(".dia-linha__abre").value;
     domingo.querySelector(".dia-linha__fecha").value = sabado.querySelector(".dia-linha__fecha").value;
-    domingo.querySelector(".dia-linha__abre").disabled = !sabado.querySelector(".dia-linha__aberto").checked;
-    domingo.querySelector(".dia-linha__fecha").disabled = !sabado.querySelector(".dia-linha__aberto").checked;
-    domingo.classList.toggle("dia-linha--fechado", !sabado.querySelector(".dia-linha__aberto").checked);
+    domingo.querySelector(".dia-linha__abre").disabled = !abertoSabado;
+    domingo.querySelector(".dia-linha__fecha").disabled = !abertoSabado;
+
+    domingo.querySelector(".dia-linha__tem-pausa").checked = temPausaSabado;
+    domingo.querySelector(".dia-linha__tem-pausa").disabled = !abertoSabado;
+    domingo.querySelector(".dia-linha__pausa-inicio").value = sabado.querySelector(".dia-linha__pausa-inicio").value;
+    domingo.querySelector(".dia-linha__pausa-fim").value = sabado.querySelector(".dia-linha__pausa-fim").value;
+    domingo.querySelector(".dia-linha__pausa-inicio").disabled = !abertoSabado || !temPausaSabado;
+    domingo.querySelector(".dia-linha__pausa-fim").disabled = !abertoSabado || !temPausaSabado;
+
+    domingo.classList.toggle("dia-linha--fechado", !abertoSabado);
   });
 }
 
