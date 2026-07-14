@@ -13,7 +13,7 @@
  * {
  *   id, nome, categoria, subcategoria, descricaoCurta, descricaoLonga, fotos[],
  *   localizacao: { lat, lng },
- *   horarioFuncionamento: { segunda: {abre, fecha, fechado}, terca: {...}, ... },
+ *   horarioFuncionamento: { segunda: {abre, fecha, fechado, pausaAlmoco: {inicio, fim} | null}, terca: {...}, ... },
  *   precoEstimado,            // número, em R$, 0 = grátis
  *   duracaoMediaVisitaMin,    // número
  *   avaliacao,                // 0-5
