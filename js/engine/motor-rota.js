@@ -575,4 +575,5 @@ export {
   recalcularRota,
   PESOS,
   MAX_PARADAS_POR_CAPITULO,
+  estaAbertoNoHorario,
 };
