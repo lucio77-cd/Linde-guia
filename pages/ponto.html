@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Linde Guia</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --borde: #8B1A1A;
+      --borde-escuro: #6B1212;
+      --dourado: #C8943A;
+      --creme: #F5F0E8;
+      --creme-medio: #EDE6D6;
+      --creme-escuro: #DDD4C0;
+      --verde: #2D4A1E;
+      --verde-claro: #3D6428;
+      --tinta: #1C1714;
+      --tinta-suave: #4A3F38;
+      --branco: #FDFAF6;
+      --fonte-display: 'Playfair Display', Georgia, serif;
+      --fonte-corpo: 'Inter', system-ui, sans-serif;
+      --raio: 12px;
+      --raio-grande: 20px;
+      --transicao: 0.2s ease;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--fonte-corpo); background: var(--creme); color: var(--tinta); -webkit-font-smoothing: antialiased; }
+    a { color: inherit; text-decoration: none; }
+
+    .topo {
+      position: sticky; top: 0; z-index: 100; background: var(--branco);
+      border-bottom: 1px solid var(--creme-escuro); padding: 0 clamp(1.25rem, 5vw, 3rem);
+      display: flex; align-items: center; justify-content: space-between; height: 64px;
+    }
+    .topo__nome { font-family: var(--fonte-display); font-weight: 700; font-size: 1.0625rem; }
+    .topo__nav { display: flex; align-items: center; gap: 0.25rem; }
+    .topo__nav a { font-size: 0.875rem; font-weight: 500; color: var(--tinta-suave); padding: 0.5rem 0.875rem; border-radius: 8px; transition: background var(--transicao); }
+    .topo__nav a:hover { background: var(--creme-medio); color: var(--tinta); }
+    @media (max-width: 640px) { .topo__nav a:not(:last-child) { display: none; } }
+
+    main { max-width: 640px; margin: 0 auto; padding: 0 clamp(1.25rem, 5vw, 2rem) 4rem; }
+
+    .estado-vazio { text-align: center; padding: 5rem 1rem; color: var(--tinta-suave); }
+    .estado-vazio h1 { font-family: var(--fonte-display); font-size: 1.5rem; color: var(--tinta); margin-bottom: 0.75rem; }
+
+    #conteudo-local[hidden], #estado-carregando[hidden], #estado-nao-encontrado[hidden] { display: none; }
+
+    .cabecalho-local { padding: 2rem 0 1.25rem; }
+    .cabecalho-local__topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
+    .cabecalho-local__tag {
+      display: inline-block; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 0.25rem 0.625rem; border-radius: 100px; margin-bottom: 0.75rem; background: var(--creme-medio); color: var(--tinta-suave);
+    }
+    .cabecalho-local__nome { font-family: var(--fonte-display); font-weight: 700; font-size: clamp(1.5rem, 5vw, 2rem); line-height: 1.2; }
+
+    .btn-favoritar {
+      flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%; border: 1.5px solid var(--creme-escuro);
+      background: var(--branco); display: flex; align-items: center; justify-content: center; cursor: pointer;
+      transition: all var(--transicao); font-size: 1.25rem;
+    }
+    .btn-favoritar[data-favorito="true"] { border-color: var(--borde); background: #FEF2F2; }
+
+    .status-agora { display: inline-flex; align-items: center; gap: 0.375rem; font-size: 0.875rem; font-weight: 600; }
+    .status-agora[data-aberto="true"] { color: var(--verde-claro); }
+    .status-agora[data-aberto="false"] { color: var(--borde); }
+    .status-agora__ponto { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+    .secao { padding: 1.5rem 0; border-top: 1px solid var(--creme-escuro); }
+    .secao__titulo { font-family: var(--fonte-display); font-size: 1.0625rem; font-weight: 600; margin-bottom: 0.875rem; }
+    .secao p { color: var(--tinta-suave); line-height: 1.6; font-size: 0.9375rem; }
+
+    .linha-horario { display: flex; justify-content: space-between; padding: 0.375rem 0; font-size: 0.875rem; color: var(--tinta-suave); }
+    .linha-horario--hoje { color: var(--tinta); font-weight: 600; }
+    .linha-horario__dia { text-transform: capitalize; }
+
+    .info-linha { display: flex; align-items: flex-start; gap: 0.625rem; margin-bottom: 0.75rem; font-size: 0.9375rem; color: var(--tinta-suave); }
+    .info-linha strong { color: var(--tinta); }
+
+    .botoes-acao { display: flex; flex-direction: column; gap: 0.625rem; }
+    .botao {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+      font-family: var(--fonte-corpo); font-size: 0.9375rem; font-weight: 600;
+      padding: 0.875rem 1.5rem; border-radius: var(--raio); border: 2px solid transparent; cursor: pointer;
+      transition: all var(--transicao);
+    }
+    .botao--principal { background: var(--borde); color: var(--branco); border-color: var(--borde); }
+    .botao--principal:hover { background: var(--borde-escuro); }
+    .botao--whatsapp { background: #25D366; color: var(--branco); border-color: #25D366; }
+    .botao--whatsapp:hover { background: #1DA851; }
+    .botao--instagram { background: linear-gradient(45deg, #F58529, #DD2A7B, #8134AF); color: var(--branco); }
+
+    .rodape { border-top: 1px solid var(--creme-escuro); padding: 1.5rem clamp(1.25rem, 5vw, 3rem); text-align: center; }
+    .rodape p { font-size: 0.8125rem; color: var(--tinta-suave); }
+
+    :focus-visible { outline: 3px solid var(--borde); outline-offset: 3px; border-radius: 4px; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
+  </style>
+</head>
+<body>
+
+  <header class="topo">
+    <a href="../index.html" class="topo__nome">Linde Guia</a>
+    <nav class="topo__nav" aria-label="Navegação principal">
+      <a href="explorar.html">Explorar</a>
+      <a href="eventos.html">Eventos</a>
+      <a href="perfil.html">Perfil</a>
+    </nav>
+  </header>
+
+  <main>
+    <div id="estado-carregando" class="estado-vazio">
+      <p>Carregando...</p>
+    </div>
+
+    <div id="estado-nao-encontrado" class="estado-vazio" hidden>
+      <h1>Não achei esse local</h1>
+      <p>Ele pode ter sido removido. <a href="explorar.html" style="color:var(--borde); text-decoration:underline;">Ver todos os locais</a></p>
+    </div>
+
+    <div id="conteudo-local" hidden>
+      <div class="cabecalho-local">
+        <div class="cabecalho-local__topo">
+          <div>
+            <span id="local-tag" class="cabecalho-local__tag"></span>
+            <h1 id="local-nome" class="cabecalho-local__nome"></h1>
+          </div>
+          <button id="btn-favoritar" class="btn-favoritar" type="button" aria-label="Salvar para conhecer depois" data-favorito="false">♡</button>
+        </div>
+        <span id="status-agora" class="status-agora">
+          <span class="status-agora__ponto"></span>
+          <span id="status-agora-texto"></span>
+        </span>
+      </div>
+
+      <section class="secao">
+        <p id="local-sobre"></p>
+      </section>
+
+      <section class="secao">
+        <p class="secao__titulo">Endereço</p>
+        <div class="info-linha">
+          <span id="local-endereco"></span>
+        </div>
+        <div class="botoes-acao">
+          <a id="btn-como-chegar" class="botao botao--principal" href="#" target="_blank" rel="noopener">Como chegar (Google Maps)</a>
+        </div>
+      </section>
+
+      <section class="secao">
+        <p class="secao__titulo">Horário de funcionamento</p>
+        <div id="lista-horarios"></div>
+      </section>
+
+      <section class="secao" id="secao-contato" hidden>
+        <p class="secao__titulo">Contato</p>
+        <div class="botoes-acao">
+          <a id="btn-whatsapp" class="botao botao--whatsapp" href="#" target="_blank" rel="noopener" hidden>
+            Chamar no WhatsApp
+          </a>
+          <a id="btn-instagram" class="botao botao--instagram" href="#" target="_blank" rel="noopener" hidden>
+            Ver Instagram
+          </a>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="rodape">
+    <p>Linde Guia · um projeto a serviço de quem visita Treze Tílias.</p>
+  </footer>
+
+  <script type="module" src="../js/core/firebase-config.js"></script>
+  <script type="module" src="../js/pages/ponto.js"></script>
+</body>
+</html>

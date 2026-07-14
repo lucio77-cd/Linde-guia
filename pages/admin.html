@@ -497,6 +497,15 @@
         <div class="form-divisor"></div>
         <span class="form-secao-titulo">📍 Localização</span>
 
+        <div class="form-grupo">
+          <label for="campo-endereco">Endereço</label>
+          <div style="display:flex; gap:0.5rem;">
+            <input type="text" id="campo-endereco" placeholder="ex: Rua Doutor Brasílio Celestino de Oliveira, 123" style="flex:1;" />
+            <button type="button" id="btn-buscar-endereco" class="btn btn--secundario" style="flex-shrink:0;">Buscar</button>
+          </div>
+          <p id="endereco-status" class="form-ajuda"></p>
+        </div>
+
         <div class="form-linha">
           <div class="form-grupo">
             <label for="campo-lat">Latitude</label>
@@ -505,6 +514,26 @@
           <div class="form-grupo">
             <label for="campo-lng">Longitude</label>
             <input type="number" step="0.000001" id="campo-lng" placeholder="-51.4084" required />
+          </div>
+        </div>
+        <p class="form-ajuda">Preenchidas automaticamente ao buscar o endereço acima — só mexe na mão se precisar ajustar o pino.</p>
+
+        <div class="form-divisor"></div>
+        <span class="form-secao-titulo">📝 Sobre e contato</span>
+
+        <div class="form-grupo">
+          <label for="campo-sobre">Sobre este local</label>
+          <textarea id="campo-sobre" placeholder="Um texto mais completo, que aparece na página do local (diferente da descrição curta do card)"></textarea>
+        </div>
+
+        <div class="form-linha">
+          <div class="form-grupo">
+            <label for="campo-instagram">Instagram (usuário, sem @)</label>
+            <input type="text" id="campo-instagram" placeholder="ex: trezetilias.oficial" />
+          </div>
+          <div class="form-grupo">
+            <label for="campo-whatsapp">WhatsApp (com DDD)</label>
+            <input type="text" id="campo-whatsapp" placeholder="ex: 47999999999" />
           </div>
         </div>
 
