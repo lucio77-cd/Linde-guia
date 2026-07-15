@@ -10,6 +10,7 @@
  */
 import { buscarTodosPois } from "../data/pois-data.js";
 import { estaAbertoNoHorario } from "../engine/motor-rota.js";
+import { ehFavorito, alternarFavorito } from "../core/favoritos-local.js";
 
 let todosPois = [];
 let categoriaAtiva = "todas";
@@ -103,16 +104,30 @@ function criarCardLocal(poi) {
   const preco = poi.precoEstimado > 0 ? `R$${poi.precoEstimado}` : "Grátis";
 
   card.innerHTML = `
-    <div class="card-local__topo">
-      <h3 class="card-local__nome">${escaparHtml(poi.nome)}</h3>
-      <span class="card-local__status status--${status.chave}">${status.texto}</span>
-    </div>
-    <p class="card-local__descricao">${escaparHtml(poi.descricaoCurta || "")}</p>
-    <div class="card-local__rodape">
-      <span class="tag-categoria">${escaparHtml(poi.categoria || "—")}</span>
-      <span class="card-local__detalhe">${poi.duracaoMediaVisitaMin || 30} min · ${preco}</span>
-    </div>
+    <a href="ponto.html?id=${poi.id}" class="card-local__link">
+      <div class="card-local__topo">
+        <h3 class="card-local__nome">${escaparHtml(poi.nome)}</h3>
+        <span class="card-local__status status--${status.chave}">${status.texto}</span>
+      </div>
+      <p class="card-local__descricao">${escaparHtml(poi.descricaoCurta || "")}</p>
+      <div class="card-local__rodape">
+        <span class="tag-categoria">${escaparHtml(poi.categoria || "—")}</span>
+        <span class="card-local__detalhe">${poi.duracaoMediaVisitaMin || 30} min · ${preco}</span>
+      </div>
+    </a>
+    <button type="button" class="card-local__favoritar" aria-label="Salvar para conhecer depois" data-favorito="${ehFavorito(poi.id)}">
+      ${ehFavorito(poi.id) ? "♥" : "♡"}
+    </button>
   `;
+
+  card.querySelector(".card-local__favoritar").addEventListener("click", (evento) => {
+    evento.preventDefault(); // não deixa o clique "vazar" pro <a> que envolve o card
+    const agoraEhFavorito = alternarFavorito(poi);
+    const btn = evento.currentTarget;
+    btn.dataset.favorito = String(agoraEhFavorito);
+    btn.textContent = agoraEhFavorito ? "♥" : "♡";
+  });
+
   return card;
 }
 
