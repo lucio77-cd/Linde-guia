@@ -146,7 +146,7 @@ async function comecarTourDosFavoritos() {
     const perfilBusca = {
       data: horarioAtual,
       horarioInicio: horarioAtual,
-      localizacaoPartida: posicaoAtual || { lat: -27.1969, lng: -49.9256 }, // centro de Treze Tílias, fallback sem GPS
+      localizacaoPartida: posicaoAtual || { lat: -27.0026, lng: -51.4084 }, // centro de Treze Tílias, fallback sem GPS
       interesses: [],
       refeicoesDesejadas: [],
       idsExcluidos: [],
@@ -159,6 +159,14 @@ async function comecarTourDosFavoritos() {
       erroEl.textContent = "Nenhum dos seus favoritos está aberto agora. Tenta de novo em outro horário.";
       erroEl.hidden = false;
       return;
+    }
+
+    if (capitulo.idsDescartados && capitulo.idsDescartados.length > 0) {
+      const n = capitulo.idsDescartados.length;
+      sessionStorage.setItem(
+        "linde-guia:aviso-proxima-tela",
+        `${n} ${n === 1 ? "favorito não entrou" : "favoritos não entraram"} no tour (fechado agora ou removido). Seguimos com o resto.`
+      );
     }
 
     sessionStorage.setItem("linde-guia:capitulo-atual", JSON.stringify(capitulo));
@@ -260,7 +268,7 @@ async function iniciarRotaSalva(rota, btn) {
     const perfilBusca = {
       data: horarioAtual,
       horarioInicio: horarioAtual,
-      localizacaoPartida: posicaoAtual || { lat: -27.1969, lng: -49.9256 },
+      localizacaoPartida: posicaoAtual || { lat: -27.0026, lng: -51.4084 },
       interesses: [],
       refeicoesDesejadas: [],
       idsExcluidos: [],
@@ -272,6 +280,14 @@ async function iniciarRotaSalva(rota, btn) {
     if (capitulo.vazio) {
       alert("Nenhum dos lugares desse roteiro está disponível agora. Os horários deles podem ter mudado desde que você salvou.");
       return;
+    }
+
+    if (capitulo.idsDescartados && capitulo.idsDescartados.length > 0) {
+      const n = capitulo.idsDescartados.length;
+      sessionStorage.setItem(
+        "linde-guia:aviso-proxima-tela",
+        `${n} ${n === 1 ? "parada não entrou" : "paradas não entraram"} nessa rota (fechado agora ou removido). Seguimos com o resto.`
+      );
     }
 
     sessionStorage.setItem("linde-guia:capitulo-atual", JSON.stringify(capitulo));
