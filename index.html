@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Linde Guia — Treze Tílias</title>
-  <meta name="description" content="Monte seu passeio por Treze Tílias: tempo, horário, localização e orçamento — a rota certa pra você." />
+  <meta name="description" content="Monte seu passeio por Treze Tílias: automático ou do seu jeito, com o horário e as refeições que você quiser." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
@@ -578,7 +578,21 @@
       outline-offset: 3px;
       border-radius: 4px;
     }
-  </style>
+  
+    /* ===== Banner de patrocinador ===== */
+    .banner-patrocinado { border-bottom: 1px solid var(--creme-escuro); background: var(--branco); }
+    .banner-patrocinado[hidden] { display: none; }
+    .banner-patrocinado a {
+      display: block; position: relative; max-width: 100%;
+    }
+    .banner-patrocinado img { width: 100%; max-height: 120px; object-fit: cover; display: block; }
+    .banner-patrocinado__selo {
+      position: absolute; bottom: 0.375rem; right: 0.5rem;
+      font-size: 0.625rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+      background: rgba(28,23,20,0.6); color: #fff; padding: 0.15rem 0.5rem; border-radius: 100px;
+    }
+</style>
+
 </head>
 <body>
 
@@ -612,6 +626,13 @@
       <a href="pages/roteiro.html" class="destaque">Criar roteiro</a>
     </nav>
   </header>
+  <div id="banner-patrocinado" class="banner-patrocinado" hidden>
+    <a id="banner-patrocinado__link" href="#" target="_blank" rel="noopener sponsored">
+      <img id="banner-patrocinado__imagem" alt="" />
+      <span class="banner-patrocinado__selo">Publicidade</span>
+    </a>
+  </div>
+
 
   <section id="banner-evento" class="banner-evento" hidden aria-live="polite">
     <p id="banner-evento__texto"></p>
@@ -630,8 +651,8 @@
           de ver.
         </h1>
         <p class="hero__subtitulo">
-          Diz quanto tempo você tem, de onde está partindo e quanto quer gastar.
-          A gente monta o passeio.
+          Diz sua localização e o que você quer comer — a gente monta o passeio.
+          Ou escolhe os lugares você mesmo, do seu jeito.
         </p>
         <div class="hero__acoes">
           <a class="botao botao--principal" href="pages/roteiro.html">
@@ -641,6 +662,11 @@
             Ver tudo o que tem na cidade
           </a>
         </div>
+        <p style="margin-top: 0.875rem;">
+          <a href="pages/roteiro-manual.html" style="font-size: 0.8125rem; text-decoration: underline; color: var(--tinta-suave);">
+            Prefere escolher os lugares você mesmo? Monte manualmente
+          </a>
+        </p>
       </div>
 
       <!-- Foto placeholder: skyline SVG de cidade tirolesa no lugar até ter foto real -->
@@ -933,5 +959,7 @@
   <script type="module" src="js/core/firebase-config.js"></script>
   <script type="module" src="js/data/eventos-data.js"></script>
   <script type="module" src="js/core/banner-evento.js"></script>
+
+  <script type="module" src="js/core/banner-patrocinado.js"></script>
 </body>
 </html>
