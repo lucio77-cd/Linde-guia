@@ -114,6 +114,77 @@ function gerarCapitulo(pois, eventos, perfilBusca) {
   return montarCapitulo(candidatosPontuados, perfilBusca, experienciasGarantidas, refeicaoFronteira);
 }
 
+// ============================================================
+// MODO MANUAL — usado por roteiro-manual.js e por perfil.js ("Começar
+// tour" dos favoritos, "Iniciar agora" de uma rota salva).
+// ============================================================
+// Diferente de gerarCapitulo(), aqui a ESCOLHA já foi feita pelo usuário —
+// esta função nunca pontua nem decide quem entra. O trabalho dela é só:
+//   1. resolver os ids escolhidos pros POIs de verdade (ignorando o que já
+//      não existir mais no banco)
+//   2. descartar o que não está viável agora (fechado, fechado_temporariamente,
+//      excluído) — sem aplicar MAX_PARADAS_POR_CAPITULO, porque cortar uma
+//      escolha explícita do usuário seria pior do que respeitar o tamanho
+//      que ele mesmo decidiu
+//   3. ordenar geograficamente e calcular horário real, reaproveitando
+//      exatamente as mesmas funções do modo automático
+// Devolve o mesmo formato de gerarCapitulo(), mais `idsDescartados`: os ids
+// que foram escolhidos mas não entraram (fechados, removidos do banco,
+// etc) — pra quem chama poder avisar o usuário em vez de a rota
+// simplesmente encolher sem explicação.
+function gerarCapituloDeFavoritos(pois, perfilBusca, idsSelecionados) {
+  const idsUnicos = [...new Set(idsSelecionados || [])];
+  const mapaPois = new Map(pois.map((poi) => [poi.id, poi]));
+  const idsExcluidos = new Set(perfilBusca.idsExcluidos || []);
+
+  const idsDescartados = [];
+  const viaveis = [];
+
+  for (const id of idsUnicos) {
+    const poi = mapaPois.get(id);
+
+    if (!poi) {
+      idsDescartados.push(id); // não existe mais no banco
+      continue;
+    }
+    if (idsExcluidos.has(id)) {
+      idsDescartados.push(id);
+      continue;
+    }
+    if (poi.statusOperacional === "fechado_temporariamente") {
+      idsDescartados.push(id);
+      continue;
+    }
+    if (!estaAbertoNoHorario(poi, perfilBusca.horarioInicio, perfilBusca.data)) {
+      idsDescartados.push(id);
+      continue;
+    }
+
+    viaveis.push(poi);
+  }
+
+  if (viaveis.length === 0) {
+    return { ...capituloVazio(perfilBusca), idsDescartados };
+  }
+
+  const sequenciaOtimizada = ordenarPorProximidadeGeografica(viaveis, perfilBusca.localizacaoPartida);
+  const paradasFinais = calcularERevalidarAteEstabilizar(sequenciaOtimizada, perfilBusca);
+
+  // calcularERevalidarAteEstabilizar pode descartar mais alguém (ex: horário
+  // calculado real cai fora do funcionamento, mesmo o POI tendo passado na
+  // checagem inicial) — soma esses também aos descartados, pro aviso ficar
+  // completo.
+  const idsQueSobraram = new Set(paradasFinais.map((p) => p.id));
+  const idsRevalidacaoDescartou = viaveis
+    .map((p) => p.id)
+    .filter((id) => !idsQueSobraram.has(id));
+
+  return {
+    ...montarResultadoCapitulo(paradasFinais, perfilBusca),
+    idsDescartados: [...idsDescartados, ...idsRevalidacaoDescartou],
+  };
+}
+
 // Entre as refeições ainda não atendidas, qual é a próxima cronologicamente
 // (pela janela de horário)? É essa que vai fechar o capítulo atual quando
 // for satisfeita. null se não sobrou nenhuma refeição desejada.
@@ -581,6 +652,7 @@ function dataEstaNoIntervalo(data, inicio, fim) {
 // ============================================================
 export {
   gerarCapitulo,
+  gerarCapituloDeFavoritos,
   recalcularRota,
   PESOS,
   MAX_PARADAS_POR_CAPITULO,
