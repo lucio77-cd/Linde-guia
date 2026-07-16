@@ -226,7 +226,7 @@ async function comecarAgora() {
     const perfilBusca = {
       data: agora,
       horarioInicio: agora,
-      localizacaoPartida: posicaoAtual || { lat: -27.1969, lng: -49.9256 }, // centro de Treze Tílias, fallback sem GPS
+      localizacaoPartida: posicaoAtual || { lat: -27.0026, lng: -51.4084 }, // centro de Treze Tílias, fallback sem GPS
       interesses: [],
       refeicoesDesejadas: [],
       idsExcluidos: [],
@@ -238,6 +238,14 @@ async function comecarAgora() {
     if (capitulo.vazio) {
       alert("Nenhum dos lugares escolhidos está disponível agora. Tenta ajustar a seleção.");
       return;
+    }
+
+    if (capitulo.idsDescartados && capitulo.idsDescartados.length > 0) {
+      const n = capitulo.idsDescartados.length;
+      sessionStorage.setItem(
+        "linde-guia:aviso-proxima-tela",
+        `${n} ${n === 1 ? "parada não entrou" : "paradas não entraram"} na rota (fechado agora). Seguimos com o resto.`
+      );
     }
 
     sessionStorage.setItem("linde-guia:capitulo-atual", JSON.stringify(capitulo));
