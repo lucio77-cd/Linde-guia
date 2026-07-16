@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Montar meu roteiro — Linde Guia</title>
+  <meta name="description" content="Escolha você mesmo os lugares que quer visitar em Treze Tílias — a gente só organiza a ordem e o horário." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    :root {
+      --borde: #8B1A1A; --borde-escuro: #6B1212; --dourado: #C8943A;
+      --creme: #F5F0E8; --creme-medio: #EDE6D6; --creme-escuro: #DDD4C0;
+      --verde: #2D4A1E; --verde-claro: #3D6428; --tinta: #1C1714; --tinta-suave: #4A3F38;
+      --branco: #FDFAF6;
+      --fonte-display: 'Playfair Display', Georgia, serif;
+      --fonte-corpo: 'Inter', system-ui, sans-serif;
+      --raio: 12px; --raio-grande: 20px; --raio-pill: 999px; --transicao: 0.2s ease;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--fonte-corpo); background: var(--creme); color: var(--tinta); -webkit-font-smoothing: antialiased; padding-bottom: 90px; }
+    a { color: inherit; text-decoration: none; }
+
+    .topo {
+      position: sticky; top: 0; z-index: 100; background: var(--branco);
+      border-bottom: 1px solid var(--creme-escuro); padding: 0 clamp(1.25rem, 5vw, 3rem);
+      display: flex; align-items: center; justify-content: space-between; height: 64px;
+    }
+    .topo__nome { font-family: var(--fonte-display); font-weight: 700; font-size: 1.0625rem; }
+    .topo__nav { display: flex; align-items: center; gap: 0.25rem; }
+    .topo__nav a { font-size: 0.875rem; font-weight: 500; color: var(--tinta-suave); padding: 0.5rem 0.875rem; border-radius: 8px; transition: background var(--transicao); }
+    .topo__nav a:hover { background: var(--creme-medio); color: var(--tinta); }
+    @media (max-width: 640px) { .topo__nav a:not(:last-child) { display: none; } }
+
+    main { max-width: 720px; margin: 0 auto; padding: 2rem clamp(1.25rem, 5vw, 2rem) 2rem; }
+
+    .pagina__cabecalho { text-align: center; margin-bottom: 2rem; }
+    .pagina__eyebrow {
+      font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--dourado); margin-bottom: 0.75rem; display: block;
+    }
+    .pagina__titulo { font-family: var(--fonte-display); font-size: clamp(1.5rem, 4vw, 2rem); font-weight: 700; margin-bottom: 0.5rem; }
+    .pagina__subtitulo { font-size: 0.9375rem; color: var(--tinta-suave); font-weight: 300; line-height: 1.6; }
+
+    .campo-quando { padding: 1.25rem 0; border-bottom: 1px solid var(--creme-escuro); margin-bottom: 1.5rem; }
+    .campo-quando__rotulo { font-family: var(--fonte-display); font-size: 0.9375rem; font-weight: 600; margin-bottom: 0.75rem; display: block; }
+    .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .chip {
+      font-family: var(--fonte-corpo); font-size: 0.875rem; font-weight: 500; padding: 0.5rem 1.125rem;
+      border-radius: var(--raio-pill); border: 1.5px solid var(--creme-escuro); background: var(--branco);
+      color: var(--tinta-suave); cursor: pointer; transition: all var(--transicao);
+    }
+    .chip[aria-pressed="true"] { background: var(--borde); border-color: var(--borde); color: var(--branco); }
+    .campo-condicional { margin-top: 0.875rem; }
+    .campo-condicional[hidden] { display: none; }
+    .campo__input {
+      font-family: var(--fonte-corpo); font-size: 0.9375rem; padding: 0.75rem 1rem;
+      border: 1.5px solid var(--creme-escuro); border-radius: var(--raio); background: var(--branco);
+      color: var(--tinta); max-width: 200px;
+    }
+
+    #mapa-selecao {
+      width: 100%; height: 200px; border-radius: var(--raio-grande);
+      border: 1.5px solid var(--creme-escuro); margin-bottom: 1.5rem; background: var(--creme-medio);
+    }
+    .mapa-selecao__legenda { font-size: 0.75rem; color: var(--tinta-suave); text-align: center; margin: -1rem 0 1.5rem; }
+
+    .grade-locais { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+
+    .card-escolha {
+      position: relative; background: var(--branco); border: 1.5px solid var(--creme-escuro);
+      border-radius: var(--raio-grande); padding: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem;
+      transition: border-color var(--transicao), box-shadow var(--transicao);
+    }
+    .card-escolha[data-selecionado="true"] { border-color: var(--verde); box-shadow: 0 4px 16px rgba(45,74,30,0.12); }
+    .card-escolha__topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
+    .card-escolha__nome { font-family: var(--fonte-display); font-size: 1.0625rem; font-weight: 600; }
+    .card-escolha__visitado {
+      font-size: 0.6875rem; font-weight: 600; color: var(--verde-claro);
+      background: #E8F5EC; padding: 0.2rem 0.5rem; border-radius: 100px; white-space: nowrap;
+    }
+    .card-escolha__descricao { font-size: 0.8125rem; color: var(--tinta-suave); line-height: 1.5; flex: 1; }
+    .card-escolha__rodape { display: flex; align-items: center; justify-content: space-between; }
+    .tag-categoria {
+      font-size: 0.6875rem; font-weight: 600; padding: 0.2rem 0.625rem; border-radius: 8px;
+      background: var(--creme-medio); color: var(--tinta-suave); text-transform: capitalize;
+    }
+    .btn-adicionar {
+      display: inline-flex; align-items: center; gap: 0.375rem; font-size: 0.8125rem; font-weight: 600;
+      padding: 0.5rem 0.875rem; border-radius: var(--raio-pill); border: 1.5px solid var(--borde);
+      background: var(--branco); color: var(--borde); cursor: pointer; transition: all var(--transicao);
+    }
+    .btn-adicionar[data-selecionado="true"] { background: var(--verde); border-color: var(--verde); color: var(--branco); }
+
+    .estado-vazio { text-align: center; padding: 3rem 1rem; color: var(--tinta-suave); grid-column: 1 / -1; }
+
+    .barra-selecao {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 90;
+      background: var(--branco); border-top: 1px solid var(--creme-escuro);
+      padding: 0.875rem clamp(1.25rem, 5vw, 3rem); box-shadow: 0 -4px 20px rgba(28,23,20,0.06);
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+    }
+    .barra-selecao__contador { font-size: 0.875rem; font-weight: 600; color: var(--tinta); white-space: nowrap; }
+    .barra-selecao__acoes { display: flex; gap: 0.625rem; flex-wrap: wrap; }
+    .botao {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+      font-family: var(--fonte-corpo); font-size: 0.875rem; font-weight: 600;
+      padding: 0.75rem 1.25rem; border-radius: var(--raio); border: 2px solid transparent; cursor: pointer;
+      transition: all var(--transicao);
+    }
+    .botao--principal { background: var(--borde); color: var(--branco); border-color: var(--borde); }
+    .botao--principal:hover:not(:disabled) { background: var(--borde-escuro); }
+    .botao--principal:disabled { opacity: 0.45; cursor: not-allowed; }
+    .botao--secundario { background: transparent; color: var(--borde); border-color: var(--borde); }
+    .botao--secundario:hover { background: var(--borde); color: var(--branco); }
+
+    .modal-salvar {
+      position: fixed; inset: 0; background: rgba(28,23,20,0.55); display: flex; align-items: center;
+      justify-content: center; padding: 1.25rem; z-index: 200; backdrop-filter: blur(3px);
+    }
+    .modal-salvar[hidden] { display: none; }
+    .modal-salvar__caixa { background: var(--branco); border-radius: var(--raio-grande); padding: 1.75rem; max-width: 400px; width: 100%; }
+    .modal-salvar__caixa h2 { font-family: var(--fonte-display); font-size: 1.125rem; margin-bottom: 1rem; }
+    .modal-salvar__caixa label { font-size: 0.8125rem; font-weight: 600; color: var(--tinta-suave); display: block; margin-bottom: 0.375rem; }
+    .modal-salvar__caixa input { width: 100%; margin-bottom: 1rem; }
+    .modal-salvar__acoes { display: flex; gap: 0.625rem; }
+    .modal-salvar__acoes .botao { flex: 1; }
+
+    :focus-visible { outline: 3px solid var(--borde); outline-offset: 3px; border-radius: 4px; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
+  
+    /* ===== Banner de patrocinador ===== */
+    .banner-patrocinado { border-bottom: 1px solid var(--creme-escuro); background: var(--branco); }
+    .banner-patrocinado[hidden] { display: none; }
+    .banner-patrocinado a {
+      display: block; position: relative; max-width: 100%;
+    }
+    .banner-patrocinado img { width: 100%; max-height: 120px; object-fit: cover; display: block; }
+    .banner-patrocinado__selo {
+      position: absolute; bottom: 0.375rem; right: 0.5rem;
+      font-size: 0.625rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+      background: rgba(28,23,20,0.6); color: #fff; padding: 0.15rem 0.5rem; border-radius: 100px;
+    }
+</style>
+
+</head>
+<body>
+
+  <header class="topo">
+    <a href="../index.html" class="topo__nome">Linde Guia</a>
+    <nav class="topo__nav" aria-label="Navegação principal">
+      <a href="explorar.html">Explorar</a>
+      <a href="roteiro.html">Roteiro automático</a>
+      <a href="perfil.html">Perfil</a>
+    </nav>
+  </header>
+  <div id="banner-patrocinado" class="banner-patrocinado" hidden>
+    <a id="banner-patrocinado__link" href="#" target="_blank" rel="noopener sponsored">
+      <img id="banner-patrocinado__imagem" alt="" />
+      <span class="banner-patrocinado__selo">Publicidade</span>
+    </a>
+  </div>
+
+
+  <main>
+    <div class="pagina__cabecalho">
+      <span class="pagina__eyebrow">Você no comando</span>
+      <h1 class="pagina__titulo">Monte seu roteiro do seu jeito</h1>
+      <p class="pagina__subtitulo">Escolha os lugares que quiser — a gente só organiza a melhor ordem e confere os horários.</p>
+    </div>
+
+    <div class="campo-quando">
+      <span class="campo-quando__rotulo">Pra quando é o passeio?</span>
+      <div class="chips" role="radiogroup" aria-label="Quando">
+        <button type="button" class="chip" data-valor="agora" aria-pressed="true">Agora</button>
+        <button type="button" class="chip" data-valor="agendado">Escolher horário</button>
+      </div>
+      <div class="campo-condicional" id="grupo-horario-agendado" hidden>
+        <input type="datetime-local" id="input-data-hora-agendada" class="campo__input" />
+      </div>
+    </div>
+
+    <div id="mapa-selecao"></div>
+    <p class="mapa-selecao__legenda">Prévia dos lugares escolhidos — a ordem final é otimizada na hora de começar.</p>
+
+    <div id="grade-locais" class="grade-locais">
+      <p class="estado-vazio">Carregando locais...</p>
+    </div>
+  </main>
+
+  <div class="barra-selecao">
+    <span id="contador-selecao" class="barra-selecao__contador">0 paradas selecionadas</span>
+    <div class="barra-selecao__acoes">
+      <button id="btn-salvar-depois" type="button" class="botao botao--secundario" disabled>Salvar pra outro dia</button>
+      <button id="btn-comecar-agora" type="button" class="botao botao--principal" disabled>Começar agora</button>
+    </div>
+  </div>
+
+  <div id="modal-salvar" class="modal-salvar" hidden>
+    <div class="modal-salvar__caixa">
+      <h2>Salvar esse roteiro</h2>
+      <label for="input-nome-rota">Dá um nome pra ele</label>
+      <input type="text" id="input-nome-rota" class="campo__input" placeholder="ex: Sábado com a família" style="max-width:none;" />
+      <p id="erro-salvar" class="mapa-selecao__legenda" style="color:var(--borde); display:none;"></p>
+      <div class="modal-salvar__acoes">
+        <button type="button" id="btn-cancelar-salvar" class="botao botao--secundario">Cancelar</button>
+        <button type="button" id="btn-confirmar-salvar" class="botao botao--principal">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="../js/core/firebase-config.js"></script>
+  <script type="module" src="../js/pages/roteiro-manual.js"></script>
+
+  <script type="module" src="../js/core/banner-patrocinado.js"></script>
+</body>
+</html>

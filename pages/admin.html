@@ -354,6 +354,12 @@
           Estatísticas
         </button>
 
+        <span class="sidebar__secao-titulo">Receita</span>
+        <button class="aba-nav" data-aba="aba-patrocinadores">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><line x1="2" y1="9" x2="22" y2="9"/></svg>
+          Patrocinadores
+        </button>
+
         <div style="margin-top:auto;padding-top:1rem;border-top:1px solid var(--creme-escuro);">
           <a href="../index.html" class="aba-nav" style="display:flex;text-decoration:none;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
@@ -439,7 +445,78 @@
           <p style="color:var(--tinta-suave);font-size:.9375rem;">Os gráficos detalhados aparecem aqui. Os dados já são carregados — clique em Dashboard para ver os gráficos principais.</p>
         </section>
 
+        <section id="aba-patrocinadores" class="aba-conteudo" hidden>
+          <div class="secao-header">
+            <div>
+              <h1>Patrocinadores</h1>
+              <p>Banner de publicidade paga, mostrado em todas as páginas do turista</p>
+            </div>
+            <button id="btn-novo-patrocinador" type="button" class="btn btn--principal">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Novo patrocinador
+            </button>
+          </div>
+
+          <div id="lista-patrocinadores" class="lista-locais-admin"></div>
+        </section>
+
       </main>
+    </div>
+  </div>
+
+  <!-- ===== MODAL DE EDIÇÃO/CRIAÇÃO — PATROCINADOR ===== -->
+  <div id="modal-patrocinador" class="modal-local" hidden>
+    <div class="modal-local__caixa">
+      <div class="modal-local__header">
+        <h2 id="modal-patrocinador__titulo">Novo patrocinador</h2>
+        <button type="button" id="btn-fechar-modal-patrocinador" class="modal-local__fechar" aria-label="Fechar">✕</button>
+      </div>
+
+      <form id="form-patrocinador">
+        <input type="hidden" id="campo-patrocinador-id" />
+
+        <div class="form-grupo">
+          <label for="campo-patrocinador-nome">Nome do patrocinador</label>
+          <input type="text" id="campo-patrocinador-nome" placeholder="ex: Hotel Tirol" required />
+        </div>
+
+        <div class="form-grupo">
+          <label for="campo-patrocinador-imagem">Link da imagem do banner</label>
+          <input type="url" id="campo-patrocinador-imagem" placeholder="https://..." required />
+          <p class="form-ajuda">Cole o link de uma imagem já hospedada (ex: enviada pra um serviço de imagens). Upload direto ainda não existe no painel.</p>
+        </div>
+
+        <div class="form-grupo">
+          <label for="campo-patrocinador-link">Link de destino (ao clicar no banner)</label>
+          <input type="url" id="campo-patrocinador-link" placeholder="https://instagram.com/hoteltirol" required />
+        </div>
+
+        <div class="form-linha">
+          <div class="form-grupo">
+            <label for="campo-patrocinador-inicio">Início do contrato</label>
+            <input type="date" id="campo-patrocinador-inicio" />
+          </div>
+          <div class="form-grupo">
+            <label for="campo-patrocinador-fim">Fim do contrato</label>
+            <input type="date" id="campo-patrocinador-fim" />
+          </div>
+        </div>
+        <p class="form-ajuda">Deixa em branco pra valer por tempo indeterminado (só controla pelo botão Ativo/Inativo).</p>
+
+        <div class="form-grupo">
+          <label class="refeicao-check" style="width:fit-content;">
+            <input type="checkbox" id="campo-patrocinador-ativo" checked /> Ativo
+          </label>
+        </div>
+
+        <p id="erro-form-patrocinador" class="erro-form" hidden></p>
+
+        <div class="modal-local__acoes">
+          <button type="button" id="btn-cancelar-patrocinador" class="btn btn--secundario">Cancelar</button>
+          <button type="button" id="btn-excluir-patrocinador" class="btn btn--excluir" hidden>Excluir</button>
+          <button type="submit" class="btn btn--principal">Salvar patrocinador</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -613,6 +690,7 @@
   <script type="module" src="../js/admin/admin-auth.js"></script>
   <script type="module" src="../js/admin/admin-estatisticas.js"></script>
   <script type="module" src="../js/admin/admin-locais.js"></script>
+  <script type="module" src="../js/admin/admin-patrocinadores.js"></script>
 
 </body>
 </html>

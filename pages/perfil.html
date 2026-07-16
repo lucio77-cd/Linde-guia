@@ -86,12 +86,53 @@
     }
     .botao--principal { background: var(--borde); color: var(--branco); border-color: var(--borde); }
     .botao--principal:hover { background: var(--borde-escuro); border-color: var(--borde-escuro); }
+    .botao--principal:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .secao-titulo { font-family: var(--fonte-display); font-size: 1.375rem; font-weight: 700; margin: 3rem 0 1rem; }
+    .secao-titulo:first-of-type { margin-top: 0; }
+
+    .btn-remover-favorito {
+      flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; border: none;
+      background: var(--creme-medio); color: var(--tinta-suave); cursor: pointer;
+      font-size: 0.875rem; display: flex; align-items: center; justify-content: center;
+      transition: background var(--transicao);
+    }
+    .btn-remover-favorito:hover { background: var(--creme-escuro); }
+
+    .btn-iniciar-rota-salva {
+      flex-shrink: 0; font-size: 0.8125rem; font-weight: 600; padding: 0.5rem 0.875rem;
+      border-radius: var(--raio-pill, 999px); border: 1.5px solid var(--borde); background: var(--branco);
+      color: var(--borde); cursor: pointer; transition: all var(--transicao); white-space: nowrap;
+    }
+    .btn-iniciar-rota-salva:hover:not(:disabled) { background: var(--borde); color: var(--branco); }
+    .btn-iniciar-rota-salva:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .favoritos-acoes { margin-top: 1.25rem; }
+    .erro-favoritos {
+      color: var(--borde); background: #FEF2F2; border: 1px solid var(--creme-escuro);
+      border-left: 3px solid var(--borde); padding: 0.75rem 1rem; border-radius: var(--raio);
+      font-size: 0.875rem; margin-top: 1rem;
+    }
 
     footer.rodape { padding: 2rem clamp(1.25rem, 5vw, 3rem); text-align: center; color: var(--tinta-suave); font-size: 0.8125rem; }
 
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
     :focus-visible { outline: 3px solid var(--borde); outline-offset: 3px; border-radius: 4px; }
-  </style>
+  
+    /* ===== Banner de patrocinador ===== */
+    .banner-patrocinado { border-bottom: 1px solid var(--creme-escuro); background: var(--branco); }
+    .banner-patrocinado[hidden] { display: none; }
+    .banner-patrocinado a {
+      display: block; position: relative; max-width: 100%;
+    }
+    .banner-patrocinado img { width: 100%; max-height: 120px; object-fit: cover; display: block; }
+    .banner-patrocinado__selo {
+      position: absolute; bottom: 0.375rem; right: 0.5rem;
+      font-size: 0.625rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+      background: rgba(28,23,20,0.6); color: #fff; padding: 0.15rem 0.5rem; border-radius: 100px;
+    }
+</style>
+
 </head>
 <body>
 
@@ -112,6 +153,13 @@
       <a href="roteiro.html" class="destaque">Criar roteiro</a>
     </nav>
   </header>
+  <div id="banner-patrocinado" class="banner-patrocinado" hidden>
+    <a id="banner-patrocinado__link" href="#" target="_blank" rel="noopener sponsored">
+      <img id="banner-patrocinado__imagem" alt="" />
+      <span class="banner-patrocinado__selo">Publicidade</span>
+    </a>
+  </div>
+
 
   <div class="faixa-topo">
     <svg class="faixa-topo__icone" viewBox="0 0 64 64" fill="none" aria-hidden="true">
@@ -138,6 +186,31 @@
     </div>
 
     <ul class="lista-selos" id="lista-selos"></ul>
+
+    <h2 class="secao-titulo">Lugares que quero conhecer</h2>
+
+    <div id="estado-vazio-favoritos" class="estado-vazio" hidden>
+      <p class="estado-vazio__titulo">Nenhum favorito salvo ainda</p>
+      <p class="estado-vazio__texto">Toca no ♡ de qualquer local (em Explorar ou na página do lugar) pra guardar aqui e montar um tour só com o que você quer ver.</p>
+      <a class="botao botao--principal" href="explorar.html">Explorar locais</a>
+    </div>
+
+    <ul class="lista-selos" id="lista-favoritos"></ul>
+
+    <div id="favoritos-acoes" class="favoritos-acoes" hidden>
+      <button type="button" id="btn-comecar-tour" class="botao botao--principal">Começar tour</button>
+      <p id="erro-favoritos" class="erro-favoritos" hidden></p>
+    </div>
+
+    <h2 class="secao-titulo">Meus roteiros salvos</h2>
+
+    <div id="estado-vazio-rotas-salvas" class="estado-vazio" hidden>
+      <p class="estado-vazio__titulo">Nenhum roteiro salvo ainda</p>
+      <p class="estado-vazio__texto">Monte um roteiro do seu jeito e escolhe "Salvar pra outro dia" pra guardar aqui.</p>
+      <a class="botao botao--principal" href="roteiro-manual.html">Montar meu roteiro</a>
+    </div>
+
+    <ul class="lista-selos" id="lista-rotas-salvas"></ul>
   </main>
 
   <footer class="rodape">
@@ -145,5 +218,7 @@
   </footer>
 
   <script type="module" src="../js/pages/perfil.js"></script>
+
+  <script type="module" src="../js/core/banner-patrocinado.js"></script>
 </body>
 </html>

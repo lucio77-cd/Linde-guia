@@ -130,6 +130,8 @@
     }
     .chip:hover { border-color: var(--borde); color: var(--borde); }
     .chip[aria-pressed="true"] { background: var(--borde); border-color: var(--borde); color: var(--branco); }
+    .chip--indisponivel { opacity: 0.4; cursor: not-allowed; text-decoration: line-through; }
+    .chip--indisponivel:hover { border-color: var(--creme-escuro); color: var(--tinta-suave); }
 
     .localizacao { display: flex; align-items: center; gap: 0.875rem; flex-wrap: wrap; }
     .btn-gps {
@@ -183,7 +185,21 @@
     }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
     :focus-visible { outline: 3px solid var(--borde); outline-offset: 3px; border-radius: 4px; }
-  </style>
+  
+    /* ===== Banner de patrocinador ===== */
+    .banner-patrocinado { border-bottom: 1px solid var(--creme-escuro); background: var(--branco); }
+    .banner-patrocinado[hidden] { display: none; }
+    .banner-patrocinado a {
+      display: block; position: relative; max-width: 100%;
+    }
+    .banner-patrocinado img { width: 100%; max-height: 120px; object-fit: cover; display: block; }
+    .banner-patrocinado__selo {
+      position: absolute; bottom: 0.375rem; right: 0.5rem;
+      font-size: 0.625rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+      background: rgba(28,23,20,0.6); color: #fff; padding: 0.15rem 0.5rem; border-radius: 100px;
+    }
+</style>
+
 </head>
 <body>
 
@@ -208,10 +224,18 @@
     </a>
     <nav class="topo__nav" aria-label="Navegação principal">
       <a href="../pages/explorar.html">Explorar</a>
+      <a href="../pages/roteiro-manual.html">Montar eu mesmo</a>
       <a href="../pages/eventos.html">Eventos</a>
       <a href="../pages/perfil.html">Perfil</a>
     </nav>
   </header>
+  <div id="banner-patrocinado" class="banner-patrocinado" hidden>
+    <a id="banner-patrocinado__link" href="#" target="_blank" rel="noopener sponsored">
+      <img id="banner-patrocinado__imagem" alt="" />
+      <span class="banner-patrocinado__selo">Publicidade</span>
+    </a>
+  </div>
+
 
   <main>
 
@@ -348,5 +372,7 @@
   <script type="module" src="../js/core/firebase-config.js"></script>
   <script type="module" src="../js/pages/formulario-roteiro.js"></script>
 
+
+  <script type="module" src="../js/core/banner-patrocinado.js"></script>
 </body>
 </html>
