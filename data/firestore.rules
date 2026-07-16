@@ -100,6 +100,29 @@ service cloud.firestore {
     }
 
     // ============================================================
+    // PATROCINADORES — banner de anúncio pago, mostrado em todas as
+    // páginas voltadas pro turista. Leitura pública (senão o banner nunca
+    // carregaria pra ninguém), escrita só pelo admin master.
+    // ============================================================
+    match /patrocinadores/{patrocinadorId} {
+      allow get, list: if true;
+
+      allow create, update: if ehAdmin() && patrocinadorTemCamposValidos();
+      allow delete: if ehAdmin();
+
+      // Nomes em camelCase — mesmo padrão que admin-locais.js já usa pra
+      // "pois", pra não repetir o bug antigo de checar snake_case contra
+      // dado que o app sempre escreve em camelCase.
+      function patrocinadorTemCamposValidos() {
+        let dados = request.resource.data;
+        return dados.nome is string && dados.nome.size() > 0
+          && dados.imagemUrl is string
+          && dados.linkDestino is string
+          && dados.ativo is bool;
+      }
+    }
+
+    // ============================================================
     // USUARIOS_ADMIN — quem é admin. Só admin LÊ; ninguém escreve via app.
     // ============================================================
     // Escrita nesta coleção é feita manualmente pelo Console do Firebase
