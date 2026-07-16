@@ -19,6 +19,7 @@ function iniciarRenderRota() {
   const capitulo = lerRotaDoStorage();
 
   esconderTodosOsEstados();
+  mostrarAvisoSeHouver();
 
   if (!capitulo) {
     mostrarEstado("estado-sem-rota");
@@ -37,6 +38,26 @@ function iniciarRenderRota() {
 }
 
 document.addEventListener("DOMContentLoaded", iniciarRenderRota);
+
+// ============================================================
+// AVISO DE ITENS DESCARTADOS (modo manual — roteiro-manual.js/perfil.js)
+// ============================================================
+// Consome a chave assim que mostra — não pode sobreviver a um F5 ou a uma
+// visita futura à página, senão o aviso de uma rota antiga reaparece do
+// nada numa rota nova sem relação nenhuma com ele.
+function mostrarAvisoSeHouver() {
+  const CHAVE_AVISO = "linde-guia:aviso-proxima-tela";
+  const texto = sessionStorage.getItem(CHAVE_AVISO);
+  if (!texto) return;
+
+  sessionStorage.removeItem(CHAVE_AVISO);
+
+  const el = document.getElementById("aviso-descartados");
+  if (!el) return;
+
+  el.textContent = texto;
+  el.hidden = false;
+}
 
 // ============================================================
 // LEITURA DO RESULTADO
