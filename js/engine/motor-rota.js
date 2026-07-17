@@ -32,6 +32,16 @@
  *   3. pontuarCandidatos()          -> dá nota pra cada POI restante (distância, avaliação, interesse)
  *   4. montarCapitulo()             -> escolhe a combinação + ordem, fecha o capítulo na fronteira certa
  *   5. recalcularRota()             -> usado durante o passeio, quando o usuário marca "Cheguei" ou "Pula essa"
+ *
+ * ============================================================
+ * CURADORIA POR IA (opcional, ver js/engine/curador-ia.js)
+ * ============================================================
+ * obterCandidatosViaveis() expõe o resultado do filtro duro (etapa 1) SEM
+ * pontuar nem montar nada — é essa lista que o curador de IA recebe pra
+ * escolher/ordenar dentro dela. A IA nunca vê POIs fora desse conjunto já
+ * filtrado, e o chamador valida os ids devolvidos contra essa mesma lista
+ * antes de confiar neles. O caminho automático (pontuarCandidatos +
+ * montarCapitulo) continua existindo intacto como fallback caso a IA falhe.
  */
 
 // ============================================================
@@ -84,11 +94,7 @@ const REFEICAO_JANELAS = {
 //     nesta rota (capítulos anteriores) ou já visitados historicamente no
 //     aparelho (ver core/selos-local.js)
 function gerarCapitulo(pois, eventos, perfilBusca) {
-  const candidatosIniciais = injetarEventosAtivos(pois, eventos, perfilBusca.data);
-  const idsExcluidos = new Set(perfilBusca.idsExcluidos || []);
-  const candidatosDisponiveis = candidatosIniciais.filter((poi) => !idsExcluidos.has(poi.id));
-
-  const candidatosViaveis = filtrarCandidatos(candidatosDisponiveis, perfilBusca);
+  const candidatosViaveis = obterCandidatosViaveis(pois, eventos, perfilBusca);
 
   if (candidatosViaveis.length === 0) {
     return capituloVazio(perfilBusca);
@@ -116,17 +122,36 @@ function gerarCapitulo(pois, eventos, perfilBusca) {
 }
 
 // ============================================================
-// MODO MANUAL — usado por roteiro-manual.js e por perfil.js ("Começar
-// tour" dos favoritos, "Iniciar agora" de uma rota salva).
+// CANDIDATOS VIÁVEIS — expõe só o filtro duro (etapa 1), sem pontuar nem
+// montar nada. Usado por gerarCapitulo() internamente, e também pelo
+// curador de IA (js/engine/curador-ia.js), que precisa da mesma lista
+// "segura" pra escolher/ordenar dentro dela.
 // ============================================================
-// Diferente de gerarCapitulo(), aqui a ESCOLHA já foi feita pelo usuário —
-// esta função nunca pontua nem decide quem entra. O trabalho dela é só:
+function obterCandidatosViaveis(pois, eventos, perfilBusca) {
+  const candidatosIniciais = injetarEventosAtivos(pois, eventos, perfilBusca.data);
+  const idsExcluidos = new Set(perfilBusca.idsExcluidos || []);
+  const candidatosDisponiveis = candidatosIniciais.filter((poi) => !idsExcluidos.has(poi.id));
+
+  return filtrarCandidatos(candidatosDisponiveis, perfilBusca);
+}
+
+// ============================================================
+// MODO MANUAL — usado por roteiro-manual.js e por perfil.js ("Começar
+// tour" dos favoritos, "Iniciar agora" de uma rota salva), E TAMBÉM pelo
+// modo de curadoria por IA: depois que a IA escolhe os ids dentro dos
+// candidatos viáveis, formulario-roteiro.js chama esta mesma função pra
+// resolver horário real e ordem geográfica em cima da escolha da IA —
+// exatamente como já fazia com escolhas manuais do usuário.
+// ============================================================
+// Diferente de gerarCapitulo(), aqui a ESCOLHA já foi feita por fora (pelo
+// usuário ou pela IA) — esta função nunca pontua nem decide quem entra. O
+// trabalho dela é só:
 //   1. resolver os ids escolhidos pros POIs de verdade (ignorando o que já
 //      não existir mais no banco)
 //   2. descartar o que não está viável agora (fechado, fechado_temporariamente,
 //      excluído) — sem aplicar MAX_PARADAS_POR_CAPITULO, porque cortar uma
-//      escolha explícita do usuário seria pior do que respeitar o tamanho
-//      que ele mesmo decidiu
+//      escolha explícita seria pior do que respeitar o tamanho que já foi
+//      decidido por fora
 //   3. ordenar geograficamente e calcular horário real, reaproveitando
 //      exatamente as mesmas funções do modo automático
 // Devolve o mesmo formato de gerarCapitulo(), mais `idsDescartados`: os ids
@@ -259,7 +284,7 @@ function injetarEventosAtivos(pois, eventos, dataReferencia) {
 // Sem orçamento e sem "tempo disponível" nesta versão — o único corte duro
 // agora é: está aberto? bate com a refeição pedida (se pedida)? Já foi
 // excluído por já ter sido visitado? (exclusão acontece antes de chamar
-// esta função, ver gerarCapitulo)
+// esta função, ver obterCandidatosViaveis)
 function filtrarCandidatos(pois, perfilBusca) {
   return pois.filter((poi) => {
     if (poi.statusOperacional === "fechado_temporariamente") return false;
@@ -661,6 +686,7 @@ function dataEstaNoIntervalo(data, inicio, fim) {
 export {
   gerarCapitulo,
   gerarCapituloDeFavoritos,
+  obterCandidatosViaveis,
   recalcularRota,
   PESOS,
   MAX_PARADAS_POR_CAPITULO,
