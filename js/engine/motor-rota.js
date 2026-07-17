@@ -100,7 +100,8 @@ function gerarCapitulo(pois, eventos, perfilBusca) {
   const experienciasGastronomicas = escolherExperienciasGastronomicasGarantidas(
     candidatosViaveis,
     refeicaoFronteira ? [refeicaoFronteira] : [],
-    idsReservados
+    idsReservados,
+    perfilBusca.horarioInicio
   );
   const experienciasDeInteresse = escolherExperienciasDeInteresseGarantidas(
     candidatosViaveis,
@@ -111,7 +112,7 @@ function gerarCapitulo(pois, eventos, perfilBusca) {
 
   const candidatosPontuados = pontuarCandidatos(candidatosViaveis, perfilBusca);
 
-  return montarCapitulo(candidatosPontuados, perfilBusca, experienciasGarantidas, refeicaoFronteira);
+  return montarCapitulo(candidatosPontuados, perfilBusca, experienciasGarantidas);
 }
 
 // ============================================================
@@ -295,12 +296,22 @@ function estaAbertoNoHorario(poi, horarioInicio, dataReferencia) {
 // cronologicamente), nunca todas as refeições restantes de uma vez — é
 // isso que evita o motor tentar (inutilmente) encaixar janta num capítulo
 // que só tem tempo físico pra ir até o almoço.
-function escolherExperienciasGastronomicasGarantidas(candidatosViaveis, refeicoesFronteira, idsReservados) {
+function escolherExperienciasGastronomicasGarantidas(candidatosViaveis, refeicoesFronteira, idsReservados, horarioInicio) {
   if (!refeicoesFronteira || refeicoesFronteira.length === 0) return [];
 
   const garantidas = [];
 
   for (const refeicao of refeicoesFronteira) {
+    // Só garante o slot se o horário atual realmente cai dentro da janela
+    // dessa refeição (ex: café da manhã = 06:00-10:30). Sem essa checagem,
+    // pedir "café da manhã" às 9h podia forçar QUALQUER lugar com
+    // prioridade gastronômica alta — mesmo uma cervejaria sem
+    // "refeicoesServidas" cadastrado — como parada de café da manhã, só
+    // porque estava "aberto" naquele instante. "Aberto" e "é a hora certa
+    // dessa refeição" são coisas diferentes.
+    const janela = REFEICAO_JANELAS[refeicao];
+    if (!horarioDentroDaJanela(horarioInicio, janela.inicio, janela.fim)) continue;
+
     const candidatosDaRefeicao = candidatosViaveis.filter(
       (poi) =>
         poi.categoria === "gastronomia" &&
@@ -406,14 +417,20 @@ function normalizarMatchInteresse(tagsPoi, interessesUsuario) {
 // ============================================================
 // ETAPA 4 — MONTAGEM DO CAPÍTULO
 // ============================================================
-// Fecha o capítulo em uma das 3 condições, o que vier primeiro:
-//   a) acabou de incluir a parada que satisfaz a refeição-fronteira
-//   b) atingiu MAX_PARADAS_POR_CAPITULO
-//   c) não sobrou candidato viável
-function montarCapitulo(candidatosPontuados, perfilBusca, experienciasGarantidas, refeicaoFronteira) {
+// Fecha o capítulo em uma das 2 condições, o que vier primeiro:
+//   a) atingiu MAX_PARADAS_POR_CAPITULO
+//   b) não sobrou candidato viável
+// (Antes existia uma 3ª condição — fechar assim que a refeição-fronteira
+// fosse satisfeita — mas isso fazia o capítulo parar de crescer cedo
+// demais: pedir 1 refeição podia limitar a rota inteira a 1 parada só,
+// mesmo sobrando espaço no teto e candidatos bons disponíveis. A garantia
+// de refeição continua reservando o slot de comida — só não fecha mais o
+// capítulo por conta própria. Overrun pra janela de outra refeição
+// continua protegido por respeitaJanelaDeRefeicao, em
+// calcularERevalidarAteEstabilizar.)
+function montarCapitulo(candidatosPontuados, perfilBusca, experienciasGarantidas) {
   const selecionados = [];
   let posicaoAtual = perfilBusca.localizacaoPartida;
-  let fechouPelaFronteira = false;
 
   // Reservas (refeição-fronteira + interesses) entram primeiro, sempre —
   // mesmo que um lugar mais conveniente perdesse pra elas numa disputa por
@@ -424,10 +441,6 @@ function montarCapitulo(candidatosPontuados, perfilBusca, experienciasGarantidas
     const deslocamento = estimarDeslocamentoMin(posicaoAtual, experiencia.localizacao);
     selecionados.push({ ...experiencia, deslocamentoMin: deslocamento });
     posicaoAtual = experiencia.localizacao || posicaoAtual;
-
-    if (refeicaoFronteira && experiencia.refeicaoReservadaPara === refeicaoFronteira) {
-      fechouPelaFronteira = true;
-    }
   }
 
   const idsJaSelecionados = new Set(selecionados.map((p) => p.id));
@@ -436,16 +449,11 @@ function montarCapitulo(candidatosPontuados, perfilBusca, experienciasGarantidas
     .sort((a, b) => b.score - a.score);
 
   for (const candidato of ordenadosPorScore) {
-    if (fechouPelaFronteira) break;
     if (selecionados.length >= MAX_PARADAS_POR_CAPITULO) break;
 
     const deslocamento = estimarDeslocamentoMin(posicaoAtual, candidato.localizacao);
     selecionados.push({ ...candidato, deslocamentoMin: deslocamento });
     posicaoAtual = candidato.localizacao || posicaoAtual;
-
-    if (refeicaoFronteira && candidato.categoria === "gastronomia" && poiServeRefeicao(candidato, refeicaoFronteira)) {
-      fechouPelaFronteira = true;
-    }
   }
 
   const sequenciaOtimizada = ordenarPorProximidadeGeografica(selecionados, perfilBusca.localizacaoPartida);
