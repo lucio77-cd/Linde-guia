@@ -6,21 +6,27 @@
  * Formulário reduzido a: localização, quando (agora/agendado), refeições
  * desejadas e interesses. Tempo disponível, orçamento, horário de término
  * e composição do grupo foram removidos — ver motor-rota.js (comentário de
- * arquitetura no topo) pra entender por quê: aquele conjunto de campos
- * permitia pedidos fisicamente contraditórios (ex: "quero janta" numa janela
- * de 4h que termina de manhã) que quebravam a geração da rota.
+ * arquitetura no topo) pra entender por quê.
  *
- * Lê os campos do formulário, monta o PerfilBusca, chama motor-rota.js pra
- * gerar o PRIMEIRO CAPÍTULO (não o passeio inteiro), guarda no
- * sessionStorage e redireciona pra minha-rota.html — que decide se pede
- * mais capítulos conforme a pessoa avança.
+ * Lê os campos do formulário, monta o PerfilBusca, tenta gerar o PRIMEIRO
+ * CAPÍTULO com curadoria por IA (curador-ia.js) — que escolhe/ordena
+ * DENTRO dos candidatos já filtrados pelo motor. Se a IA falhar, estourar
+ * o tempo, ou não devolver nada válido, cai automaticamente no motor de
+ * pontuação padrão (gerarCapitulo) — o app nunca fica sem roteiro por
+ * causa da IA. Guarda o resultado no sessionStorage e redireciona pra
+ * minha-rota.html — que decide se pede mais capítulos conforme a pessoa
+ * avança.
  */
 
-import { gerarCapitulo }               from "../engine/motor-rota.js";
+import { gerarCapitulo, gerarCapituloDeFavoritos, obterCandidatosViaveis } from "../engine/motor-rota.js";
+import { curarCapituloComIA }          from "../engine/curador-ia.js";
+import { montarHistoricoDoUsuario }    from "../data/historico-data.js";
 import { buscarPoisAtivos }            from "../data/pois-data.js";
 import { buscarEventosAtivosNaData }   from "../data/eventos-data.js";
 import { registrarRotaCriada }         from "../data/registro-data.js";
 import { lerSelos }                    from "../core/selos-local.js";
+
+const MAX_PARADAS_CAPITULO_IA = 4; // mesmo teto do motor (MAX_PARADAS_POR_CAPITULO)
 
 // ============================================================
 // ESTADO DO FORMULÁRIO
@@ -264,7 +270,7 @@ function definirStatusLocalizacao(elemento, estadoVisual, texto) {
 }
 
 // ============================================================
-// SUBMIT — valida, busca dados, chama motor, redireciona
+// SUBMIT — valida, busca dados, tenta IA (com fallback), redireciona
 // ============================================================
 function configurarSubmit() {
   const form    = document.getElementById("form-roteiro");
@@ -292,7 +298,7 @@ function configurarSubmit() {
         buscarEventosAtivosNaData(perfilBusca.data),
       ]);
 
-      const capitulo = gerarCapitulo(pois, eventos, perfilBusca);
+      const capitulo = await gerarCapituloComOuSemIA(pois, eventos, perfilBusca);
 
       sessionStorage.setItem("linde-guia:capitulo-atual", JSON.stringify(capitulo));
       registrarRotaCriada(perfilBusca, capitulo); // falha silenciosa, não bloqueia redirect
@@ -306,6 +312,33 @@ function configurarSubmit() {
       esconderOverlayCarregando();
     }
   });
+}
+
+// Tenta curadoria por IA primeiro; se ela não devolver nada aproveitável,
+// cai no motor de pontuação padrão (gerarCapitulo). A IA só escolhe DENTRO
+// dos candidatos já filtrados pelo motor (obterCandidatosViaveis) — nunca
+// decide sozinha o que está aberto ou bate com a refeição pedida.
+async function gerarCapituloComOuSemIA(pois, eventos, perfilBusca) {
+  const candidatosViaveis = obterCandidatosViaveis(pois, eventos, perfilBusca);
+
+  if (candidatosViaveis.length === 0) {
+    return gerarCapitulo(pois, eventos, perfilBusca); // devolve o capítulo vazio padrão
+  }
+
+  const historico = await montarHistoricoDoUsuario();
+  const curadoria = await curarCapituloComIA(candidatosViaveis, perfilBusca, historico, MAX_PARADAS_CAPITULO_IA);
+
+  if (!curadoria) {
+    return gerarCapitulo(pois, eventos, perfilBusca); // fallback: IA indisponível
+  }
+
+  const capitulo = gerarCapituloDeFavoritos(pois, perfilBusca, curadoria.idsEscolhidos);
+
+  if (capitulo.vazio) {
+    return gerarCapitulo(pois, eventos, perfilBusca); // fallback: escolha da IA não sobreviveu à revalidação
+  }
+
+  return { ...capitulo, explicacaoIA: curadoria.explicacao || "" };
 }
 
 function validarEstado() {
