@@ -30,10 +30,6 @@ const REFEICOES = ["cafeDaManha", "almoco", "tarde", "janta"];
 // endereço E a validação final antes de salvar.
 // ============================================================
 const CENTRO_TREZE_TILIAS = { lat: -27.0026, lng: -51.4084 };
-const BBOX_TREZE_TILIAS = {
-  sul: -27.04, norte: -26.84,
-  oeste: -51.54, leste: -51.33,
-};
 // Raio bem mais generoso que o do turista (15km) — o admin pode
 // legitimamente cadastrar um POI na zona rural, num distrito vizinho, etc.
 // O objetivo aqui não é limitar onde um local pode existir, é pegar erro
@@ -303,19 +299,15 @@ function configurarPrioridadeCondicional() {
 }
 
 // ============================================================
-// BUSCA DE ENDEREÇO — preenche lat/lng automaticamente (Nominatim/OSM)
+// BUSCA DE ENDEREÇO — preenche lat/lng automaticamente via Google
+// Geocoding API (endpoint /api/geocodificar.js).
 // ============================================================
-// CORREÇÃO: a versão anterior buscava só com countrycodes:"br", sem
-// restringir a região — um endereço com nome de rua comum podia casar com
-// uma rua de mesmo nome em outro estado, longe de Treze Tílias, e o campo
-// era preenchido calado com essa coordenada errada. Agora:
-//   1. Busca primeiro DENTRO de uma caixa ao redor de Treze Tílias
-//      (mesmo bbox usado em formulario-roteiro.js do lado do turista).
-//   2. Se não achar nada aí, tenta de novo sem a caixa (endereço pode
-//      estar cadastrado de um jeito que o OSM só reconhece sem restrição).
-//   3. Em QUALQUER dos dois casos, mede a distância do resultado até o
-//      centro da cidade — se estiver longe demais, avisa bem visível em
-//      vez de preencher os campos calado, e deixa o admin decidir.
+// Trocado do Nominatim (OSM) pro Google porque o Nominatim estava casando
+// endereços de Treze Tílias com ruas de mesmo nome em outras cidades —
+// precisão insuficiente pra cidade pequena. A checagem de distância até o
+// centro continua existindo mesmo assim (defesa em profundidade — nenhum
+// provedor de geocodificação é infalível), só que agora o cálculo já vem
+// pronto do servidor.
 function configurarBuscaEndereco() {
   const botao = document.getElementById("btn-buscar-endereco");
   const input = document.getElementById("campo-endereco");
@@ -331,63 +323,41 @@ function configurarBuscaEndereco() {
     definirStatusEndereco(statusEl, null, "Buscando...");
 
     try {
-      let resultado = await buscarNominatim(montarUrlComBbox(texto));
-      if (!resultado) {
-        resultado = await buscarNominatim(montarUrlSemBbox(texto));
+      const resposta = await fetch("/api/geocodificar", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ endereco: texto }),
+      });
+
+      if (!resposta.ok) {
+        definirStatusEndereco(statusEl, "erro", "Erro ao buscar — confere a latitude/longitude na mão.");
+        return;
       }
 
-      if (!resultado) {
+      const dados = await resposta.json();
+
+      if (!dados.encontrado) {
         definirStatusEndereco(statusEl, "erro", "Não encontrei esse endereço — confere a latitude/longitude na mão.");
         return;
       }
 
-      const lat = parseFloat(resultado.lat);
-      const lng = parseFloat(resultado.lon);
-      const distancia = distanciaKm(CENTRO_TREZE_TILIAS, { lat, lng });
+      document.getElementById("campo-lat").value = dados.lat;
+      document.getElementById("campo-lng").value = dados.lng;
 
-      document.getElementById("campo-lat").value = lat;
-      document.getElementById("campo-lng").value = lng;
-
-      if (distancia > RAIO_AVISO_KM) {
+      if (dados.distanciaKmDoCentro > RAIO_AVISO_KM) {
         definirStatusEndereco(
           statusEl, "aviso",
-          `⚠️ Esse resultado está a ${Math.round(distancia)} km do centro de Treze Tílias ` +
-          `(${resultado.display_name.split(",").slice(0, 3).join(",")}). ` +
-          `Confere com atenção antes de salvar — pode ser um endereço de mesmo nome em outra cidade.`
+          `⚠️ Esse resultado está a ${Math.round(dados.distanciaKmDoCentro)} km do centro de Treze Tílias ` +
+          `(${dados.enderecoFormatado}). Confere com atenção antes de salvar.`
         );
       } else {
-        definirStatusEndereco(statusEl, "ok", "Encontrado! Latitude e longitude preenchidas.");
+        definirStatusEndereco(statusEl, "ok", `Encontrado: ${dados.enderecoFormatado}`);
       }
     } catch (erro) {
       console.error("[admin-locais] Erro ao buscar endereço:", erro);
       definirStatusEndereco(statusEl, "erro", "Erro ao buscar — confere a latitude/longitude na mão.");
     }
   });
-}
-
-function montarUrlComBbox(texto) {
-  return `https://nominatim.openstreetmap.org/search?` + new URLSearchParams({
-    q: `${texto}, Treze Tílias, SC, Brasil`,
-    format: "json", limit: "1", countrycodes: "br",
-    viewbox: `${BBOX_TREZE_TILIAS.oeste},${BBOX_TREZE_TILIAS.norte},${BBOX_TREZE_TILIAS.leste},${BBOX_TREZE_TILIAS.sul}`,
-    bounded: "1",
-  });
-}
-
-function montarUrlSemBbox(texto) {
-  return `https://nominatim.openstreetmap.org/search?` + new URLSearchParams({
-    q: `${texto}, Treze Tílias, SC, Brasil`,
-    format: "json", limit: "1", countrycodes: "br",
-  });
-}
-
-async function buscarNominatim(url) {
-  const resposta = await fetch(url, {
-    headers: { "Accept-Language": "pt-BR", "User-Agent": "LindeGuia/1.0 (admin)" },
-  });
-  if (!resposta.ok) return null;
-  const dados = await resposta.json();
-  return dados.length > 0 ? dados[0] : null;
 }
 
 function definirStatusEndereco(elemento, tipo, texto) {
