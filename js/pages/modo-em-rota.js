@@ -24,6 +24,7 @@ import { registrarCheckin, registrarRoteiroFinalizado } from "../data/registro-d
 import { salvarSeloLocal, lerSelos } from "../core/selos-local.js";
 import { buscarPoisAtivos } from "../data/pois-data.js";
 import { buscarEventosAtivosNaData } from "../data/eventos-data.js";
+import { escaparHtml } from "../core/html-utils.js";
 
 const CHAVE_INDEX = "linde-guia:parada-atual-index";
 
@@ -229,8 +230,8 @@ function desenharParadaAtual(rota, indice) {
 
   const card = document.getElementById("card-parada-atual");
   card.innerHTML = `
-    <p class="card-parada-atual__categoria">${parada.categoria || ""}</p>
-    <h2 class="card-parada-atual__nome">${parada.nome}</h2>
+    <p class="card-parada-atual__categoria">${escaparHtml(parada.categoria || "")}</p>
+    <h2 class="card-parada-atual__nome">${escaparHtml(parada.nome)}</h2>
     <div class="card-parada-atual__info">
       <span>Chegada prevista: ${formatarHorarioLocal(parada.horarioChegada)}</span>
       <span>${parada.duracaoMediaVisitaMin} min de visita</span>
