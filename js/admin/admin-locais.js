@@ -337,7 +337,18 @@ function configurarBuscaEndereco() {
       const dados = await resposta.json();
 
       if (!dados.encontrado) {
-        definirStatusEndereco(statusEl, "erro", "Não encontrei esse endereço — confere a latitude/longitude na mão.");
+        if (dados.motivo === "erro_configuracao") {
+          definirStatusEndereco(
+            statusEl, "erro",
+            `⚠️ A busca automática está com problema de configuração (${dados.detalheStatus || "erro desconhecido"}). ` +
+            `Provavelmente falta habilitar o faturamento (billing) do projeto no Google Cloud Console, ou a Geocoding API ` +
+            `ainda não está habilitada na chave. Por enquanto, digita latitude/longitude na mão.`
+          );
+        } else if (dados.motivo === "erro_rede") {
+          definirStatusEndereco(statusEl, "erro", "Sem conexão com o serviço de busca agora — confere a latitude/longitude na mão.");
+        } else {
+          definirStatusEndereco(statusEl, "erro", "Não encontrei esse endereço — tenta descrever diferente, ou confere a latitude/longitude na mão.");
+        }
         return;
       }
 
