@@ -8,6 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
     :root {
@@ -73,6 +75,10 @@
 
     /* ===== Lista de paradas ===== */
     .lista-paradas { list-style: none; display: flex; flex-direction: column; gap: 1rem; margin-bottom: 2.5rem; }
+
+    /* ===== Mapa da rota ===== */
+    #mapa-rota { height: 220px; border-radius: var(--raio-grande); margin-bottom: 1.5rem; border: 1.5px solid var(--creme-escuro); }
+
     .parada-card {
       display: flex; gap: 1rem; padding: 1.25rem;
       background: var(--branco); border: 1.5px solid var(--creme-escuro);
@@ -196,6 +202,8 @@
       </div>
 
       <ol id="lista-paradas" class="lista-paradas"></ol>
+
+      <div id="mapa-rota" aria-label="Mapa da rota"></div>
 
       <div class="vista-resultado__acoes">
         <a class="botao botao--secundario" href="roteiro.html">Ajustar preferências</a>
