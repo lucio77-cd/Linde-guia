@@ -23,6 +23,36 @@ const DIAS_SEMANA = [
 
 const REFEICOES = ["cafeDaManha", "almoco", "tarde", "janta"];
 
+// ============================================================
+// SANIDADE GEOGRÁFICA — mesma referência usada em formulario-roteiro.js
+// (CENTRO_TREZE_TILIAS) e mapa-rota.js (raio de tolerância). Centralizado
+// aqui porque agora dois pontos deste arquivo dependem dele: a busca de
+// endereço E a validação final antes de salvar.
+// ============================================================
+const CENTRO_TREZE_TILIAS = { lat: -27.0026, lng: -51.4084 };
+const BBOX_TREZE_TILIAS = {
+  sul: -27.04, norte: -26.84,
+  oeste: -51.54, leste: -51.33,
+};
+// Raio bem mais generoso que o do turista (15km) — o admin pode
+// legitimamente cadastrar um POI na zona rural, num distrito vizinho, etc.
+// O objetivo aqui não é limitar onde um local pode existir, é pegar erro
+// grosseiro (lat/lng de outra cidade/estado, ou dígito trocado na digitação
+// manual) — algo na casa de dezenas de km, não centenas.
+const RAIO_AVISO_KM = 30;
+
+function distanciaKm(a, b) {
+  const R = 6371;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLon = ((b.lng - a.lng) * Math.PI) / 180;
+  const lat1 = (a.lat * Math.PI) / 180;
+  const lat2 = (b.lat * Math.PI) / 180;
+  const sinDLat = Math.sin(dLat / 2);
+  const sinDLon = Math.sin(dLon / 2);
+  const aH = sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon;
+  return R * 2 * Math.atan2(Math.sqrt(aH), Math.sqrt(1 - aH));
+}
+
 function iniciarAdminLocais() {
   document.addEventListener("linde-guia:admin-autenticado", carregarLocais);
   configurarAbas();
@@ -31,6 +61,7 @@ function iniciarAdminLocais() {
   configurarAtalhosHorario();
   configurarPrioridadeCondicional();
   configurarBuscaEndereco();
+  configurarAvisoDistanciaManual();
 
   document.getElementById("btn-novo-local").addEventListener("click", () => abrirModal(null));
   document.getElementById("btn-cancelar-local").addEventListener("click", fecharModal);
@@ -78,8 +109,6 @@ function configurarFiltros() {
 // ============================================================
 // HORÁRIO POR DIA DA SEMANA — cada dia com seu próprio abre/fecha
 // ============================================================
-// Monta as 7 linhas uma única vez (na inicialização da página, não a cada
-// abertura do modal) — abrirModal() só preenche os valores.
 function montarLinhasHorarioSemana() {
   const container = document.getElementById("horarios-semana");
   container.innerHTML = "";
@@ -128,13 +157,6 @@ function montarLinhasHorarioSemana() {
   });
 }
 
-// Lê as 7 linhas do formulário e monta o objeto que motor-rota.js espera:
-// { segunda: {abre, fecha, fechado, pausaAlmoco: {inicio, fim} | null}, ... }
-// — sempre com as 7 chaves presentes (mesmo os dias fechados), pra
-// facilitar reabrir e editar depois sem perder o horário que já estava
-// configurado ali. pausaAlmoco só existe quando "Fecha pro almoço" está
-// marcado — dia sem pausa não tem essa chave (undefined), pra não confundir
-// com um horário de pausa zerado.
 function lerHorarioSemanaDoFormulario() {
   const horario = {};
   document.querySelectorAll(".dia-linha").forEach((linha) => {
@@ -157,9 +179,6 @@ function lerHorarioSemanaDoFormulario() {
   return horario;
 }
 
-// Preenche as 7 linhas a partir do horarioFuncionamento salvo no Firestore.
-// Dia ausente no dado salvo = tratado como fechado (mesma regra que
-// motor-rota.js usa: `if (!janela || janela.fechado) return false`).
 function preencherHorarioSemanaNoFormulario(horarioFuncionamento) {
   const dados = horarioFuncionamento || {};
   document.querySelectorAll(".dia-linha").forEach((linha) => {
@@ -192,8 +211,6 @@ function preencherHorarioSemanaNoFormulario(horarioFuncionamento) {
   });
 }
 
-// Atalhos de preenchimento rápido — o caso mais comum é "segunda a sexta
-// igual, fim de semana diferente", então copiar em vez de digitar 7 vezes.
 function configurarAtalhosHorario() {
   document.getElementById("btn-copiar-semana").addEventListener("click", () => {
     const segunda = document.querySelector('.dia-linha[data-dia="segunda"]');
@@ -286,9 +303,19 @@ function configurarPrioridadeCondicional() {
 }
 
 // ============================================================
-// BUSCA DE ENDEREÇO — preenche lat/lng automaticamente (Nominatim/OSM,
-// mesmo serviço já usado em formulario-roteiro.js pro turista)
+// BUSCA DE ENDEREÇO — preenche lat/lng automaticamente (Nominatim/OSM)
 // ============================================================
+// CORREÇÃO: a versão anterior buscava só com countrycodes:"br", sem
+// restringir a região — um endereço com nome de rua comum podia casar com
+// uma rua de mesmo nome em outro estado, longe de Treze Tílias, e o campo
+// era preenchido calado com essa coordenada errada. Agora:
+//   1. Busca primeiro DENTRO de uma caixa ao redor de Treze Tílias
+//      (mesmo bbox usado em formulario-roteiro.js do lado do turista).
+//   2. Se não achar nada aí, tenta de novo sem a caixa (endereço pode
+//      estar cadastrado de um jeito que o OSM só reconhece sem restrição).
+//   3. Em QUALQUER dos dois casos, mede a distância do resultado até o
+//      centro da cidade — se estiver longe demais, avisa bem visível em
+//      vez de preencher os campos calado, e deixa o admin decidir.
 function configurarBuscaEndereco() {
   const botao = document.getElementById("btn-buscar-endereco");
   const input = document.getElementById("campo-endereco");
@@ -297,35 +324,103 @@ function configurarBuscaEndereco() {
   botao.addEventListener("click", async () => {
     const texto = input.value.trim();
     if (!texto) {
-      statusEl.textContent = "Digita um endereço primeiro.";
+      definirStatusEndereco(statusEl, "erro", "Digita um endereço primeiro.");
       return;
     }
 
-    statusEl.textContent = "Buscando...";
+    definirStatusEndereco(statusEl, null, "Buscando...");
 
     try {
-      const url = `https://nominatim.openstreetmap.org/search?` + new URLSearchParams({
-        q: `${texto}, Treze Tílias, SC, Brasil`,
-        format: "json", limit: "1", countrycodes: "br",
-      });
-      const resposta = await fetch(url, {
-        headers: { "Accept-Language": "pt-BR", "User-Agent": "LindeGuia/1.0 (admin)" },
-      });
-      const dados = await resposta.json();
+      let resultado = await buscarNominatim(montarUrlComBbox(texto));
+      if (!resultado) {
+        resultado = await buscarNominatim(montarUrlSemBbox(texto));
+      }
 
-      if (dados.length === 0) {
-        statusEl.textContent = "Não encontrei esse endereço — confere a latitude/longitude na mão.";
+      if (!resultado) {
+        definirStatusEndereco(statusEl, "erro", "Não encontrei esse endereço — confere a latitude/longitude na mão.");
         return;
       }
 
-      document.getElementById("campo-lat").value = dados[0].lat;
-      document.getElementById("campo-lng").value = dados[0].lon;
-      statusEl.textContent = "Encontrado! Latitude e longitude preenchidas.";
+      const lat = parseFloat(resultado.lat);
+      const lng = parseFloat(resultado.lon);
+      const distancia = distanciaKm(CENTRO_TREZE_TILIAS, { lat, lng });
+
+      document.getElementById("campo-lat").value = lat;
+      document.getElementById("campo-lng").value = lng;
+
+      if (distancia > RAIO_AVISO_KM) {
+        definirStatusEndereco(
+          statusEl, "aviso",
+          `⚠️ Esse resultado está a ${Math.round(distancia)} km do centro de Treze Tílias ` +
+          `(${resultado.display_name.split(",").slice(0, 3).join(",")}). ` +
+          `Confere com atenção antes de salvar — pode ser um endereço de mesmo nome em outra cidade.`
+        );
+      } else {
+        definirStatusEndereco(statusEl, "ok", "Encontrado! Latitude e longitude preenchidas.");
+      }
     } catch (erro) {
       console.error("[admin-locais] Erro ao buscar endereço:", erro);
-      statusEl.textContent = "Erro ao buscar — confere a latitude/longitude na mão.";
+      definirStatusEndereco(statusEl, "erro", "Erro ao buscar — confere a latitude/longitude na mão.");
     }
   });
+}
+
+function montarUrlComBbox(texto) {
+  return `https://nominatim.openstreetmap.org/search?` + new URLSearchParams({
+    q: `${texto}, Treze Tílias, SC, Brasil`,
+    format: "json", limit: "1", countrycodes: "br",
+    viewbox: `${BBOX_TREZE_TILIAS.oeste},${BBOX_TREZE_TILIAS.norte},${BBOX_TREZE_TILIAS.leste},${BBOX_TREZE_TILIAS.sul}`,
+    bounded: "1",
+  });
+}
+
+function montarUrlSemBbox(texto) {
+  return `https://nominatim.openstreetmap.org/search?` + new URLSearchParams({
+    q: `${texto}, Treze Tílias, SC, Brasil`,
+    format: "json", limit: "1", countrycodes: "br",
+  });
+}
+
+async function buscarNominatim(url) {
+  const resposta = await fetch(url, {
+    headers: { "Accept-Language": "pt-BR", "User-Agent": "LindeGuia/1.0 (admin)" },
+  });
+  if (!resposta.ok) return null;
+  const dados = await resposta.json();
+  return dados.length > 0 ? dados[0] : null;
+}
+
+function definirStatusEndereco(elemento, tipo, texto) {
+  elemento.textContent = texto;
+  elemento.dataset.tipo = tipo || "";
+}
+
+// ============================================================
+// AVISO DE DISTÂNCIA NA DIGITAÇÃO MANUAL — pega o caso de alguém editar
+// lat/lng na mão (não só via busca de endereço) e errar um dígito.
+// Só avisa, não bloqueia — pode ser um POI legítimo longe do centro.
+// ============================================================
+function configurarAvisoDistanciaManual() {
+  const inputLat = document.getElementById("campo-lat");
+  const inputLng = document.getElementById("campo-lng");
+  const statusEl = document.getElementById("endereco-status");
+
+  const checar = () => {
+    const lat = parseFloat(inputLat.value);
+    const lng = parseFloat(inputLng.value);
+    if (isNaN(lat) || isNaN(lng)) return;
+
+    const distancia = distanciaKm(CENTRO_TREZE_TILIAS, { lat, lng });
+    if (distancia > RAIO_AVISO_KM) {
+      definirStatusEndereco(
+        statusEl, "aviso",
+        `⚠️ Essa coordenada está a ${Math.round(distancia)} km do centro de Treze Tílias. Confere se não trocou nenhum dígito.`
+      );
+    }
+  };
+
+  inputLat.addEventListener("change", checar);
+  inputLng.addEventListener("change", checar);
 }
 
 // ============================================================
@@ -355,6 +450,13 @@ function renderizarListaLocais() {
 
   filtrados.forEach((poi) => {
     const status = poi.statusOperacional || poi.status_operacional || "ativo";
+    const distanciaDoCentro = poi.localizacao
+      ? distanciaKm(CENTRO_TREZE_TILIAS, poi.localizacao)
+      : null;
+    const avisoDistancia = distanciaDoCentro !== null && distanciaDoCentro > RAIO_AVISO_KM
+      ? `<span class="local-admin-card__aviso" title="Coordenada distante do centro de Treze Tílias">⚠️ ${Math.round(distanciaDoCentro)} km do centro</span>`
+      : "";
+
     const card = document.createElement("div");
     card.className = "local-admin-card";
     card.innerHTML = `
@@ -365,6 +467,7 @@ function renderizarListaLocais() {
       <div class="local-admin-card__rodape">
         <span class="tag-categoria tag-categoria--${poi.categoria || 'lazer'}">${poi.categoria || '—'}</span>
         <span class="local-admin-card__detalhe">${poi.duracaoMediaVisitaMin ?? poi.duracao_media_visita_min ?? 30} min · ${poi.precoEstimado > 0 ? 'R$' + poi.precoEstimado : 'Grátis'}</span>
+        ${avisoDistancia}
       </div>
     `;
     card.addEventListener("click", () => abrirModal(poi));
@@ -405,15 +508,24 @@ function abrirModal(poi) {
     document.getElementById("campo-instagram").value = poi.instagram || "";
     document.getElementById("campo-whatsapp").value  = poi.whatsapp || "";
     document.getElementById("endereco-status").textContent = "";
+    document.getElementById("endereco-status").dataset.tipo = "";
 
-    // Horário — poi.horarioFuncionamento vem no formato
-    // { segunda: {abre,fecha,fechado}, terca: {...}, ... }, com cada dia
-    // podendo ter um horário diferente (ex: sábado/domingo abrindo mais cedo).
+    // Se o local já cadastrado está longe do centro, avisa assim que abre
+    // o modal — não só quando o admin mexer nos campos.
+    if (poi.localizacao) {
+      const distancia = distanciaKm(CENTRO_TREZE_TILIAS, poi.localizacao);
+      if (distancia > RAIO_AVISO_KM) {
+        definirStatusEndereco(
+          document.getElementById("endereco-status"), "aviso",
+          `⚠️ Esse local está cadastrado a ${Math.round(distancia)} km do centro de Treze Tílias. Confere se a coordenada está certa.`
+        );
+      }
+    }
+
     preencherHorarioSemanaNoFormulario(poi.horarioFuncionamento);
     preencherRefeicoesServidasNoFormulario(poi.refeicoesServidas || []);
     preencherTagsDeInteresseNoFormulario(poi.tagsDeInteresse || []);
 
-    // Prioridade gastronômica + refeições servidas
     grupoPrio.hidden = poi.categoria !== "gastronomia";
     grupoRefeicoesEl.hidden = poi.categoria !== "gastronomia";
     document.getElementById("campo-prioridade-gastronomica").value = poi.prioridadeGastronomica ?? 0;
@@ -433,6 +545,7 @@ function abrirModal(poi) {
     document.getElementById("campo-instagram").value = "";
     document.getElementById("campo-whatsapp").value  = "";
     document.getElementById("endereco-status").textContent = "";
+    document.getElementById("endereco-status").dataset.tipo = "";
     grupoPrio.hidden = true;
     grupoRefeicoesEl.hidden = true;
     btnExcl.hidden = true;
@@ -489,6 +602,26 @@ async function salvarLocal(e) {
     erroEl.textContent = "Latitude e longitude precisam ser números válidos.";
     erroEl.hidden = false;
     return;
+  }
+  // Sanidade extra, além do campo obrigatório: números "válidos" mas fora
+  // do intervalo físico possível (ex: lat/lng trocados de propósito ou por
+  // engano em algum outro fluxo de importação) — pega antes de salvar
+  // qualquer coisa geograficamente impossível no banco.
+  if (Math.abs(dados.localizacao.lat) > 90 || Math.abs(dados.localizacao.lng) > 180) {
+    erroEl.textContent = "Latitude/longitude fora do intervalo válido — confere se não estão trocadas entre si.";
+    erroEl.hidden = false;
+    return;
+  }
+  // Não bloqueia — só confirma com o admin, porque um POI legítimo pode
+  // estar longe do centro (zona rural, distrito vizinho). Bloquear
+  // silenciosamente uma coordenada correta seria pior do que avisar.
+  const distanciaDoCentro = distanciaKm(CENTRO_TREZE_TILIAS, dados.localizacao);
+  if (distanciaDoCentro > RAIO_AVISO_KM) {
+    const confirmar = confirm(
+      `Essa coordenada está a ${Math.round(distanciaDoCentro)} km do centro de Treze Tílias. ` +
+      `Tem certeza que é isso mesmo? Cancelar pra revisar, OK pra salvar assim mesmo.`
+    );
+    if (!confirmar) return;
   }
 
   try {
