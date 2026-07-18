@@ -9,6 +9,8 @@
  * recebe dados e desenha.
  */
 
+import { escaparHtml } from "../core/html-utils.js";
+
 const COR_MARCA = "#3C4A3E"; // var(--cor-lodengrun), Leaflet não lê CSS vars direto
 const COR_ACAO = "#9E2B25"; // var(--cor-vermelho-tirol)
 const COR_USUARIO = "#2563eb";
@@ -54,7 +56,7 @@ function desenharMapaCompleto(elementoId, paradas, pontoPartida) {
     if (!parada.localizacao) return;
 
     const marcador = criarMarcadorNumerado(parada.localizacao, indice + 1);
-    marcador.addTo(mapa).bindPopup(`<strong>${indice + 1}. ${parada.nome}</strong>`);
+    marcador.addTo(mapa).bindPopup(`<strong>${indice + 1}. ${escaparHtml(parada.nome)}</strong>`);
   });
 
   if (pontos.length > 1) {
@@ -89,7 +91,7 @@ function criarMapaFocado(elementoId) {
     if (localizacaoParada) {
       if (marcadorParada) mapa.removeLayer(marcadorParada);
       marcadorParada = criarMarcadorDestino(localizacaoParada);
-      marcadorParada.addTo(mapa).bindPopup(nomeParada || "Próxima parada");
+      marcadorParada.addTo(mapa).bindPopup(escaparHtml(nomeParada || "Próxima parada"));
       pontos.push([localizacaoParada.lat, localizacaoParada.lng]);
     }
 
