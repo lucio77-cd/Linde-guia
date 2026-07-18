@@ -2,46 +2,51 @@
  * motor-rota.js
  * Linde Guia — Treze Tílias
  *
- * O CÉREBRO do app. Não toca DOM, não importa HTML, não fala com Firebase direto.
+ * O CÉREBRO do app. Não toca DOM, não importa HTML, não fala com Firebase
+ * nem com nenhuma API externa direto (isso é feito pelos endpoints em
+ * /api, chamados pelos módulos em js/engine/curador-ia.js e
+ * js/engine/caminhada-real.js).
+ *
  * Recebe: lista de POIs (+ eventos) e um Perfil de Busca.
- * Devolve: um CAPÍTULO da rota (não o "dia inteiro") — ver nota de arquitetura abaixo.
+ * Devolve: um CAPÍTULO da rota (não o "dia inteiro") — ver nota de
+ * arquitetura abaixo.
  *
  * ============================================================
  * POR QUE "CAPÍTULO" E NÃO MAIS "TEMPO DISPONÍVEL / ORÇAMENTO / GRUPO"
  * ============================================================
- * Versão anterior deste motor recebia duração total (ex: "meio dia" = 240min),
- * orçamento e horário de término, e tentava montar o DIA INTEIRO de uma vez.
- * Isso quebrava sempre que a combinação de campos era fisicamente impossível
- * (ex: pedir "janta" numa janela de 4h que termina às 13h) — o motor tentava
- * reservar slot pra algo inviável, gastava esforço nisso, e o resultado final
- * podia ficar vazio ou incoerente.
+ * Versão anterior deste motor recebia duração total, orçamento e horário
+ * de término, e tentava montar o DIA INTEIRO de uma vez. Isso quebrava
+ * sempre que a combinação de campos era fisicamente impossível (ex: pedir
+ * "janta" numa janela que termina às 13h) — o motor tentava reservar slot
+ * pra algo inviável e o resultado final podia ficar vazio ou incoerente.
  *
- * A decisão (registrada em conversa com o cliente) foi trocar pelo modelo que
- * apps de navegação e itinerário de referência usam: nunca promete o dia
- * inteiro de uma vez. Gera um CAPÍTULO — um grupo curto e coerente de
- * paradas — e pergunta se a pessoa quer continuar. Cada capítulo:
- *   - fecha quando bate a próxima refeição desejada (fronteira natural), OU
- *   - fecha ao atingir MAX_PARADAS_POR_CAPITULO, OU
- *   - fecha por falta de candidato viável.
- * Isso elimina a classe inteira de bug de "não achei nada" por conflito de
- * horário, porque nunca tenta prometer mais do que cabe fisicamente.
+ * A troca foi pelo modelo que apps de navegação e itinerário de referência
+ * usam: nunca promete o dia inteiro de uma vez. Gera um CAPÍTULO — um
+ * grupo curto e coerente de paradas — e pergunta se a pessoa quer
+ * continuar. Cada capítulo fecha ao atingir MAX_PARADAS_POR_CAPITULO ou
+ * por falta de candidato viável.
  *
  * Etapas (na ordem que são executadas):
  *   1. filtrarCandidatos()          -> remove o que é IMPOSSÍVEL (fechado, já visitado, refeição não bate)
  *   2. garantias de refeição/interesse -> reserva slots pros itens mais importantes deste capítulo
  *   3. pontuarCandidatos()          -> dá nota pra cada POI restante (distância, avaliação, interesse)
- *   4. montarCapitulo()             -> escolhe a combinação + ordem, fecha o capítulo na fronteira certa
+ *   4. montarCapitulo()             -> escolhe a combinação + ordem
  *   5. recalcularRota()             -> usado durante o passeio, quando o usuário marca "Cheguei" ou "Pula essa"
  *
  * ============================================================
- * CURADORIA POR IA (opcional, ver js/engine/curador-ia.js)
+ * CURADORIA POR IA E TEMPO REAL (opcional, camadas externas)
  * ============================================================
- * obterCandidatosViaveis() expõe o resultado do filtro duro (etapa 1) SEM
- * pontuar nem montar nada — é essa lista que o curador de IA recebe pra
- * escolher/ordenar dentro dela. A IA nunca vê POIs fora desse conjunto já
- * filtrado, e o chamador valida os ids devolvidos contra essa mesma lista
- * antes de confiar neles. O caminho automático (pontuarCandidatos +
- * montarCapitulo) continua existindo intacto como fallback caso a IA falhe.
+ * obterCandidatosViaveis() expõe o resultado do filtro duro (etapa 1) pro
+ * curador de IA (js/engine/curador-ia.js) escolher/ordenar dentro dela —
+ * a IA nunca vê POI fora desse conjunto, e o chamador valida os ids
+ * devolvidos contra essa mesma lista.
+ *
+ * aplicarDeslocamentosReais() troca a estimativa por linha reta pelos
+ * minutos reais de caminhada (js/engine/caminhada-real.js, via Directions
+ * API) — na MESMA ordem já decidida, sem reordenar nada.
+ *
+ * As duas camadas são OPCIONAIS por design: se qualquer uma falhar, o
+ * capítulo continua válido com o motor de pontuação e a estimativa padrão.
  */
 
 // ============================================================
@@ -55,11 +60,10 @@ const PESOS = {
 
 const MARGEM_SEGURANCA_MIN = 10; // minutos de "colchão" entre paradas, pra não estourar horário por atraso
 
-// Tamanho máximo de um capítulo quando não há refeição marcando a fronteira
-// natural. Não é um número arbitrário: é o range que estudos de memória de
-// curto prazo (regra de Miller, 7±2, com trabalhos mais recentes apontando
-// 3-5 como o ponto ideal pra sensação de "grupo completo") apontam como o
-// tamanho que uma pessoa processa como um bloco fechado sem se perder.
+// Tamanho máximo de um capítulo. Range que estudos de memória de curto
+// prazo (regra de Miller, 7±2, com trabalhos mais recentes apontando 3-5
+// como o ponto ideal) apontam como o tamanho que uma pessoa processa como
+// um bloco fechado sem se perder.
 const MAX_PARADAS_POR_CAPITULO = 4;
 
 // Nível mínimo de prioridade gastronômica (definido no admin, escala 1-5)
@@ -67,9 +71,7 @@ const MAX_PARADAS_POR_CAPITULO = 4;
 // reserva de slot.
 const NIVEL_MINIMO_GARANTIA_GASTRONOMICA = 4;
 
-// Janelas de horário aproximadas de cada refeição — usadas tanto pra achar
-// qual é a "próxima fronteira" quanto pra casar o horário real de chegada
-// com a refeição que a parada deveria satisfazer.
+// Janelas de horário aproximadas de cada refeição.
 const REFEICAO_JANELAS = {
   cafeDaManha: { inicio: "06:00", fim: "10:30" },
   almoco:      { inicio: "11:00", fim: "14:30" },
@@ -79,20 +81,15 @@ const REFEICAO_JANELAS = {
 
 // ============================================================
 // FUNÇÃO PRINCIPAL — chamada pela tela "Criar Roteiro" e também pra gerar
-// cada capítulo seguinte (a tela "Minha Rota" chama de novo com uma nova
-// posição/horário/lista de refeições restantes — ver comentário no topo).
+// cada capítulo seguinte.
 // ============================================================
 // perfilBusca esperado:
 //   localizacaoPartida: { lat, lng }
-//   horarioInicio: ISO datetime (agora, ou o horário agendado pelo turista)
-//   data: ISO date (pra checar dia da semana e eventos ativos)
-//   refeicoesDesejadas: array de refeições AINDA NÃO atendidas (o chamador
-//     é responsável por tirar da lista o que já foi satisfeito em capítulos
-//     anteriores)
-//   interesses: array de tags de interesse marcadas (não muda entre capítulos)
-//   idsExcluidos: array de ids de POI que NÃO podem entrar — já visitados
-//     nesta rota (capítulos anteriores) ou já visitados historicamente no
-//     aparelho (ver core/selos-local.js)
+//   horarioInicio: ISO datetime
+//   data: ISO date
+//   refeicoesDesejadas: array de refeições AINDA NÃO atendidas
+//   interesses: array de tags de interesse marcadas
+//   idsExcluidos: array de ids de POI que NÃO podem entrar (já visitados)
 function gerarCapitulo(pois, eventos, perfilBusca) {
   const candidatosViaveis = obterCandidatosViaveis(pois, eventos, perfilBusca);
 
@@ -122,10 +119,8 @@ function gerarCapitulo(pois, eventos, perfilBusca) {
 }
 
 // ============================================================
-// CANDIDATOS VIÁVEIS — expõe só o filtro duro (etapa 1), sem pontuar nem
-// montar nada. Usado por gerarCapitulo() internamente, e também pelo
-// curador de IA (js/engine/curador-ia.js), que precisa da mesma lista
-// "segura" pra escolher/ordenar dentro dela.
+// CANDIDATOS VIÁVEIS — expõe só o filtro duro (etapa 1). Usado por
+// gerarCapitulo() internamente, e pelo curador de IA.
 // ============================================================
 function obterCandidatosViaveis(pois, eventos, perfilBusca) {
   const candidatosIniciais = injetarEventosAtivos(pois, eventos, perfilBusca.data);
@@ -136,28 +131,14 @@ function obterCandidatosViaveis(pois, eventos, perfilBusca) {
 }
 
 // ============================================================
-// MODO MANUAL — usado por roteiro-manual.js e por perfil.js ("Começar
-// tour" dos favoritos, "Iniciar agora" de uma rota salva), E TAMBÉM pelo
-// modo de curadoria por IA: depois que a IA escolhe os ids dentro dos
-// candidatos viáveis, formulario-roteiro.js chama esta mesma função pra
-// resolver horário real e ordem geográfica em cima da escolha da IA —
-// exatamente como já fazia com escolhas manuais do usuário.
+// MODO MANUAL / IA — a escolha (usuário ou IA) já foi feita por fora.
 // ============================================================
-// Diferente de gerarCapitulo(), aqui a ESCOLHA já foi feita por fora (pelo
-// usuário ou pela IA) — esta função nunca pontua nem decide quem entra. O
-// trabalho dela é só:
-//   1. resolver os ids escolhidos pros POIs de verdade (ignorando o que já
-//      não existir mais no banco)
-//   2. descartar o que não está viável agora (fechado, fechado_temporariamente,
-//      excluído) — sem aplicar MAX_PARADAS_POR_CAPITULO, porque cortar uma
-//      escolha explícita seria pior do que respeitar o tamanho que já foi
-//      decidido por fora
-//   3. ordenar geograficamente e calcular horário real, reaproveitando
-//      exatamente as mesmas funções do modo automático
-// Devolve o mesmo formato de gerarCapitulo(), mais `idsDescartados`: os ids
-// que foram escolhidos mas não entraram (fechados, removidos do banco,
-// etc) — pra quem chama poder avisar o usuário em vez de a rota
-// simplesmente encolher sem explicação.
+// Diferente de gerarCapitulo(), aqui a ESCOLHA já foi feita — esta função
+// nunca pontua nem decide quem entra. Resolve ids -> POIs reais, descarta
+// o que não está mais viável, ordena geograficamente e calcula horário
+// real. Devolve `idsDescartados`: ids escolhidos que não entraram, pra
+// quem chamou poder avisar o usuário em vez de a rota encolher sem
+// explicação.
 function gerarCapituloDeFavoritos(pois, perfilBusca, idsSelecionados) {
   const idsUnicos = [...new Set(idsSelecionados || [])];
   const mapaPois = new Map(pois.map((poi) => [poi.id, poi]));
@@ -169,22 +150,10 @@ function gerarCapituloDeFavoritos(pois, perfilBusca, idsSelecionados) {
   for (const id of idsUnicos) {
     const poi = mapaPois.get(id);
 
-    if (!poi) {
-      idsDescartados.push(id); // não existe mais no banco
-      continue;
-    }
-    if (idsExcluidos.has(id)) {
-      idsDescartados.push(id);
-      continue;
-    }
-    if (poi.statusOperacional === "fechado_temporariamente") {
-      idsDescartados.push(id);
-      continue;
-    }
-    if (!estaAbertoNoHorario(poi, perfilBusca.horarioInicio, perfilBusca.data)) {
-      idsDescartados.push(id);
-      continue;
-    }
+    if (!poi) { idsDescartados.push(id); continue; }
+    if (idsExcluidos.has(id)) { idsDescartados.push(id); continue; }
+    if (poi.statusOperacional === "fechado_temporariamente") { idsDescartados.push(id); continue; }
+    if (!estaAbertoNoHorario(poi, perfilBusca.horarioInicio, perfilBusca.data)) { idsDescartados.push(id); continue; }
 
     viaveis.push(poi);
   }
@@ -196,14 +165,8 @@ function gerarCapituloDeFavoritos(pois, perfilBusca, idsSelecionados) {
   const sequenciaOtimizada = ordenarPorProximidadeGeografica(viaveis, perfilBusca.localizacaoPartida);
   const paradasFinais = calcularERevalidarAteEstabilizar(sequenciaOtimizada, perfilBusca);
 
-  // calcularERevalidarAteEstabilizar pode descartar mais alguém (ex: horário
-  // calculado real cai fora do funcionamento, mesmo o POI tendo passado na
-  // checagem inicial) — soma esses também aos descartados, pro aviso ficar
-  // completo.
   const idsQueSobraram = new Set(paradasFinais.map((p) => p.id));
-  const idsRevalidacaoDescartou = viaveis
-    .map((p) => p.id)
-    .filter((id) => !idsQueSobraram.has(id));
+  const idsRevalidacaoDescartou = viaveis.map((p) => p.id).filter((id) => !idsQueSobraram.has(id));
 
   return {
     ...montarResultadoCapitulo(paradasFinais, perfilBusca),
@@ -211,9 +174,26 @@ function gerarCapituloDeFavoritos(pois, perfilBusca, idsSelecionados) {
   };
 }
 
-// Entre as refeições ainda não atendidas, qual é a próxima cronologicamente
-// (pela janela de horário)? É essa que vai fechar o capítulo atual quando
-// for satisfeita. null se não sobrou nenhuma refeição desejada.
+// ============================================================
+// TEMPO REAL DE CAMINHADA — troca a estimativa (Haversine) pelos minutos
+// reais devolvidos pela Directions API (js/engine/caminhada-real.js), na
+// MESMA ordem de paradas já decidida. Não reordena nada. Se não vier dado
+// real, devolve o capítulo como já estava, com a estimativa.
+// ============================================================
+function aplicarDeslocamentosReais(paradas, deslocamentosReaisMin, perfilBusca) {
+  if (!deslocamentosReaisMin || deslocamentosReaisMin.length !== paradas.length) {
+    return montarResultadoCapitulo(paradas, perfilBusca);
+  }
+
+  const comDeslocamentoReal = paradas.map((parada, i) => ({
+    ...parada,
+    deslocamentoMin: deslocamentosReaisMin[i],
+  }));
+
+  const paradasFinais = calcularERevalidarAteEstabilizar(comDeslocamentoReal, perfilBusca);
+  return montarResultadoCapitulo(paradasFinais, perfilBusca);
+}
+
 function proximaRefeicaoFronteira(refeicoesDesejadas) {
   if (!refeicoesDesejadas || refeicoesDesejadas.length === 0) return null;
   return [...refeicoesDesejadas].sort(
@@ -224,10 +204,6 @@ function proximaRefeicaoFronteira(refeicoesDesejadas) {
 // ============================================================
 // FUNÇÃO DE RECÁLCULO — chamada pelo "modo Em Rota" (Cheguei / Pular)
 // ============================================================
-// Diferente da versão que tentava um dia inteiro, capítulos são curtos
-// (no máximo 4 paradas) — então recalcular não precisa reotimizar do zero
-// nem trazer candidatos de reserva. Só reordena geograficamente a partir
-// da posição atual e revalida horário de funcionamento.
 function recalcularRota(rotaAtual, paradaAtualIndex, acao, horarioAtual, posicaoAtual) {
   const paradasRestantes = rotaAtual.paradas.slice(paradaAtualIndex + 1);
 
@@ -269,10 +245,10 @@ function injetarEventosAtivos(pois, eventos, dataReferencia) {
     horarioFuncionamento: evento.horarioFuncionamento,
     precoEstimado: evento.precoEstimado || 0,
     duracaoMediaVisitaMin: evento.duracaoMediaVisitaMin || 60,
-    avaliacao: 5, // eventos institucionais entram com nota alta por padrão
+    avaliacao: 5,
     tagsDeInteresse: evento.tagsDeInteresse || ["cultura"],
     statusOperacional: "ativo",
-    pesoInstitucional: evento.pesoInstitucional ?? 1, // eventos puxam peso institucional máximo
+    pesoInstitucional: evento.pesoInstitucional ?? 1,
   }));
 
   return [...pois, ...eventosComoPoi];
@@ -281,10 +257,6 @@ function injetarEventosAtivos(pois, eventos, dataReferencia) {
 // ============================================================
 // ETAPA 1 — FILTRO DURO
 // ============================================================
-// Sem orçamento e sem "tempo disponível" nesta versão — o único corte duro
-// agora é: está aberto? bate com a refeição pedida (se pedida)? Já foi
-// excluído por já ter sido visitado? (exclusão acontece antes de chamar
-// esta função, ver obterCandidatosViaveis)
 function filtrarCandidatos(pois, perfilBusca) {
   return pois.filter((poi) => {
     if (poi.statusOperacional === "fechado_temporariamente") return false;
@@ -295,7 +267,7 @@ function filtrarCandidatos(pois, perfilBusca) {
 }
 
 function estaAbertoNoHorario(poi, horarioInicio, dataReferencia) {
-  if (!poi.horarioFuncionamento) return true; // sem dado de horário, assume aberto (POI 24h, ex: praça)
+  if (!poi.horarioFuncionamento) return true;
 
   const diaSemana = obterDiaSemana(dataReferencia);
   const janela = poi.horarioFuncionamento[diaSemana];
@@ -303,10 +275,6 @@ function estaAbertoNoHorario(poi, horarioInicio, dataReferencia) {
   if (!janela || janela.fechado) return false;
   if (!horarioDentroDaJanela(horarioInicio, janela.abre, janela.fecha)) return false;
 
-  // Fecha pro almoço: mesmo dentro do intervalo abre-fecha do dia, o
-  // horário pode cair bem no meio da pausa (ex: local abre 6h-18h mas
-  // fecha 12h-13h pro almoço) — nesse caso está tecnicamente "no horário
-  // comercial" mas de portas fechadas mesmo assim.
   if (janela.pausaAlmoco && horarioDentroDaJanela(horarioInicio, janela.pausaAlmoco.inicio, janela.pausaAlmoco.fim)) {
     return false;
   }
@@ -315,25 +283,14 @@ function estaAbertoNoHorario(poi, horarioInicio, dataReferencia) {
 }
 
 // ============================================================
-// ETAPA 2 — GARANTIA DE EXPERIÊNCIA GASTRONÔMICA (definida no admin)
+// ETAPA 2 — GARANTIA DE EXPERIÊNCIA GASTRONÔMICA
 // ============================================================
-// Só tenta garantir a refeição-FRONTEIRA deste capítulo (a próxima
-// cronologicamente), nunca todas as refeições restantes de uma vez — é
-// isso que evita o motor tentar (inutilmente) encaixar janta num capítulo
-// que só tem tempo físico pra ir até o almoço.
 function escolherExperienciasGastronomicasGarantidas(candidatosViaveis, refeicoesFronteira, idsReservados, horarioInicio) {
   if (!refeicoesFronteira || refeicoesFronteira.length === 0) return [];
 
   const garantidas = [];
 
   for (const refeicao of refeicoesFronteira) {
-    // Só garante o slot se o horário atual realmente cai dentro da janela
-    // dessa refeição (ex: café da manhã = 06:00-10:30). Sem essa checagem,
-    // pedir "café da manhã" às 9h podia forçar QUALQUER lugar com
-    // prioridade gastronômica alta — mesmo uma cervejaria sem
-    // "refeicoesServidas" cadastrado — como parada de café da manhã, só
-    // porque estava "aberto" naquele instante. "Aberto" e "é a hora certa
-    // dessa refeição" são coisas diferentes.
     const janela = REFEICAO_JANELAS[refeicao];
     if (!horarioDentroDaJanela(horarioInicio, janela.inicio, janela.fim)) continue;
 
@@ -359,11 +316,8 @@ function escolherExperienciasGastronomicasGarantidas(candidatosViaveis, refeicoe
 }
 
 // ============================================================
-// ETAPA 2b — GARANTIA DE EXPERIÊNCIA POR INTERESSE (história, natureza...)
+// ETAPA 2b — GARANTIA DE EXPERIÊNCIA POR INTERESSE
 // ============================================================
-// Reserva 1 slot por interesse marcado, entre os candidatos deste capítulo.
-// Critério de escolha: melhor avaliação (nota) — não existe campo de
-// "prioridade" pra história/natureza/etc como existe pra gastronomia.
 function escolherExperienciasDeInteresseGarantidas(candidatosViaveis, interesses, idsReservados) {
   if (!interesses || interesses.length === 0) return [];
 
@@ -376,9 +330,7 @@ function escolherExperienciasDeInteresseGarantidas(candidatosViaveis, interesses
 
     if (candidatosDoInteresse.length === 0) continue;
 
-    const melhor = [...candidatosDoInteresse].sort(
-      (a, b) => (b.avaliacao || 0) - (a.avaliacao || 0)
-    )[0];
+    const melhor = [...candidatosDoInteresse].sort((a, b) => (b.avaliacao || 0) - (a.avaliacao || 0))[0];
 
     garantidas.push({ ...melhor, interesseReservadoPara: interesse });
     idsReservados.add(melhor.id);
@@ -387,16 +339,13 @@ function escolherExperienciasDeInteresseGarantidas(candidatosViaveis, interesses
   return garantidas;
 }
 
-// Sem dado de refeições cadastrado no admin (local antigo, ainda não
-// preenchido), assume que serve qualquer refeição — não pune cadastro
-// incompleto escondendo o local da rota.
 function poiServeRefeicao(poi, refeicao) {
   if (!poi.refeicoesServidas || poi.refeicoesServidas.length === 0) return true;
   return poi.refeicoesServidas.includes(refeicao);
 }
 
 function candidatoCombinaComRefeicoesDesejadas(poi, refeicoesDesejadas) {
-  if (poi.categoria !== "gastronomia") return true; // filtro de refeição só vale pra gastronomia
+  if (poi.categoria !== "gastronomia") return true;
   if (!refeicoesDesejadas || refeicoesDesejadas.length === 0) return true;
   return refeicoesDesejadas.some((refeicao) => poiServeRefeicao(poi, refeicao));
 }
@@ -414,16 +363,16 @@ function pontuarCandidatos(pois, perfilBusca) {
       PESOS.distancia * distanciaScore +
       PESOS.avaliacao * avaliacaoScore +
       PESOS.interesse * interesseScore +
-      (poi.pesoInstitucional || 0) * 0.05; // bônus pequeno, não domina o score
+      (poi.pesoInstitucional || 0) * 0.05;
 
     return { ...poi, score };
   });
 }
 
 function normalizarProximidade(localizacaoPoi, localizacaoPartida) {
-  if (!localizacaoPoi) return 0.5; // sem coordenada, nota neutra
+  if (!localizacaoPoi) return 0.5;
   const distanciaKm = calcularDistanciaKm(localizacaoPartida, localizacaoPoi);
-  const distanciaMaximaRelevanteKm = 5; // Treze Tílias é pequena, 5km já é "longe" no contexto local
+  const distanciaMaximaRelevanteKm = 5;
   return Math.max(0, 1 - distanciaKm / distanciaMaximaRelevanteKm);
 }
 
@@ -433,7 +382,7 @@ function normalizarAvaliacao(avaliacao) {
 }
 
 function normalizarMatchInteresse(tagsPoi, interessesUsuario) {
-  if (!interessesUsuario || interessesUsuario.length === 0) return 0.5; // sem preferência, neutro
+  if (!interessesUsuario || interessesUsuario.length === 0) return 0.5;
   if (!tagsPoi || tagsPoi.length === 0) return 0;
   const intersecao = tagsPoi.filter((tag) => interessesUsuario.includes(tag));
   return intersecao.length / interessesUsuario.length;
@@ -442,24 +391,10 @@ function normalizarMatchInteresse(tagsPoi, interessesUsuario) {
 // ============================================================
 // ETAPA 4 — MONTAGEM DO CAPÍTULO
 // ============================================================
-// Fecha o capítulo em uma das 2 condições, o que vier primeiro:
-//   a) atingiu MAX_PARADAS_POR_CAPITULO
-//   b) não sobrou candidato viável
-// (Antes existia uma 3ª condição — fechar assim que a refeição-fronteira
-// fosse satisfeita — mas isso fazia o capítulo parar de crescer cedo
-// demais: pedir 1 refeição podia limitar a rota inteira a 1 parada só,
-// mesmo sobrando espaço no teto e candidatos bons disponíveis. A garantia
-// de refeição continua reservando o slot de comida — só não fecha mais o
-// capítulo por conta própria. Overrun pra janela de outra refeição
-// continua protegido por respeitaJanelaDeRefeicao, em
-// calcularERevalidarAteEstabilizar.)
 function montarCapitulo(candidatosPontuados, perfilBusca, experienciasGarantidas) {
   const selecionados = [];
   let posicaoAtual = perfilBusca.localizacaoPartida;
 
-  // Reservas (refeição-fronteira + interesses) entram primeiro, sempre —
-  // mesmo que um lugar mais conveniente perdesse pra elas numa disputa por
-  // pontuação. Ainda respeitam o teto de paradas do capítulo.
   for (const experiencia of experienciasGarantidas || []) {
     if (selecionados.length >= MAX_PARADAS_POR_CAPITULO) break;
 
@@ -487,9 +422,6 @@ function montarCapitulo(candidatosPontuados, perfilBusca, experienciasGarantidas
   return montarResultadoCapitulo(paradasFinais, perfilBusca);
 }
 
-// Monta o objeto de retorno do capítulo: paradas + o que precisa pro
-// PRÓXIMO capítulo (refeições ainda restantes, de onde e que horas
-// continuar) — ver comentário de arquitetura no topo do arquivo.
 function montarResultadoCapitulo(paradasFinais, perfilBusca) {
   const refeicoesAtendidas = new Set();
   for (const parada of paradasFinais) {
@@ -504,10 +436,7 @@ function montarResultadoCapitulo(paradasFinais, perfilBusca) {
     }
   }
 
-  const refeicoesRestantes = (perfilBusca.refeicoesDesejadas || []).filter(
-    (r) => !refeicoesAtendidas.has(r)
-  );
-
+  const refeicoesRestantes = (perfilBusca.refeicoesDesejadas || []).filter((r) => !refeicoesAtendidas.has(r));
   const ultimaParada = paradasFinais[paradasFinais.length - 1];
 
   return {
@@ -535,13 +464,6 @@ function capituloVazio(perfilBusca) {
   };
 }
 
-// ============================================================
-// Calcula horários reais e remove paradas inválidas (fechada no horário
-// real de chegada, ou fora da janela da refeição que deveria satisfazer).
-// Como remover uma parada do meio muda o horário de TODAS as que vêm
-// depois dela, repete o ciclo (calcular -> filtrar) até nada mais precisar
-// ser removido.
-// ============================================================
 function calcularERevalidarAteEstabilizar(paradas, perfilBusca) {
   let atuais = paradas;
 
@@ -553,7 +475,7 @@ function calcularERevalidarAteEstabilizar(paradas, perfilBusca) {
     );
 
     if (validas.length === comHorario.length) {
-      return validas; // nada foi removido nesta rodada, já estabilizou
+      return validas;
     }
 
     atuais = validas;
@@ -566,10 +488,6 @@ function calcularERevalidarAteEstabilizar(paradas, perfilBusca) {
   return atuais;
 }
 
-// Confere se o HORÁRIO REAL de chegada da parada bate com a janela de tempo
-// da refeição que ela deveria satisfazer. Sem essa checagem, um restaurante
-// marcado como "reservado pro almoço" podia acabar virando a primeira
-// parada do capítulo de manhã cedo — serve almoço, mas ninguém almoça às 9h.
 function respeitaJanelaDeRefeicao(parada, refeicoesDesejadas) {
   if (parada.categoria !== "gastronomia") return true;
 
@@ -593,18 +511,15 @@ function respeitaJanelaDeRefeicao(parada, refeicoesDesejadas) {
 }
 
 function ordenarPorProximidadeGeografica(paradas, pontoPartida) {
-  // Algoritmo simples do "vizinho mais próximo" — suficiente pra cidade pequena com poucas paradas por capítulo
   const restantes = [...paradas];
   const ordenadas = [];
   let posicaoAtual = pontoPartida;
 
   while (restantes.length > 0) {
     restantes.sort(
-      (a, b) =>
-        calcularDistanciaKm(posicaoAtual, a.localizacao) - calcularDistanciaKm(posicaoAtual, b.localizacao)
+      (a, b) => calcularDistanciaKm(posicaoAtual, a.localizacao) - calcularDistanciaKm(posicaoAtual, b.localizacao)
     );
     const proxima = restantes.shift();
-
     const deslocamentoMinReal = estimarDeslocamentoMin(posicaoAtual, proxima.localizacao);
 
     ordenadas.push({ ...proxima, deslocamentoMin: deslocamentoMinReal });
@@ -628,7 +543,7 @@ function calcularHorariosReais(paradas, horarioInicio) {
 }
 
 // ============================================================
-// UTILITÁRIOS PUROS (sem Firebase, sem DOM)
+// UTILITÁRIOS PUROS (sem Firebase, sem DOM, sem rede)
 // ============================================================
 function calcularDistanciaKm(a, b) {
   if (!a || !b) return 0;
@@ -652,7 +567,7 @@ function grauParaRad(graus) {
 
 function estimarDeslocamentoMin(origem, destino) {
   const km = calcularDistanciaKm(origem, destino);
-  const VELOCIDADE_CAMINHADA_KMH = 4.5; // Treze Tílias: roteiro pensado a pé no centro histórico
+  const VELOCIDADE_CAMINHADA_KMH = 4.5;
   return Math.round((km / VELOCIDADE_CAMINHADA_KMH) * 60);
 }
 
@@ -687,6 +602,7 @@ export {
   gerarCapitulo,
   gerarCapituloDeFavoritos,
   obterCandidatosViaveis,
+  aplicarDeslocamentosReais,
   recalcularRota,
   PESOS,
   MAX_PARADAS_POR_CAPITULO,
