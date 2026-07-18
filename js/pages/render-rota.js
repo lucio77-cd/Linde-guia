@@ -10,7 +10,18 @@
  * card da parada ativa durante o passeio (mesmo formato visual).
  */
 
+import { desenharMapaCompleto } from "./mapa-rota.js";
+
 const CHAVE_SESSION_STORAGE = "linde-guia:capitulo-atual";
+
+// Mapa Leaflet do resultado atual. Guardado aqui (não local a
+// renderizarResultado) porque precisa ser removido explicitamente antes de
+// desenhar um mapa novo — Leaflet lança erro ("Map container is already
+// initialized") se L.map() for chamado de novo na mesma <div> sem isso.
+// Isso acontece de verdade neste app: toda vez que a pessoa termina um
+// capítulo e escolhe "continuar", renderizarResultado() é chamado outra
+// vez pro capítulo seguinte, na mesma div#mapa-rota.
+let mapaAtual = null;
 
 // ============================================================
 // INICIALIZAÇÃO
@@ -116,6 +127,27 @@ function renderizarResultado(capitulo) {
   capitulo.paradas.forEach((parada, indice) => {
     listaEl.appendChild(criarParadaCard(parada, indice));
   });
+
+  desenharOuAtualizarMapa(capitulo);
+}
+
+// Remove o mapa anterior (se houver) antes de desenhar o novo — necessário
+// porque este mesmo #mapa-rota recebe um capítulo novo toda vez que a
+// pessoa continua o passeio (ver comentário de mapaAtual no topo do
+// arquivo). desenharMapaCompleto já lida sozinho com #mapa-rota ausente
+// (ex: cache de HTML antigo sem essa div) ou Leaflet não carregado —
+// devolve null nesses casos, sem lançar erro.
+function desenharOuAtualizarMapa(capitulo) {
+  if (mapaAtual) {
+    mapaAtual.remove();
+    mapaAtual = null;
+  }
+
+  mapaAtual = desenharMapaCompleto(
+    "mapa-rota",
+    capitulo.paradas,
+    capitulo.perfilOriginal?.localizacaoPartida
+  );
 }
 
 // Capítulo não carrega mais uma duração total pronta (não existe mais
