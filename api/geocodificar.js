@@ -22,7 +22,7 @@ export default async function handler(req, res) {
 
   if (!process.env.GOOGLE_MAPS_API_KEY) {
     console.error("[geocodificar] GOOGLE_MAPS_API_KEY não configurada na Vercel.");
-    res.status(500).json({ erro: "Geocodificação não configurada no servidor" });
+    res.status(200).json({ encontrado: false, motivo: "erro_configuracao", detalheStatus: "CHAVE_AUSENTE" });
     return;
   }
 
@@ -53,12 +53,23 @@ export default async function handler(req, res) {
     );
     const dados = await resposta.json();
 
+    if (dados.status === "ZERO_RESULTS") {
+      res.status(200).json({ encontrado: false, motivo: "nao_encontrado" });
+      return;
+    }
+
     if (dados.status !== "OK" || !dados.results?.[0]) {
-      // ZERO_RESULTS é resultado válido de "não achei", não erro de sistema.
-      if (dados.status !== "ZERO_RESULTS") {
-        console.warn("[geocodificar] Geocoding status:", dados.status, dados.error_message);
-      }
-      res.status(200).json({ encontrado: false });
+      // REQUEST_DENIED, OVER_QUERY_LIMIT, INVALID_REQUEST, etc — isso NÃO
+      // é "endereço não encontrado", é problema de configuração da API
+      // (billing desligado, chave sem permissão, cota estourada...). Sem
+      // acesso ao log da Vercel pelo celular, o admin precisa ver essa
+      // diferença na tela, senão parece que todo endereço "não existe".
+      console.error("[geocodificar] Geocoding status:", dados.status, dados.error_message);
+      res.status(200).json({
+        encontrado: false,
+        motivo: "erro_configuracao",
+        detalheStatus: dados.status,
+      });
       return;
     }
 
@@ -76,7 +87,7 @@ export default async function handler(req, res) {
     });
   } catch (erro) {
     console.error("[geocodificar] Erro:", erro.name === "AbortError" ? "timeout" : erro);
-    res.status(200).json({ encontrado: false }); // fallback silencioso, admin cai pra digitação manual
+    res.status(200).json({ encontrado: false, motivo: "erro_rede" });
   } finally {
     clearTimeout(timeoutId);
   }
