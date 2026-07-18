@@ -238,12 +238,12 @@ function desenharParadaAtual(rota, indice) {
     </div>
     <div class="card-parada-atual__navegacao">
       <a class="botao botao--secundario"
-         href="${montarLinkGoogleMaps(parada.localizacao)}"
+         href="${montarLinkGoogleMaps(parada)}"
          target="_blank" rel="noopener">
         Navegar (Google Maps)
       </a>
       <a class="botao botao--secundario"
-         href="${montarLinkWaze(parada.localizacao)}"
+         href="${montarLinkWaze(parada)}"
          target="_blank" rel="noopener">
         Navegar (Waze)
       </a>
@@ -258,17 +258,25 @@ function desenharParadaAtual(rota, indice) {
   avisarSeRiscoDeFechar(parada);
 }
 
-function montarLinkGoogleMaps(localizacao) {
-  if (!localizacao) return "#";
-  // "dir" (direções) abre navegação turn-by-turn de verdade, diferente de
-  // "search" (que só mostra o ponto no mapa). travelmode=walking porque o
+// Busca por NOME do local + cidade, em vez de coordenada crua. Decisão
+// consciente: parte dos POIs cadastrados pode ter lat/lng impreciso (ver
+// admin-locais.js — Nominatim, sem verificação humana em todo cadastro),
+// e mandar alguém pra um pino errado é pior do que deixar o próprio
+// Google/Waze resolver o nome do estabelecimento com a base deles, que
+// já inclui avaliações, fotos e o pino certo na porta do lugar. Também
+// evita qualquer custo ou dependência de API de geocodificação nossa —
+// esses links são só URLs abertas no app de navegação da pessoa.
+function montarLinkGoogleMaps(parada) {
+  const consulta = encodeURIComponent(`${parada.nome}, Treze Tílias, SC`);
+  // "dir" (direções) abre navegação turn-by-turn de verdade; destination
+  // aceita texto de busca, não só coordenada. travelmode=walking porque o
   // passeio em Treze Tílias é pensado a pé no centro histórico.
-  return `https://www.google.com/maps/dir/?api=1&destination=${localizacao.lat},${localizacao.lng}&travelmode=walking`;
+  return `https://www.google.com/maps/dir/?api=1&destination=${consulta}&travelmode=walking`;
 }
 
-function montarLinkWaze(localizacao) {
-  if (!localizacao) return "#";
-  return `https://waze.com/ul?ll=${localizacao.lat},${localizacao.lng}&navigate=yes`;
+function montarLinkWaze(parada) {
+  const consulta = encodeURIComponent(`${parada.nome}, Treze Tílias, SC`);
+  return `https://waze.com/ul?q=${consulta}&navigate=yes`;
 }
 
 function atualizarProgresso(indice, total) {
