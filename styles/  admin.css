@@ -332,3 +332,93 @@ th {
     grid-template-columns: 1fr;
   }
 }
+/*
+  ===== CSS do admin: selo de patrocínio + preview de imagem =====
+  Cola no CSS do admin.html (ou num arquivo de styles/ que o admin já importa).
+*/
+.selo-patrocinio {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+.selo-patrocinio--ouro   { background: #fff4d6; color: #8a6d00; }
+.selo-patrocinio--prata  { background: #eef0f2; color: #5a6268; }
+.selo-patrocinio--bronze { background: #f3e2d3; color: #8a4b1f; }
+
+.preview-patrocinio-imagem {
+  max-width: 100%;
+  max-height: 160px;
+  border-radius: var(--raio-grande, 8px);
+  margin-top: 0.5rem;
+  object-fit: cover;
+}
+
+/*
+  ===== CSS do carrossel de patrocínio =====
+  Cola no CSS de QUALQUER página que use <div class="carrossel-patrocinio">
+  (Home, e as outras 2 telas — mesmo bloco serve pras 3, só o id muda).
+*/
+.carrossel-patrocinio {
+  position: relative;
+  margin-bottom: 1.5rem;
+}
+
+.carrossel-patrocinio__trilha {
+  position: relative;
+}
+
+.carrossel-patrocinio__pagina {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.carrossel-patrocinio__banner {
+  position: relative;
+  display: block;
+  border-radius: var(--raio-grande, 8px);
+  overflow: hidden;
+  aspect-ratio: 3 / 1;
+  text-decoration: none;
+}
+
+.carrossel-patrocinio__banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.carrossel-patrocinio__selo {
+  position: absolute;
+  bottom: 0.4rem;
+  right: 0.5rem;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 0.65rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+}
+
+.carrossel-patrocinio__pontos {
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+
+.carrossel-patrocinio__ponto {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  background: var(--creme-escuro, #ddd);
+  padding: 0;
+  cursor: pointer;
+}
+
+.carrossel-patrocinio__ponto[aria-current="true"] {
+  background: var(--bordeaux, #7a1f2b);
+}
