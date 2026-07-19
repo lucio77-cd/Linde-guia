@@ -5,9 +5,11 @@
 import {
   buscarTodosPois, criarPoi, atualizarPoi, removerPoi,
 } from "../data/pois-data.js";
+import { enviarImagemBanner } from "./upload-imagem.js";
 
 let poisCache = [];
 let categoriaAtiva = "todos";
+let imagemBannerUrlAtual = null; // URL da imagem de banner do local aberto no modal (já enviada ou recém-enviada agora)
 
 // Nomes completos na ordem da semana (domingo primeiro), formato usado por
 // motor-rota.js (obterDiaSemana) e por pois-seed.json.
@@ -62,6 +64,7 @@ function iniciarAdminLocais() {
   configurarPrioridadeCondicional();
   configurarBuscaEndereco();
   configurarAvisoDistanciaManual();
+  configurarPatrocinio();
 
   document.getElementById("btn-novo-local").addEventListener("click", () => abrirModal(null));
   document.getElementById("btn-cancelar-local").addEventListener("click", fecharModal);
@@ -303,6 +306,96 @@ function configurarPrioridadeCondicional() {
 }
 
 // ============================================================
+// PATROCÍNIO — nível (Ouro/Prata/Bronze), ativo/inativo e imagem do
+// banner. Vira um campo do próprio POI (não uma coleção separada) porque
+// só locais já cadastrados no app podem ser patrocinados — decisão
+// registrada em conversa com o cliente.
+// ============================================================
+// Referência de tamanho recomendado pra arte, mostrada no admin — não é
+// validado tecnicamente (só tamanho de arquivo e tipo são, em
+// upload-imagem.js), é só orientação pra quem está montando a peça.
+const RESOLUCAO_RECOMENDADA_BANNER = "1200×400px";
+
+function configurarPatrocinio() {
+  const selectNivel   = document.getElementById("campo-patrocinio-nivel");
+  const grupoDetalhes = document.getElementById("grupo-patrocinio-detalhes");
+  const inputImagem   = document.getElementById("campo-patrocinio-imagem");
+
+  selectNivel.addEventListener("change", () => {
+    grupoDetalhes.hidden = !selectNivel.value; // "" = Nenhum
+  });
+
+  inputImagem.addEventListener("change", async () => {
+    const arquivo = inputImagem.files[0];
+    if (!arquivo) return;
+
+    const idAtual = document.getElementById("campo-id").value || "novo";
+    const statusEl = document.getElementById("status-patrocinio-imagem");
+    statusEl.textContent = "Enviando imagem...";
+    statusEl.dataset.tipo = "";
+
+    try {
+      const url = await enviarImagemBanner(idAtual, arquivo);
+      imagemBannerUrlAtual = url;
+      atualizarPreviewBanner(url);
+      statusEl.textContent = "Imagem enviada!";
+      statusEl.dataset.tipo = "ok";
+    } catch (erro) {
+      console.error("[admin-locais] Erro ao enviar imagem de banner:", erro);
+      statusEl.textContent = erro.message || "Erro ao enviar imagem. Tenta de novo.";
+      statusEl.dataset.tipo = "erro";
+    }
+  });
+}
+
+function atualizarPreviewBanner(url) {
+  const preview = document.getElementById("preview-patrocinio-imagem");
+  if (!url) {
+    preview.hidden = true;
+    preview.removeAttribute("src");
+    return;
+  }
+  preview.src = url;
+  preview.hidden = false;
+}
+
+// Chamado por abrirModal() — preenche os campos de patrocínio a partir do
+// POI (ou zera tudo, pra "Novo local").
+function preencherPatrocinioNoFormulario(poi) {
+  const selectNivel = document.getElementById("campo-patrocinio-nivel");
+  const inputAtivo  = document.getElementById("campo-patrocinio-ativo");
+  const grupoDetalhes = document.getElementById("grupo-patrocinio-detalhes");
+  const statusEl = document.getElementById("status-patrocinio-imagem");
+
+  const patrocinio = poi?.patrocinio || null;
+
+  selectNivel.value = patrocinio?.nivel || "";
+  inputAtivo.checked = patrocinio?.ativo ?? true; // default ativo quando marcar um nível pela primeira vez
+  imagemBannerUrlAtual = patrocinio?.imagemBannerUrl || null;
+
+  grupoDetalhes.hidden = !selectNivel.value;
+  statusEl.textContent = "";
+  statusEl.dataset.tipo = "";
+  atualizarPreviewBanner(imagemBannerUrlAtual);
+}
+
+// Chamado por salvarLocal() — monta o objeto patrocinio pro dados do POI.
+// null (não undefined) quando nível é "Nenhum", pra sobrescrever de
+// verdade um patrocínio removido em vez de deixar o campo antigo no
+// Firestore (updateDoc não remove campo que simplesmente não é enviado).
+function lerPatrocinioDoFormulario() {
+  const nivel = document.getElementById("campo-patrocinio-nivel").value;
+  if (!nivel) {
+    return null;
+  }
+  return {
+    nivel,
+    ativo: document.getElementById("campo-patrocinio-ativo").checked,
+    imagemBannerUrl: imagemBannerUrlAtual || null,
+  };
+}
+
+// ============================================================
 // BUSCA DE ENDEREÇO — preenche lat/lng automaticamente via Nominatim/OSM
 // (grátis, sem faturamento vinculado — decisão consciente em vez do
 // Google Geocoding, que exige cartão de crédito no projeto).
@@ -453,6 +546,9 @@ function renderizarListaLocais() {
     const avisoDistancia = distanciaDoCentro !== null && distanciaDoCentro > RAIO_AVISO_KM
       ? `<span class="local-admin-card__aviso" title="Coordenada distante do centro de Treze Tílias">⚠️ ${Math.round(distanciaDoCentro)} km do centro</span>`
       : "";
+    const seloPatrocinio = poi.patrocinio?.nivel
+      ? `<span class="selo-patrocinio selo-patrocinio--${poi.patrocinio.nivel}">${LABEL_NIVEL[poi.patrocinio.nivel]}${poi.patrocinio.ativo ? "" : " (pausado)"}</span>`
+      : "";
 
     const card = document.createElement("div");
     card.className = "local-admin-card";
@@ -465,6 +561,7 @@ function renderizarListaLocais() {
         <span class="tag-categoria tag-categoria--${poi.categoria || 'lazer'}">${poi.categoria || '—'}</span>
         <span class="local-admin-card__detalhe">${poi.duracaoMediaVisitaMin ?? poi.duracao_media_visita_min ?? 30} min · ${poi.precoEstimado > 0 ? 'R$' + poi.precoEstimado : 'Grátis'}</span>
         ${avisoDistancia}
+        ${seloPatrocinio}
       </div>
     `;
     card.addEventListener("click", () => abrirModal(poi));
@@ -475,6 +572,8 @@ function renderizarListaLocais() {
 function formatarStatus(s) {
   return { ativo:"Ativo", sazonal:"Sazonal", em_reforma:"Em reforma", fechado_temporariamente:"Fechado" }[s] || s;
 }
+
+const LABEL_NIVEL = { ouro: "🥇 Ouro", prata: "🥈 Prata", bronze: "🥉 Bronze" };
 
 // ============================================================
 // MODAL
@@ -527,6 +626,8 @@ function abrirModal(poi) {
     grupoRefeicoesEl.hidden = poi.categoria !== "gastronomia";
     document.getElementById("campo-prioridade-gastronomica").value = poi.prioridadeGastronomica ?? 0;
 
+    preencherPatrocinioNoFormulario(poi);
+
     btnExcl.hidden = false;
   } else {
     titulo.textContent = "Novo local";
@@ -543,6 +644,7 @@ function abrirModal(poi) {
     document.getElementById("campo-whatsapp").value  = "";
     document.getElementById("endereco-status").textContent = "";
     document.getElementById("endereco-status").dataset.tipo = "";
+    preencherPatrocinioNoFormulario(null);
     grupoPrio.hidden = true;
     grupoRefeicoesEl.hidden = true;
     btnExcl.hidden = true;
@@ -583,6 +685,7 @@ async function salvarLocal(e) {
     descricaoLonga:       document.getElementById("campo-sobre").value.trim(),
     instagram:            document.getElementById("campo-instagram").value.trim().replace(/^@/, ""),
     whatsapp:             document.getElementById("campo-whatsapp").value.trim().replace(/\D/g, ""),
+    patrocinio:           lerPatrocinioDoFormulario(),
   };
 
   if (categoria === "gastronomia") {
