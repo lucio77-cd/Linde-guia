@@ -535,7 +535,32 @@
           <label for="campo-nome">Nome do local</label>
           <input type="text" id="campo-nome" placeholder="ex: Museu do Imigrante Tirolês" required />
         </div>
+<!--
+  Cola este bloco dentro do <form id="form-local"> no admin.html,
+  em qualquer lugar depois dos campos de nome/categoria (a ordem exata na
+  tela não importa, só precisa estar dentro do form pra ser salvo junto).
+-->
+<div class="grupo-campo">
+  <label for="campo-patrocinio-nivel">Nível de patrocínio</label>
+  <select id="campo-patrocinio-nivel">
+    <option value="">Nenhum</option>
+    <option value="ouro">🥇 Ouro</option>
+    <option value="prata">🥈 Prata</option>
+    <option value="bronze">🥉 Bronze</option>
+  </select>
+</div>
 
+<div id="grupo-patrocinio-detalhes" class="grupo-campo" hidden>
+  <label class="dia-linha__toggle">
+    <input type="checkbox" id="campo-patrocinio-ativo" checked />
+    <span>Patrocínio ativo (aparece no carrossel)</span>
+  </label>
+
+  <label for="campo-patrocinio-imagem">Imagem do banner (recomendado: 1200×400px, JPG/PNG/WebP, até 5MB)</label>
+  <input type="file" id="campo-patrocinio-imagem" accept="image/jpeg,image/png,image/webp" />
+  <p id="status-patrocinio-imagem" class="mapa-selecao__legenda"></p>
+  <img id="preview-patrocinio-imagem" class="preview-patrocinio-imagem" alt="Prévia do banner" hidden />
+</div>
         <div class="form-linha">
           <div class="form-grupo">
             <label for="campo-categoria">Categoria</label>
