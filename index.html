@@ -579,7 +579,7 @@
       border-radius: 4px;
     }
   
-    /* ===== Banner de patrocinador ===== */
+    /* ===== Banner de patrocinador (avulso, único, por link externo) ===== */
     .banner-patrocinado { border-bottom: 1px solid var(--creme-escuro); background: var(--branco); }
     .banner-patrocinado[hidden] { display: none; }
     .banner-patrocinado a {
@@ -591,6 +591,41 @@
       font-size: 0.625rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
       background: rgba(28,23,20,0.6); color: #fff; padding: 0.15rem 0.5rem; border-radius: 100px;
     }
+
+    /* ===== Carrossel de patrocínio por nível (Ouro/Prata/Bronze) =====
+       Home = nível Ouro, 2 slots. Ver <script> no fim da página. */
+    .secao-carrossel-patrocinio {
+      padding: 0 clamp(1.25rem, 5vw, 3rem);
+      margin-bottom: 3rem;
+    }
+    .carrossel-patrocinio { position: relative; }
+    .carrossel-patrocinio[hidden] { display: none; }
+    .carrossel-patrocinio__trilha { position: relative; max-width: 1000px; margin: 0 auto; }
+    .carrossel-patrocinio__pagina {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+    .carrossel-patrocinio__banner {
+      position: relative;
+      display: block;
+      border-radius: var(--raio-grande);
+      overflow: hidden;
+      aspect-ratio: 3 / 1;
+      border: 1.5px solid var(--creme-escuro);
+    }
+    .carrossel-patrocinio__banner img { width: 100%; height: 100%; object-fit: cover; }
+    .carrossel-patrocinio__selo {
+      position: absolute; bottom: 0.4rem; right: 0.5rem;
+      background: rgba(28,23,20,0.6); color: #fff; font-size: 0.625rem;
+      padding: 0.15rem 0.5rem; border-radius: 100px; letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .carrossel-patrocinio__pontos { display: flex; justify-content: center; gap: 0.4rem; margin-top: 0.75rem; }
+    .carrossel-patrocinio__ponto {
+      width: 8px; height: 8px; border-radius: 50%; border: none;
+      background: var(--creme-escuro); padding: 0; cursor: pointer;
+    }
+    .carrossel-patrocinio__ponto[aria-current="true"] { background: var(--borde); }
 </style>
 
 </head>
@@ -622,6 +657,7 @@
     <nav class="topo__nav" aria-label="Navegação principal">
       <a href="pages/explorar.html">Explorar</a>
       <a href="pages/eventos.html">Eventos</a>
+      <a href="pages/favoritos.html">Lugares salvos</a>
       <a href="pages/perfil.html">Perfil</a>
       <a href="pages/roteiro.html" class="destaque">Criar roteiro</a>
     </nav>
@@ -912,6 +948,14 @@
       </div>
     </section>
 
+    <!-- ===== CARROSSEL DE PATROCÍNIO — Ouro, 2 slots ===== -->
+    <section class="secao-carrossel-patrocinio" aria-label="Patrocinadores em destaque">
+      <div id="carrossel-patrocinio-ouro" class="carrossel-patrocinio" hidden>
+        <div class="carrossel-patrocinio__trilha"></div>
+        <div class="carrossel-patrocinio__pontos"></div>
+      </div>
+    </section>
+
     <!-- ===== CTA SELOS ===== -->
     <div class="secao-selos">
       <!-- Ícone de caderneta/passaporte -->
@@ -961,5 +1005,13 @@
   <script type="module" src="js/core/banner-evento.js"></script>
 
   <script type="module" src="js/core/banner-patrocinado.js"></script>
+
+  <!-- Carrossel de patrocínio — Home = nível Ouro, 2 slots.
+       caminhoParaPonto="pages/ponto.html?id=" porque este arquivo (index.html)
+       está na raiz do site, não dentro de pages/. -->
+  <script type="module">
+    import { iniciarCarrosselPatrocinio } from "./js/core/carrossel-patrocinio.js";
+    iniciarCarrosselPatrocinio("carrossel-patrocinio-ouro", "ouro", 2, "pages/ponto.html?id=");
+  </script>
 </body>
 </html>
