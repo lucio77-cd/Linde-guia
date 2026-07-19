@@ -1,0 +1,21 @@
+rules_version = '2';
+
+// storage.rules — Linde Guia — Treze Tílias
+//
+// Novo: até agora o projeto não usava Firebase Storage (nenhum upload de
+// imagem existia). Regra propositalmente simples e no mesmo espírito do
+// firestore.rules que já existe: leitura pública (banners aparecem pro
+// turista sem estar logado), escrita só autenticado (mesmo login do
+// admin.html). Ajusta pra bater exatamente com a condição de admin que o
+// firestore.rules já usa, se ela for mais específica que só
+// "request.auth != null" (ex: checar um campo isAdmin custom claim).
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /banners-patrocinio/{arquivo} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+  }
+}
