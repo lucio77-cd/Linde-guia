@@ -5,7 +5,6 @@
 import {
   buscarTodosPois, criarPoi, atualizarPoi, removerPoi,
 } from "../data/pois-data.js";
-import { enviarImagemBanner } from "./upload-imagem.js";
 
 let poisCache = [];
 let categoriaAtiva = "todos";
@@ -306,57 +305,111 @@ function configurarPrioridadeCondicional() {
 }
 
 // ============================================================
-// PATROCÍNIO — nível (Ouro/Prata/Bronze), ativo/inativo e imagem do
+// PATROCÍNIO — nível (Ouro/Prata/Bronze), ativo/inativo e a arte do
 // banner. Vira um campo do próprio POI (não uma coleção separada) porque
-// só locais já cadastrados no app podem ser patrocinados — decisão
-// registrada em conversa com o cliente.
+// só locais já cadastrados no app podem ser patrocinados.
+//
+// SEM UPLOAD, SEM FIREBASE STORAGE: Storage exige o plano pago (Blaze) do
+// Firebase, e não vale a pena pro tamanho do projeto agora. Em vez disso,
+// a arte é um arquivo estático servido direto pela Vercel — o admin digita
+// só um NÚMERO aqui, e sobe manualmente o arquivo
+// "banners/{numero}.jpg" no repositório (pelo GitHub mesmo, sem precisar
+// de tela de upload). O caminho é montado sozinho a partir do número.
 // ============================================================
-// Referência de tamanho recomendado pra arte, mostrada no admin — não é
-// validado tecnicamente (só tamanho de arquivo e tipo são, em
-// upload-imagem.js), é só orientação pra quem está montando a peça.
-const RESOLUCAO_RECOMENDADA_BANNER = "1200×400px";
+const PASTA_BANNERS = "/banners"; // caminho absoluto — funciona igual não importa de qual pasta a página está servindo
+const EXTENSAO_BANNER = ".jpg";   // fixo por simplicidade — exporta a arte sempre como JPG
 
 function configurarPatrocinio() {
   const selectNivel   = document.getElementById("campo-patrocinio-nivel");
   const grupoDetalhes = document.getElementById("grupo-patrocinio-detalhes");
-  const inputImagem   = document.getElementById("campo-patrocinio-imagem");
+  const inputNumero   = document.getElementById("campo-patrocinio-numero");
 
   selectNivel.addEventListener("change", () => {
     grupoDetalhes.hidden = !selectNivel.value; // "" = Nenhum
+    if (!selectNivel.value) return;
+    mostrarNumerosEmUso();
   });
 
-  inputImagem.addEventListener("change", async () => {
-    const arquivo = inputImagem.files[0];
-    if (!arquivo) return;
-
-    const idAtual = document.getElementById("campo-id").value || "novo";
-    const statusEl = document.getElementById("status-patrocinio-imagem");
-    statusEl.textContent = "Enviando imagem...";
-    statusEl.dataset.tipo = "";
-
-    try {
-      const url = await enviarImagemBanner(idAtual, arquivo);
-      imagemBannerUrlAtual = url;
-      atualizarPreviewBanner(url);
-      statusEl.textContent = "Imagem enviada!";
-      statusEl.dataset.tipo = "ok";
-    } catch (erro) {
-      console.error("[admin-locais] Erro ao enviar imagem de banner:", erro);
-      statusEl.textContent = erro.message || "Erro ao enviar imagem. Tenta de novo.";
-      statusEl.dataset.tipo = "erro";
-    }
+  inputNumero.addEventListener("input", () => {
+    const numero = inputNumero.value.trim();
+    imagemBannerUrlAtual = numero ? montarCaminhoBanner(numero) : null;
+    atualizarPreviewBanner(imagemBannerUrlAtual);
+    avisarSeNumeroJaUsado(numero);
   });
+}
+
+function montarCaminhoBanner(numero) {
+  return `${PASTA_BANNERS}/${numero}${EXTENSAO_BANNER}`;
 }
 
 function atualizarPreviewBanner(url) {
   const preview = document.getElementById("preview-patrocinio-imagem");
+  const avisoQuebrada = document.getElementById("aviso-patrocinio-imagem-quebrada");
   if (!url) {
     preview.hidden = true;
     preview.removeAttribute("src");
+    avisoQuebrada.hidden = true;
     return;
   }
   preview.src = url;
   preview.hidden = false;
+  avisoQuebrada.hidden = true;
+  // A imagem pode ainda não existir no repo (admin digitou o número mas
+  // não subiu o arquivo ainda) — isso é normal, não é erro. Só avisa de
+  // forma discreta, sem travar nada.
+  preview.onerror = () => { avisoQuebrada.hidden = false; };
+  preview.onload = () => { avisoQuebrada.hidden = true; };
+}
+
+// Varre os POIs já carregados e monta um mapa {numero: nomeDoLocal} —
+// ajuda a não repetir um número já usado por outro local sem querer.
+// Exclui o próprio POI em edição (senão ele apareceria "colidindo" consigo
+// mesmo toda vez que reabrir pra editar).
+function numerosDeBannerEmUso(idIgnorar) {
+  const regex = new RegExp(`^${PASTA_BANNERS}/(\\d+)${EXTENSAO_BANNER.replace(".", "\\.")}$`);
+  const emUso = {};
+
+  poisCache.forEach((poi) => {
+    if (poi.id === idIgnorar) return;
+    const url = poi.patrocinio?.imagemBannerUrl;
+    if (!url) return;
+    const match = url.match(regex);
+    if (match) emUso[match[1]] = poi.nome;
+  });
+
+  return emUso;
+}
+
+function mostrarNumerosEmUso() {
+  const idAtual = document.getElementById("campo-id").value || null;
+  const emUso = numerosDeBannerEmUso(idAtual);
+  const listaEl = document.getElementById("lista-numeros-em-uso");
+
+  const entradas = Object.entries(emUso).sort((a, b) => Number(a[0]) - Number(b[0]));
+  if (entradas.length === 0) {
+    listaEl.textContent = "Nenhum número em uso ainda — pode começar do 1.";
+    return;
+  }
+  listaEl.textContent = "Já em uso: " + entradas.map(([n, nome]) => `${n} (${nome})`).join(", ");
+}
+
+function avisarSeNumeroJaUsado(numero) {
+  const statusEl = document.getElementById("status-patrocinio-imagem");
+  if (!numero) {
+    statusEl.textContent = "";
+    statusEl.dataset.tipo = "";
+    return;
+  }
+  const idAtual = document.getElementById("campo-id").value || null;
+  const emUso = numerosDeBannerEmUso(idAtual);
+
+  if (emUso[numero]) {
+    statusEl.textContent = `⚠️ Número ${numero} já está em uso por "${emUso[numero]}" — escolhe outro, ou os dois vão mostrar a mesma imagem.`;
+    statusEl.dataset.tipo = "erro";
+  } else {
+    statusEl.textContent = `Vai carregar de: ${PASTA_BANNERS}/${numero}${EXTENSAO_BANNER}`;
+    statusEl.dataset.tipo = "ok";
+  }
 }
 
 // Chamado por abrirModal() — preenche os campos de patrocínio a partir do
@@ -364,6 +417,7 @@ function atualizarPreviewBanner(url) {
 function preencherPatrocinioNoFormulario(poi) {
   const selectNivel = document.getElementById("campo-patrocinio-nivel");
   const inputAtivo  = document.getElementById("campo-patrocinio-ativo");
+  const inputNumero = document.getElementById("campo-patrocinio-numero");
   const grupoDetalhes = document.getElementById("grupo-patrocinio-detalhes");
   const statusEl = document.getElementById("status-patrocinio-imagem");
 
@@ -373,10 +427,19 @@ function preencherPatrocinioNoFormulario(poi) {
   inputAtivo.checked = patrocinio?.ativo ?? true; // default ativo quando marcar um nível pela primeira vez
   imagemBannerUrlAtual = patrocinio?.imagemBannerUrl || null;
 
+  // Extrai só o número de volta do caminho salvo, pra reaparecer no campo
+  // ao reabrir um local que já tem patrocínio configurado.
+  const match = imagemBannerUrlAtual?.match(
+    new RegExp(`^${PASTA_BANNERS}/(\\d+)${EXTENSAO_BANNER.replace(".", "\\.")}$`)
+  );
+  inputNumero.value = match ? match[1] : "";
+
   grupoDetalhes.hidden = !selectNivel.value;
   statusEl.textContent = "";
   statusEl.dataset.tipo = "";
   atualizarPreviewBanner(imagemBannerUrlAtual);
+
+  if (selectNivel.value) mostrarNumerosEmUso();
 }
 
 // Chamado por salvarLocal() — monta o objeto patrocinio pro dados do POI.
@@ -722,6 +785,32 @@ async function salvarLocal(e) {
       `Tem certeza que é isso mesmo? Cancelar pra revisar, OK pra salvar assim mesmo.`
     );
     if (!confirmar) return;
+  }
+
+  // Nível escolhido mas sem número de arte definido — patrocínio ficaria
+  // "ativo" mas sem imagem nenhuma, o que só resultaria num slot quebrado
+  // no carrossel do turista.
+  if (dados.patrocinio && !dados.patrocinio.imagemBannerUrl) {
+    erroEl.textContent = "Escolheu um nível de patrocínio, mas não digitou o número da arte.";
+    erroEl.hidden = false;
+    return;
+  }
+  // Número de arte colidindo com outro local — não impede salvar (pode ser
+  // proposital em algum caso raro), só confirma, porque sobrescrever o
+  // banner de outro patrocinador sem querer é o tipo de erro que só
+  // aparece dias depois, quando alguém notar a imagem errada no ar.
+  if (dados.patrocinio) {
+    const numeroAtual = dados.patrocinio.imagemBannerUrl.match(
+      new RegExp(`^${PASTA_BANNERS}/(\\d+)${EXTENSAO_BANNER.replace(".", "\\.")}$`)
+    )?.[1];
+    const emUso = numerosDeBannerEmUso(id || null);
+    if (numeroAtual && emUso[numeroAtual]) {
+      const confirmar2 = confirm(
+        `O número ${numeroAtual} já está em uso por "${emUso[numeroAtual]}". ` +
+        `Os dois vão mostrar a mesma imagem. Salvar assim mesmo?`
+      );
+      if (!confirmar2) return;
+    }
   }
 
   try {
