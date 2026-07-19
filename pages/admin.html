@@ -273,6 +273,31 @@
     .refeicao-check:has(input:checked) { background: var(--verde); border-color: var(--verde); color: var(--branco); }
     .refeicao-check input { margin: 0; }
 
+    /* ===== Patrocínio por local (Ouro/Prata/Bronze) =====
+       Novo: nível de patrocínio + número da arte estática (banners/N.jpg,
+       sem upload — ver js/admin/admin-locais.js pro porquê). */
+    #status-patrocinio-imagem[data-tipo="ok"]   { color: var(--verde); }
+    #status-patrocinio-imagem[data-tipo="erro"] { color: var(--borde); }
+    .preview-patrocinio-imagem {
+      max-width: 100%;
+      max-height: 140px;
+      border-radius: var(--raio);
+      border: 1.5px solid var(--creme-escuro);
+      object-fit: cover;
+      display: block;
+    }
+    #aviso-patrocinio-imagem-quebrada { color: var(--borde); }
+
+    /* Selo mostrado no card da lista de Locais quando o local tem patrocínio */
+    .selo-patrocinio {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      padding: 0.2rem 0.625rem;
+      border-radius: 999px;
+    }
+    .selo-patrocinio--ouro   { background: #FFF4D6; color: #8A6D00; }
+    .selo-patrocinio--prata  { background: #EEF0F2; color: #5A6268; }
+    .selo-patrocinio--bronze { background: #F3E2D3; color: #8A4B1F; }
 
     @media (max-width: 768px) {
       .painel { grid-template-columns: 1fr; }
@@ -464,7 +489,7 @@
     </div>
   </div>
 
-  <!-- ===== MODAL DE EDIÇÃO/CRIAÇÃO — PATROCINADOR ===== -->
+  <!-- ===== MODAL DE EDIÇÃO/CRIAÇÃO — PATROCINADOR (banner único avulso, por link externo) ===== -->
   <div id="modal-patrocinador" class="modal-local" hidden>
     <div class="modal-local__caixa">
       <div class="modal-local__header">
@@ -520,7 +545,7 @@
     </div>
   </div>
 
-  <!-- ===== MODAL DE EDIÇÃO/CRIAÇÃO ===== -->
+  <!-- ===== MODAL DE EDIÇÃO/CRIAÇÃO — LOCAL ===== -->
   <div id="modal-local" class="modal-local" hidden>
     <div class="modal-local__caixa">
       <div class="modal-local__header">
@@ -535,32 +560,7 @@
           <label for="campo-nome">Nome do local</label>
           <input type="text" id="campo-nome" placeholder="ex: Museu do Imigrante Tirolês" required />
         </div>
-<!--
-  Cola este bloco dentro do <form id="form-local"> no admin.html,
-  em qualquer lugar depois dos campos de nome/categoria (a ordem exata na
-  tela não importa, só precisa estar dentro do form pra ser salvo junto).
--->
-<div class="grupo-campo">
-  <label for="campo-patrocinio-nivel">Nível de patrocínio</label>
-  <select id="campo-patrocinio-nivel">
-    <option value="">Nenhum</option>
-    <option value="ouro">🥇 Ouro</option>
-    <option value="prata">🥈 Prata</option>
-    <option value="bronze">🥉 Bronze</option>
-  </select>
-</div>
 
-<div id="grupo-patrocinio-detalhes" class="grupo-campo" hidden>
-  <label class="dia-linha__toggle">
-    <input type="checkbox" id="campo-patrocinio-ativo" checked />
-    <span>Patrocínio ativo (aparece no carrossel)</span>
-  </label>
-
-  <label for="campo-patrocinio-imagem">Imagem do banner (recomendado: 1200×400px, JPG/PNG/WebP, até 5MB)</label>
-  <input type="file" id="campo-patrocinio-imagem" accept="image/jpeg,image/png,image/webp" />
-  <p id="status-patrocinio-imagem" class="mapa-selecao__legenda"></p>
-  <img id="preview-patrocinio-imagem" class="preview-patrocinio-imagem" alt="Prévia do banner" hidden />
-</div>
         <div class="form-linha">
           <div class="form-grupo">
             <label for="campo-categoria">Categoria</label>
@@ -698,6 +698,37 @@
             <option value="5">5 — Máxima prioridade</option>
           </select>
           <p class="form-ajuda">Nível 4 ou 5 garante que este local entre quase sempre no roteiro gastronômico, na refeição que ele servir.</p>
+        </div>
+
+        <!-- Patrocínio por nível (Ouro/Prata/Bronze) — carrossel nas 3 telas do turista -->
+        <div class="form-grupo">
+          <div class="form-divisor"></div>
+          <span class="form-secao-titulo">🏆 Patrocínio</span>
+          <label for="campo-patrocinio-nivel">Nível</label>
+          <select id="campo-patrocinio-nivel">
+            <option value="">Nenhum</option>
+            <option value="ouro">🥇 Ouro</option>
+            <option value="prata">🥈 Prata</option>
+            <option value="bronze">🥉 Bronze</option>
+          </select>
+        </div>
+
+        <div class="form-grupo campo-condicional" id="grupo-patrocinio-detalhes" hidden>
+          <label class="refeicao-check" style="width:fit-content;">
+            <input type="checkbox" id="campo-patrocinio-ativo" checked /> Patrocínio ativo (aparece no carrossel)
+          </label>
+
+          <p id="lista-numeros-em-uso" class="form-ajuda"></p>
+
+          <label for="campo-patrocinio-numero">Número da arte</label>
+          <input type="text" inputmode="numeric" id="campo-patrocinio-numero" placeholder="ex: 3" />
+          <p class="form-ajuda">Recomendado 1200×400px, arquivo .jpg. Sobe manualmente pelo GitHub em <code>banners/{número}.jpg</code> — sem upload direto por aqui.</p>
+          <p id="status-patrocinio-imagem" class="form-ajuda"></p>
+
+          <img id="preview-patrocinio-imagem" class="preview-patrocinio-imagem" alt="Prévia do banner" hidden />
+          <p id="aviso-patrocinio-imagem-quebrada" class="form-ajuda" hidden>
+            ⚠️ Ainda não encontrei esse arquivo no repositório — normal se você ainda não subiu ele pelo GitHub.
+          </p>
         </div>
 
         <p id="erro-form-local" class="erro-form" hidden></p>
