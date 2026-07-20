@@ -278,6 +278,8 @@
        sem upload — ver js/admin/admin-locais.js pro porquê). */
     #status-patrocinio-imagem[data-tipo="ok"]   { color: var(--verde); }
     #status-patrocinio-imagem[data-tipo="erro"] { color: var(--borde); }
+    #status-patrocinador-imagem[data-tipo="ok"]   { color: var(--verde); }
+    #status-patrocinador-imagem[data-tipo="erro"] { color: var(--borde); }
     .preview-patrocinio-imagem {
       max-width: 100%;
       max-height: 140px;
@@ -287,6 +289,7 @@
       display: block;
     }
     #aviso-patrocinio-imagem-quebrada { color: var(--borde); }
+    #aviso-patrocinador-imagem-quebrada { color: var(--borde); }
 
     /* Selo mostrado no card da lista de Locais quando o local tem patrocínio */
     .selo-patrocinio {
@@ -502,18 +505,25 @@
 
         <div class="form-grupo">
           <label for="campo-patrocinador-nome">Nome do patrocinador</label>
-          <input type="text" id="campo-patrocinador-nome" placeholder="ex: Hotel Tirol" required />
+          <input type="text" id="campo-patrocinador-nome" placeholder="ex: Hotel Tirol, ou 'Aviso Tirolerfest'" required />
         </div>
 
         <div class="form-grupo">
-          <label for="campo-patrocinador-imagem">Link da imagem do banner</label>
-          <input type="url" id="campo-patrocinador-imagem" placeholder="https://..." required />
-          <p class="form-ajuda">Cole o link de uma imagem já hospedada (ex: enviada pra um serviço de imagens). Upload direto ainda não existe no painel.</p>
+          <p id="lista-numeros-em-uso-patrocinador" class="form-ajuda"></p>
+          <label for="campo-patrocinador-numero">Número da arte (recomendado: 1200×400px, .jpg)</label>
+          <input type="text" inputmode="numeric" id="campo-patrocinador-numero" placeholder="ex: 5" />
+          <p class="form-ajuda">Sobe manualmente pelo GitHub em <code>banners/{número}.jpg</code> — sem upload direto por aqui.</p>
+          <p id="status-patrocinador-imagem" class="form-ajuda"></p>
+          <img id="preview-patrocinador-imagem" class="preview-patrocinio-imagem" alt="Prévia do banner" hidden />
+          <p id="aviso-patrocinador-imagem-quebrada" class="form-ajuda" hidden>
+            ⚠️ Ainda não encontrei esse arquivo no repositório — normal se você ainda não subiu ele pelo GitHub.
+          </p>
         </div>
 
         <div class="form-grupo">
-          <label for="campo-patrocinador-link">Link de destino (ao clicar no banner)</label>
-          <input type="url" id="campo-patrocinador-link" placeholder="https://instagram.com/hoteltirol" required />
+          <label for="campo-patrocinador-link">Link de destino (opcional — ao clicar no banner)</label>
+          <input type="url" id="campo-patrocinador-link" placeholder="https://instagram.com/hoteltirol" />
+          <p class="form-ajuda">Deixa em branco pra um anúncio que é só a mensagem em si (aviso, campanha) — o banner aparece sem link nenhum, não clicável.</p>
         </div>
 
         <div class="form-linha">
