@@ -798,7 +798,8 @@ async function salvarLocal(e) {
     await carregarLocais();
   } catch (erro) {
     console.error("[admin-locais] Erro ao salvar:", erro);
-    erroEl.textContent = "Erro ao salvar. Tente de novo.";
+    const detalhe = erro.code || erro.message || "erro desconhecido";
+    erroEl.textContent = `Erro ao salvar (${detalhe}). Tente de novo.`;
     erroEl.hidden = false;
   }
 }

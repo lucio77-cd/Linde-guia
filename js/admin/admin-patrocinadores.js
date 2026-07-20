@@ -270,7 +270,12 @@ async function salvarPatrocinador(evento) {
     fecharModal();
     await carregarPatrocinadores();
   } catch (erro) {
-    erroEl.textContent = "Não consegui salvar agora. Tenta de novo em instante.";
+    console.error("[admin-patrocinadores] Erro ao salvar:", erro);
+    // Mostra o código/mensagem real do Firestore na tela — sem isso, no
+    // celular (sem acesso a console de dev), "não consegui salvar" não diz
+    // nada sobre SE é permissão negada, campo inválido, ou rede.
+    const detalhe = erro.code || erro.message || "erro desconhecido";
+    erroEl.textContent = `Não consegui salvar agora (${detalhe}). Se disser "permission-denied", falta liberar a coleção "patrocinadores" nas regras do Firestore.`;
     erroEl.hidden = false;
   } finally {
     btnSalvar.disabled = false;
