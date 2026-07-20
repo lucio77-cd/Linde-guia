@@ -16,6 +16,10 @@
  *
  * Se não houver patrocinador ativo (ou a coleção estiver vazia), o banner
  * continua oculto — o atributo "hidden" do HTML nunca é removido.
+ *
+ * MUDANÇA: patrocinador.linkDestino agora é OPCIONAL (ver
+ * patrocinadores-data.js). Sem link, o banner aparece só como imagem —
+ * remove o href e desliga o clique, em vez de forçar um destino qualquer.
  */
 import { buscarPatrocinadorParaExibir } from "../data/patrocinadores-data.js";
 
@@ -36,9 +40,21 @@ async function iniciarBannerPatrocinado() {
   const linkEl = document.getElementById("banner-patrocinado__link");
   const imagemEl = document.getElementById("banner-patrocinado__imagem");
 
-  linkEl.href = patrocinador.linkDestino;
-  imagemEl.src = patrocinador.imagemUrl;
+  imagemEl.src = patrocinador.imagemBannerUrl;
   imagemEl.alt = patrocinador.nome;
+
+  if (patrocinador.linkDestino) {
+    linkEl.href = patrocinador.linkDestino;
+    linkEl.style.cursor = "";
+    linkEl.style.pointerEvents = "";
+  } else {
+    // Banner-anúncio sem destino: é a própria mensagem, não uma chamada
+    // pra clicar em algo. Remove o link em vez de deixar um href quebrado
+    // ou forçar um destino que não existe.
+    linkEl.removeAttribute("href");
+    linkEl.style.cursor = "default";
+    linkEl.style.pointerEvents = "none";
+  }
 
   banner.hidden = false;
 }
