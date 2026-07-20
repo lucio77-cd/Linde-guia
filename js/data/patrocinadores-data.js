@@ -7,13 +7,22 @@
  * direto com essa coleção.
  *
  * Formato de um patrocinador:
- *   id, nome, imagemUrl, linkDestino, dataInicio, dataFim, ativo
+ *   id, nome, imagemBannerUrl, linkDestino, dataInicio, dataFim, ativo
+ *
+ * MUDANÇA: imagemUrl (link colado à mão) virou imagemBannerUrl — mesma
+ * convenção de arte estática que o patrocínio de Local usa
+ * (/banners/{numero}.jpg, sem upload nem link externo — ver
+ * js/admin/numeracao-banners.js). Sem dado antigo pra migrar: nenhum
+ * patrocinador tinha sido salvo ainda quando essa troca foi feita.
+ *
+ * MUDANÇA: linkDestino agora é OPCIONAL. Sem ele, o banner aparece só como
+ * imagem, sem levar a lugar nenhum ao tocar — cobre o caso de um anúncio
+ * que é a própria mensagem (aviso, campanha, agradecimento), não uma
+ * chamada pra visitar algo.
  *
  * "ativo" é uma chave geral (liga/desliga rápido, sem precisar mexer nas
  * datas). dataInicio/dataFim são opcionais — sem elas, o patrocinador vale
- * indefinidamente enquanto "ativo" for true. Com elas, só conta como
- * disponível dentro do período contratado, mesmo que "ativo" continue true
- * (evita você esquecer de desligar manualmente quando o contrato acabar).
+ * indefinidamente enquanto "ativo" for true.
  */
 import { db } from "../core/firebase-config.js";
 import {
@@ -92,8 +101,8 @@ function normalizarPatrocinador(id, dadosFirestore) {
   return {
     id,
     nome: dadosFirestore.nome || "",
-    imagemUrl: dadosFirestore.imagemUrl || "",
-    linkDestino: dadosFirestore.linkDestino || "#",
+    imagemBannerUrl: dadosFirestore.imagemBannerUrl || "",
+    linkDestino: dadosFirestore.linkDestino || null, // null = banner sem clique, só imagem
     dataInicio: dadosFirestore.dataInicio || null,
     dataFim: dadosFirestore.dataFim || null,
     ativo: dadosFirestore.ativo !== false,
@@ -105,8 +114,8 @@ function normalizarPatrocinador(id, dadosFirestore) {
 function desnormalizarPatrocinador(dados) {
   const saida = {};
   if (dados.nome !== undefined) saida.nome = dados.nome;
-  if (dados.imagemUrl !== undefined) saida.imagemUrl = dados.imagemUrl;
-  if (dados.linkDestino !== undefined) saida.linkDestino = dados.linkDestino;
+  if (dados.imagemBannerUrl !== undefined) saida.imagemBannerUrl = dados.imagemBannerUrl;
+  if (dados.linkDestino !== undefined) saida.linkDestino = dados.linkDestino || null;
   if (dados.dataInicio !== undefined) saida.dataInicio = dados.dataInicio || null;
   if (dados.dataFim !== undefined) saida.dataFim = dados.dataFim || null;
   if (dados.ativo !== undefined) saida.ativo = dados.ativo;
