@@ -5,8 +5,11 @@
 import {
   buscarTodosPois, criarPoi, atualizarPoi, removerPoi,
 } from "../data/pois-data.js";
+import { buscarTodosPatrocinadores } from "../data/patrocinadores-data.js";
+import { montarCaminhoBanner, extrairNumeroDoCaminho, numerosDeBannerEmUso } from "./numeracao-banners.js";
 
 let poisCache = [];
+let patrocinadoresCache = [];
 let categoriaAtiva = "todos";
 let imagemBannerUrlAtual = null; // URL da imagem de banner do local aberto no modal (já enviada ou recém-enviada agora)
 
@@ -309,16 +312,12 @@ function configurarPrioridadeCondicional() {
 // banner. Vira um campo do próprio POI (não uma coleção separada) porque
 // só locais já cadastrados no app podem ser patrocinados.
 //
-// SEM UPLOAD, SEM FIREBASE STORAGE: Storage exige o plano pago (Blaze) do
-// Firebase, e não vale a pena pro tamanho do projeto agora. Em vez disso,
-// a arte é um arquivo estático servido direto pela Vercel — o admin digita
-// só um NÚMERO aqui, e sobe manualmente o arquivo
-// "banners/{numero}.jpg" no repositório (pelo GitHub mesmo, sem precisar
-// de tela de upload). O caminho é montado sozinho a partir do número.
+// SEM UPLOAD, SEM FIREBASE STORAGE: a arte é um arquivo estático servido
+// direto pela Vercel — o admin digita só um NÚMERO aqui, e sobe manualmente
+// o arquivo "banners/{numero}.jpg" no repositório. Numeração e checagem de
+// colisão são compartilhadas com admin-patrocinadores.js (ver
+// numeracao-banners.js) porque os dois sistemas escrevem na mesma pasta.
 // ============================================================
-const PASTA_BANNERS = "/banners"; // caminho absoluto — funciona igual não importa de qual pasta a página está servindo
-const EXTENSAO_BANNER = ".jpg";   // fixo por simplicidade — exporta a arte sempre como JPG
-
 function configurarPatrocinio() {
   const selectNivel   = document.getElementById("campo-patrocinio-nivel");
   const grupoDetalhes = document.getElementById("grupo-patrocinio-detalhes");
@@ -336,10 +335,6 @@ function configurarPatrocinio() {
     atualizarPreviewBanner(imagemBannerUrlAtual);
     avisarSeNumeroJaUsado(numero);
   });
-}
-
-function montarCaminhoBanner(numero) {
-  return `${PASTA_BANNERS}/${numero}${EXTENSAO_BANNER}`;
 }
 
 function atualizarPreviewBanner(url) {
@@ -361,28 +356,9 @@ function atualizarPreviewBanner(url) {
   preview.onload = () => { avisoQuebrada.hidden = true; };
 }
 
-// Varre os POIs já carregados e monta um mapa {numero: nomeDoLocal} —
-// ajuda a não repetir um número já usado por outro local sem querer.
-// Exclui o próprio POI em edição (senão ele apareceria "colidindo" consigo
-// mesmo toda vez que reabrir pra editar).
-function numerosDeBannerEmUso(idIgnorar) {
-  const regex = new RegExp(`^${PASTA_BANNERS}/(\\d+)${EXTENSAO_BANNER.replace(".", "\\.")}$`);
-  const emUso = {};
-
-  poisCache.forEach((poi) => {
-    if (poi.id === idIgnorar) return;
-    const url = poi.patrocinio?.imagemBannerUrl;
-    if (!url) return;
-    const match = url.match(regex);
-    if (match) emUso[match[1]] = poi.nome;
-  });
-
-  return emUso;
-}
-
 function mostrarNumerosEmUso() {
   const idAtual = document.getElementById("campo-id").value || null;
-  const emUso = numerosDeBannerEmUso(idAtual);
+  const emUso = numerosDeBannerEmUso(poisCache, patrocinadoresCache, { poiId: idAtual });
   const listaEl = document.getElementById("lista-numeros-em-uso");
 
   const entradas = Object.entries(emUso).sort((a, b) => Number(a[0]) - Number(b[0]));
@@ -390,7 +366,7 @@ function mostrarNumerosEmUso() {
     listaEl.textContent = "Nenhum número em uso ainda — pode começar do 1.";
     return;
   }
-  listaEl.textContent = "Já em uso: " + entradas.map(([n, nome]) => `${n} (${nome})`).join(", ");
+  listaEl.textContent = "Já em uso: " + entradas.map(([n, origem]) => `${n} (${origem})`).join(", ");
 }
 
 function avisarSeNumeroJaUsado(numero) {
@@ -401,13 +377,13 @@ function avisarSeNumeroJaUsado(numero) {
     return;
   }
   const idAtual = document.getElementById("campo-id").value || null;
-  const emUso = numerosDeBannerEmUso(idAtual);
+  const emUso = numerosDeBannerEmUso(poisCache, patrocinadoresCache, { poiId: idAtual });
 
   if (emUso[numero]) {
     statusEl.textContent = `⚠️ Número ${numero} já está em uso por "${emUso[numero]}" — escolhe outro, ou os dois vão mostrar a mesma imagem.`;
     statusEl.dataset.tipo = "erro";
   } else {
-    statusEl.textContent = `Vai carregar de: ${PASTA_BANNERS}/${numero}${EXTENSAO_BANNER}`;
+    statusEl.textContent = `Vai carregar de: /banners/${numero}.jpg`;
     statusEl.dataset.tipo = "ok";
   }
 }
@@ -429,10 +405,7 @@ function preencherPatrocinioNoFormulario(poi) {
 
   // Extrai só o número de volta do caminho salvo, pra reaparecer no campo
   // ao reabrir um local que já tem patrocínio configurado.
-  const match = imagemBannerUrlAtual?.match(
-    new RegExp(`^${PASTA_BANNERS}/(\\d+)${EXTENSAO_BANNER.replace(".", "\\.")}$`)
-  );
-  inputNumero.value = match ? match[1] : "";
+  inputNumero.value = extrairNumeroDoCaminho(imagemBannerUrlAtual) || "";
 
   grupoDetalhes.hidden = !selectNivel.value;
   statusEl.textContent = "";
@@ -582,6 +555,10 @@ function configurarAvisoDistanciaManual() {
 async function carregarLocais() {
   try {
     poisCache = await buscarTodosPois({ forcarAtualizacao: true });
+    patrocinadoresCache = await buscarTodosPatrocinadores().catch((erro) => {
+      console.warn("[admin-locais] Não consegui checar números de Patrocinadores:", erro);
+      return []; // checagem cruzada falhar não pode travar a tela de Locais
+    });
     renderizarListaLocais();
   } catch (erro) {
     console.error("[admin-locais] Erro ao carregar locais:", erro);
@@ -800,10 +777,8 @@ async function salvarLocal(e) {
   // banner de outro patrocinador sem querer é o tipo de erro que só
   // aparece dias depois, quando alguém notar a imagem errada no ar.
   if (dados.patrocinio) {
-    const numeroAtual = dados.patrocinio.imagemBannerUrl.match(
-      new RegExp(`^${PASTA_BANNERS}/(\\d+)${EXTENSAO_BANNER.replace(".", "\\.")}$`)
-    )?.[1];
-    const emUso = numerosDeBannerEmUso(id || null);
+    const numeroAtual = extrairNumeroDoCaminho(dados.patrocinio.imagemBannerUrl);
+    const emUso = numerosDeBannerEmUso(poisCache, patrocinadoresCache, { poiId: id || null });
     if (numeroAtual && emUso[numeroAtual]) {
       const confirmar2 = confirm(
         `O número ${numeroAtual} já está em uso por "${emUso[numeroAtual]}". ` +
