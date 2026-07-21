@@ -509,6 +509,27 @@
         </div>
 
         <div class="form-grupo">
+          <label for="campo-patrocinador-nivel">Nível de patrocínio (opcional)</label>
+          <select id="campo-patrocinador-nivel">
+            <option value="">Nenhum — só aparece no banner único de topo</option>
+            <option value="ouro">🥇 Ouro — também entra no carrossel Ouro</option>
+            <option value="prata">🥈 Prata — também entra no carrossel Prata</option>
+            <option value="bronze">🥉 Bronze — também entra no carrossel Bronze</option>
+          </select>
+          <p class="form-ajuda">Sem nível, o anúncio só aparece no banner único que gira no topo das páginas. Com nível, ele também concorre pelos slots do carrossel daquele nível, junto com os Locais patrocinados.</p>
+        </div>
+
+        <div class="form-grupo">
+          <label for="campo-patrocinador-nivel">Nível (entra nos carrosséis Ouro/Prata/Bronze)</label>
+          <select id="campo-patrocinador-nivel">
+            <option value="">Nenhum — só aparece no topo das páginas</option>
+            <option value="ouro">🥇 Ouro</option>
+            <option value="prata">🥈 Prata</option>
+            <option value="bronze">🥉 Bronze</option>
+          </select>
+        </div>
+
+        <div class="form-grupo">
           <p id="lista-numeros-em-uso-patrocinador" class="form-ajuda"></p>
           <label for="campo-patrocinador-numero">Número da arte (recomendado: 1200×400px, .jpg)</label>
           <input type="text" inputmode="numeric" id="campo-patrocinador-numero" placeholder="ex: 5" />
