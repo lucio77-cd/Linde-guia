@@ -7,11 +7,15 @@
  * de slots dela — o mesmo módulo serve pra Home (ouro, 2), segunda tela
  * (prata, 3) e terceira tela (bronze, 4), sem duplicar código.
  *
- * Fonte dos dados: os próprios POIs (patrocínio virou um campo do POI, não
- * uma coleção separada — só locais já cadastrados no app podem ser
- * patrocinados). Filtra por patrocinio.nivel + patrocinio.ativo +
- * patrocinio.imagemBannerUrl presente (sem imagem, não é candidato a
- * aparecer, mesmo que o admin tenha marcado o nível).
+ * DUAS FONTES DE CANDIDATOS, MESMA DISPUTA POR NÍVEL:
+ *  - Locais já cadastrados no app, com patrocinio.nivel definido no
+ *    cadastro do Local (admin-locais.js) — clique leva pra ponto.html
+ *    daquele local.
+ *  - Anúncios avulsos, sem precisar ser um Local (admin-patrocinadores.js)
+ *    — clique leva pro linkDestino externo (se tiver) ou não é clicável
+ *    (se o anúncio for só a mensagem em si, sem link).
+ * As duas fontes competem pelos mesmos slots do mesmo nível, embaralhadas
+ * juntas — nenhuma tem prioridade sobre a outra.
  *
  * HTML esperado na página que for usar:
  *   <div id="carrossel-patrocinio-ouro" class="carrossel-patrocinio" hidden>
@@ -21,10 +25,11 @@
  * (troque "ouro" no id pelo nível daquela tela — passe o mesmo id como
  * primeiro argumento da função)
  *
- * Se não houver NENHUM patrocinador ativo daquele nível com imagem, o
+ * Se não houver NENHUM candidato ativo daquele nível com imagem, o
  * container continua oculto — nunca mostra um carrossel vazio.
  */
 import { buscarPoisAtivos } from "../data/pois-data.js";
+import { buscarPatrocinadoresAtivos } from "../data/patrocinadores-data.js";
 
 const INTERVALO_ROTACAO_MS = 6000;
 
@@ -36,32 +41,59 @@ async function iniciarCarrosselPatrocinio(idContainer, nivel, quantidade, caminh
   const container = document.getElementById(idContainer);
   if (!container) return; // página não tem esse carrossel — não faz nada
 
-  let pois;
-  try {
-    pois = await buscarPoisAtivos();
-  } catch (erro) {
-    console.warn(`[carrossel-patrocinio] Não consegui carregar POIs (nível ${nivel}):`, erro);
-    return; // mantém hidden — carrossel nunca deve travar a página por trás dele
-  }
+  const candidatos = await coletarCandidatos(nivel, caminhoParaPonto);
+  if (candidatos.length === 0) return; // mantém hidden
 
-  const patrocinados = pois.filter(
-    (poi) =>
-      poi.patrocinio?.ativo === true &&
-      poi.patrocinio?.nivel === nivel &&
-      !!poi.patrocinio?.imagemBannerUrl
-  );
-
-  if (patrocinados.length === 0) return; // mantém hidden
-
-  // Embaralha pra não ser sempre a mesma ordem/os mesmos 2 primeiros do
-  // banco quando há mais patrocinadores ativos do que slots — dá exposição
-  // igual entre quem está no mesmo nível, não só "quem foi cadastrado
-  // primeiro".
-  const embaralhados = embaralhar(patrocinados);
+  // Embaralha pra não ser sempre a mesma ordem/os mesmos primeiros quando
+  // há mais candidatos do que slots — dá exposição igual entre quem está
+  // no mesmo nível, não só "quem foi cadastrado primeiro".
+  const embaralhados = embaralhar(candidatos);
   const grupos = agruparEmSlots(embaralhados, quantidade);
 
-  montarCarrossel(container, grupos, caminhoParaPonto);
+  montarCarrossel(container, grupos);
   container.hidden = false;
+}
+
+// Busca as duas fontes em paralelo e devolve uma lista única, já no
+// formato que o carrossel entende: { nome, imagemBannerUrl, href, externo }
+// href = null quando o banner não deve ser clicável (anúncio avulso sem
+// linkDestino).
+async function coletarCandidatos(nivel, caminhoParaPonto) {
+  const [pois, patrocinadores] = await Promise.all([
+    buscarPoisAtivos().catch((erro) => {
+      console.warn("[carrossel-patrocinio] Não consegui carregar POIs:", erro);
+      return [];
+    }),
+    buscarPatrocinadoresAtivos().catch((erro) => {
+      console.warn("[carrossel-patrocinio] Não consegui carregar Patrocinadores:", erro);
+      return [];
+    }),
+  ]);
+
+  const candidatosDeLocais = pois
+    .filter(
+      (poi) =>
+        poi.patrocinio?.ativo === true &&
+        poi.patrocinio?.nivel === nivel &&
+        !!poi.patrocinio?.imagemBannerUrl
+    )
+    .map((poi) => ({
+      nome: poi.nome,
+      imagemBannerUrl: poi.patrocinio.imagemBannerUrl,
+      href: `${caminhoParaPonto}${poi.id}`,
+      externo: false,
+    }));
+
+  const candidatosAvulsos = patrocinadores
+    .filter((p) => p.nivel === nivel && !!p.imagemBannerUrl)
+    .map((p) => ({
+      nome: p.nome,
+      imagemBannerUrl: p.imagemBannerUrl,
+      href: p.linkDestino || null, // sem link = banner só imagem, não clicável
+      externo: true,
+    }));
+
+  return [...candidatosDeLocais, ...candidatosAvulsos];
 }
 
 function embaralhar(lista) {
@@ -75,7 +107,7 @@ function embaralhar(lista) {
 
 // Divide a lista embaralhada em grupos do tamanho "quantidade" — cada
 // grupo é uma "página" do carrossel. Se sobrar menos que "quantidade" no
-// último grupo, ele fica menor mesmo (não repete patrocinador só pra
+// último grupo, ele fica menor mesmo (não repete candidato só pra
 // preencher slot vazio).
 function agruparEmSlots(lista, quantidade) {
   const grupos = [];
@@ -85,7 +117,7 @@ function agruparEmSlots(lista, quantidade) {
   return grupos;
 }
 
-function montarCarrossel(container, grupos, caminhoParaPonto) {
+function montarCarrossel(container, grupos) {
   const trilha = container.querySelector(".carrossel-patrocinio__trilha");
   const pontosContainer = container.querySelector(".carrossel-patrocinio__pontos");
   trilha.innerHTML = "";
@@ -96,8 +128,8 @@ function montarCarrossel(container, grupos, caminhoParaPonto) {
     paginaEl.className = "carrossel-patrocinio__pagina";
     paginaEl.hidden = indiceGrupo !== 0;
 
-    grupo.forEach((poi) => {
-      paginaEl.appendChild(criarBannerEl(poi, caminhoParaPonto));
+    grupo.forEach((candidato) => {
+      paginaEl.appendChild(criarBannerEl(candidato));
     });
 
     trilha.appendChild(paginaEl);
@@ -139,23 +171,34 @@ function montarCarrossel(container, grupos, caminhoParaPonto) {
   pontosContainer.addEventListener("pointerenter", () => clearInterval(intervaloId));
 }
 
-function criarBannerEl(poi, caminhoParaPonto) {
-  const link = document.createElement("a");
-  link.className = "carrossel-patrocinio__banner";
-  link.href = `${caminhoParaPonto}${poi.id}`;
+// candidato.href null = anúncio avulso sem link, banner só imagem, sem
+// clique — renderiza como <div> em vez de <a>, igual ao mesmo caso em
+// banner-patrocinado.js.
+function criarBannerEl(candidato) {
+  const clicavel = !!candidato.href;
+  const wrapper = document.createElement(clicavel ? "a" : "div");
+  wrapper.className = "carrossel-patrocinio__banner";
+
+  if (clicavel) {
+    wrapper.href = candidato.href;
+    if (candidato.externo) {
+      wrapper.target = "_blank";
+      wrapper.rel = "noopener sponsored";
+    }
+  }
 
   const imagem = document.createElement("img");
-  imagem.src = poi.patrocinio.imagemBannerUrl;
-  imagem.alt = poi.nome;
+  imagem.src = candidato.imagemBannerUrl;
+  imagem.alt = candidato.nome;
   imagem.loading = "lazy";
 
   const selo = document.createElement("span");
   selo.className = "carrossel-patrocinio__selo";
   selo.textContent = "Publicidade";
 
-  link.appendChild(imagem);
-  link.appendChild(selo);
-  return link;
+  wrapper.appendChild(imagem);
+  wrapper.appendChild(selo);
+  return wrapper;
 }
 
 export { iniciarCarrosselPatrocinio };
