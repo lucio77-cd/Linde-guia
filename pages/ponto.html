@@ -99,18 +99,52 @@
     :focus-visible { outline: 3px solid var(--borde); outline-offset: 3px; border-radius: 4px; }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
   
-    /* ===== Banner de patrocinador ===== */
+    /* ===== Banner de patrocinador (avulso, único, banner de topo) ===== */
     .banner-patrocinado { border-bottom: 1px solid var(--creme-escuro); background: var(--branco); }
     .banner-patrocinado[hidden] { display: none; }
     .banner-patrocinado a {
       display: block; position: relative; max-width: 100%;
     }
-    .banner-patrocinado img { width: 100%; max-height: 120px; object-fit: cover; display: block; }
+    .banner-patrocinado img { width: 100%; aspect-ratio: 3 / 1; object-fit: cover; display: block; }
     .banner-patrocinado__selo {
       position: absolute; bottom: 0.375rem; right: 0.5rem;
       font-size: 0.625rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
       background: rgba(28,23,20,0.6); color: #fff; padding: 0.15rem 0.5rem; border-radius: 100px;
     }
+
+    /* ===== Carrossel de patrocínio por nível — Ponto (estabelecimento) = Bronze, 4 slots ===== */
+    .secao-carrossel-patrocinio { padding-top: 1.5rem; border-top: 1px solid var(--creme-escuro); }
+    .secao-carrossel-patrocinio__titulo {
+      font-family: var(--fonte-display); font-size: 1.0625rem; font-weight: 600; margin-bottom: 0.875rem;
+    }
+    .carrossel-patrocinio { position: relative; }
+    .carrossel-patrocinio[hidden] { display: none; }
+    .carrossel-patrocinio__trilha { position: relative; }
+    .carrossel-patrocinio__pagina {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+    }
+    .carrossel-patrocinio__banner {
+      position: relative;
+      display: block;
+      border-radius: var(--raio-grande);
+      overflow: hidden;
+      aspect-ratio: 3 / 1;
+      border: 1.5px solid var(--creme-escuro);
+    }
+    .carrossel-patrocinio__banner img { width: 100%; height: 100%; object-fit: cover; }
+    .carrossel-patrocinio__selo {
+      position: absolute; bottom: 0.4rem; right: 0.5rem;
+      background: rgba(28,23,20,0.6); color: #fff; font-size: 0.625rem;
+      padding: 0.15rem 0.5rem; border-radius: 100px; letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .carrossel-patrocinio__pontos { display: flex; justify-content: center; gap: 0.4rem; margin-top: 0.75rem; }
+    .carrossel-patrocinio__ponto {
+      width: 8px; height: 8px; border-radius: 50%; border: none;
+      background: var(--creme-escuro); padding: 0; cursor: pointer;
+    }
+    .carrossel-patrocinio__ponto[aria-current="true"] { background: var(--borde); }
 </style>
 
 </head>
@@ -187,6 +221,17 @@
           </a>
         </div>
       </section>
+
+      <!-- ===== CARROSSEL DE PATROCÍNIO — Bronze, 4 slots =====
+           Fica dentro de #conteudo-local (só aparece quando o local
+           carregou), no fim da página, depois do contato. -->
+      <section class="secao secao-carrossel-patrocinio" aria-label="Patrocinadores em destaque">
+        <p class="secao-carrossel-patrocinio__titulo">Você também pode gostar</p>
+        <div id="carrossel-patrocinio-bronze" class="carrossel-patrocinio" hidden>
+          <div class="carrossel-patrocinio__trilha"></div>
+          <div class="carrossel-patrocinio__pontos"></div>
+        </div>
+      </section>
     </div>
   </main>
 
@@ -198,5 +243,13 @@
   <script type="module" src="../js/pages/ponto.js"></script>
 
   <script type="module" src="../js/core/banner-patrocinado.js"></script>
+
+  <!-- Carrossel de patrocínio — Ponto (estabelecimento) = nível Bronze, 4
+       slots. caminhoParaPonto="ponto.html?id=" porque este arquivo já
+       está dentro de pages/ — mesma pasta, sem prefixo. -->
+  <script type="module">
+    import { iniciarCarrosselPatrocinio } from "../js/core/carrossel-patrocinio.js";
+    iniciarCarrosselPatrocinio("carrossel-patrocinio-bronze", "bronze", 4, "ponto.html?id=");
+  </script>
 </body>
 </html>
