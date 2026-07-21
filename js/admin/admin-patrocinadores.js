@@ -82,6 +82,8 @@ function renderizarListaPatrocinadores() {
   patrocinadoresCache.forEach((p) => container.appendChild(criarCardPatrocinador(p)));
 }
 
+const LABEL_NIVEL = { ouro: "🥇 Ouro", prata: "🥈 Prata", bronze: "🥉 Bronze" };
+
 function criarCardPatrocinador(p) {
   const card = document.createElement("article");
   card.className = "local-admin-card";
@@ -89,6 +91,9 @@ function criarCardPatrocinador(p) {
 
   const periodo = formatarPeriodo(p);
   const semLink = !p.linkDestino ? " · sem link (só imagem)" : "";
+  const seloNivel = p.nivel
+    ? `<span class="selo-patrocinio selo-patrocinio--${p.nivel}">${LABEL_NIVEL[p.nivel]}</span>`
+    : "";
 
   card.innerHTML = `
     <div class="local-admin-card__topo">
@@ -98,6 +103,7 @@ function criarCardPatrocinador(p) {
       </span>
     </div>
     <p class="local-admin-card__detalhe">${periodo}${semLink}</p>
+    ${seloNivel}
   `;
 
   card.addEventListener("click", () => abrirModal(p));
@@ -196,6 +202,7 @@ function abrirModal(p) {
     titulo.textContent = "Editar patrocinador";
     document.getElementById("campo-patrocinador-id").value = p.id;
     document.getElementById("campo-patrocinador-nome").value = p.nome;
+    document.getElementById("campo-patrocinador-nivel").value = p.nivel || "";
     imagemBannerUrlAtual = p.imagemBannerUrl || null;
     inputNumero.value = extrairNumeroDoCaminho(imagemBannerUrlAtual) || "";
     document.getElementById("campo-patrocinador-link").value = p.linkDestino || "";
@@ -206,6 +213,7 @@ function abrirModal(p) {
   } else {
     titulo.textContent = "Novo patrocinador";
     document.getElementById("campo-patrocinador-id").value = "";
+    document.getElementById("campo-patrocinador-nivel").value = "";
     imagemBannerUrlAtual = null;
     inputNumero.value = "";
     document.getElementById("campo-patrocinador-ativo").checked = true;
@@ -235,6 +243,7 @@ async function salvarPatrocinador(evento) {
     nome: document.getElementById("campo-patrocinador-nome").value.trim(),
     imagemBannerUrl: imagemBannerUrlAtual || null,
     linkDestino: document.getElementById("campo-patrocinador-link").value.trim() || null, // opcional agora
+    nivel: document.getElementById("campo-patrocinador-nivel").value || null,
     dataInicio: dataInicio ? new Date(dataInicio).toISOString() : null,
     dataFim: dataFim ? new Date(dataFim).toISOString() : null,
     ativo: document.getElementById("campo-patrocinador-ativo").checked,
