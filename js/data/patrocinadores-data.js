@@ -7,7 +7,12 @@
  * direto com essa coleção.
  *
  * Formato de um patrocinador:
- *   id, nome, imagemBannerUrl, linkDestino, dataInicio, dataFim, ativo
+ *   id, nome, imagemBannerUrl, linkDestino, nivel, dataInicio, dataFim, ativo
+ *
+ * MUDANÇA: ganhou "nivel" (ouro/prata/bronze/null) — com isso, um anúncio
+ * avulso (sem ser um Local cadastrado) também entra na disputa pelos
+ * carrosséis por nível, igual ao patrocínio de Local. "nivel: null" =
+ * não participa dos carrosséis, só do slot único do topo (banner-patrocinado.js).
  *
  * MUDANÇA: imagemUrl (link colado à mão) virou imagemBannerUrl — mesma
  * convenção de arte estática que o patrocínio de Local usa
@@ -103,6 +108,7 @@ function normalizarPatrocinador(id, dadosFirestore) {
     nome: dadosFirestore.nome || "",
     imagemBannerUrl: dadosFirestore.imagemBannerUrl || "",
     linkDestino: dadosFirestore.linkDestino || null, // null = banner sem clique, só imagem
+    nivel: dadosFirestore.nivel || null, // null = não entra nos carrosséis por nível
     dataInicio: dadosFirestore.dataInicio || null,
     dataFim: dadosFirestore.dataFim || null,
     ativo: dadosFirestore.ativo !== false,
@@ -116,6 +122,7 @@ function desnormalizarPatrocinador(dados) {
   if (dados.nome !== undefined) saida.nome = dados.nome;
   if (dados.imagemBannerUrl !== undefined) saida.imagemBannerUrl = dados.imagemBannerUrl;
   if (dados.linkDestino !== undefined) saida.linkDestino = dados.linkDestino || null;
+  if (dados.nivel !== undefined) saida.nivel = dados.nivel || null;
   if (dados.dataInicio !== undefined) saida.dataInicio = dados.dataInicio || null;
   if (dados.dataFim !== undefined) saida.dataFim = dados.dataFim || null;
   if (dados.ativo !== undefined) saida.ativo = dados.ativo;
