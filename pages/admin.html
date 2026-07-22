@@ -280,6 +280,7 @@
     #status-patrocinio-imagem[data-tipo="erro"] { color: var(--borde); }
     #status-patrocinador-imagem[data-tipo="ok"]   { color: var(--verde); }
     #status-patrocinador-imagem[data-tipo="erro"] { color: var(--borde); }
+    #relatorio-ia-status[data-tipo="erro"] { color: var(--borde); }
     .preview-patrocinio-imagem {
       max-width: 100%;
       max-height: 140px;
@@ -409,6 +410,34 @@
           <div class="kpis" id="cartoes-resumo"></div>
 
           <div class="grafico-card">
+            <h2>Relatório com IA</h2>
+            <p style="font-size:0.875rem;color:var(--tinta-suave);margin-bottom:1rem;">
+              Gera um resumo em texto dos números abaixo — útil pra entender o
+              próprio negócio ou como argumento na hora de vender espaço de
+              patrocínio. Manda só números agregados, nunca dado individual.
+            </p>
+            <button id="btn-gerar-relatorio-ia" type="button" class="btn btn--principal">Gerar relatório com IA</button>
+            <p id="relatorio-ia-status" class="form-ajuda" style="margin-top:0.75rem;"></p>
+            <div id="relatorio-ia-resultado" style="white-space:pre-wrap;font-size:0.9375rem;line-height:1.6;margin-top:1rem;padding:1rem;background:var(--creme);border-radius:var(--raio);" hidden></div>
+          </div>
+
+          <div class="grafico-card">
+            <h2>Funil de conversão</h2>
+            <canvas id="grafico-funil-conversao"></canvas>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem;" class="grade-2col">
+            <div class="grafico-card" style="margin-bottom:0">
+              <h2>Acessos por dia</h2>
+              <canvas id="grafico-acessos-por-dia"></canvas>
+            </div>
+            <div class="grafico-card" style="margin-bottom:0">
+              <h2>Acessos por horário</h2>
+              <canvas id="grafico-acessos-por-horario"></canvas>
+            </div>
+          </div>
+
+          <div class="grafico-card">
             <h2>Rotas criadas por dia</h2>
             <canvas id="grafico-rotas-por-dia"></canvas>
           </div>
@@ -425,7 +454,23 @@
           </div>
 
           <div class="grafico-card">
-            <h2>Locais mais visitados</h2>
+            <h2>Dia da semana mais movimentado</h2>
+            <canvas id="grafico-dia-semana"></canvas>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem;" class="grade-2col">
+            <div class="grafico-card" style="margin-bottom:0">
+              <h2>Refeições mais pedidas</h2>
+              <canvas id="grafico-refeicoes-pedidas"></canvas>
+            </div>
+            <div class="grafico-card" style="margin-bottom:0">
+              <h2>Interesses mais marcados</h2>
+              <canvas id="grafico-interesses-marcados"></canvas>
+            </div>
+          </div>
+
+          <div class="grafico-card">
+            <h2>Locais mais visitados (selos)</h2>
             <canvas id="grafico-locais-visitados"></canvas>
           </div>
 
