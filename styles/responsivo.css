@@ -143,3 +143,101 @@ img, svg, video, canvas {
     grid-template-columns: 1fr !important;
   }
 }
+
+/* ============================================================
+   10. MENU HAMBÚRGUER — todas as páginas escondem os links de navegação
+   abaixo de ~720px (regra que já existia página por página, ex:
+   `.topo__nav a:not(.destaque) { display: none; }`), mas nenhuma tinha um
+   jeito de reabrir esses links no celular — só sobrava o botão "Criar
+   roteiro". Corrige isso de um lugar só, compartilhado por toda página
+   que usa a mesma estrutura .topo / .topo__nav.
+
+   HTML esperado (adicionar 1 botão no cabeçalho de cada página, entre
+   .topo__marca e <nav class="topo__nav">):
+     <button type="button" class="botao-menu-mobile" id="botao-menu-mobile"
+             aria-label="Abrir menu" aria-expanded="false" aria-controls="menu-nav-principal">
+       <span class="botao-menu-mobile__linha"></span>
+       <span class="botao-menu-mobile__linha"></span>
+       <span class="botao-menu-mobile__linha"></span>
+     </button>
+
+   E dar id="menu-nav-principal" na tag <nav class="topo__nav">.
+
+   JS: incluir js/core/menu-mobile.js em toda página que tiver esse botão.
+   ============================================================ */
+.botao-menu-mobile {
+  display: none; /* só aparece em telas estreitas, ver media query abaixo */
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+.botao-menu-mobile__linha {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--tinta, #1C1714);
+  border-radius: 2px;
+  margin: 0 auto;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+/* Vira um "X" quando o menu está aberto — feedback visual claro de que
+   tocar de novo fecha, não abre outra coisa. */
+.botao-menu-mobile[aria-expanded="true"] .botao-menu-mobile__linha:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+.botao-menu-mobile[aria-expanded="true"] .botao-menu-mobile__linha:nth-child(2) {
+  opacity: 0;
+}
+.botao-menu-mobile[aria-expanded="true"] .botao-menu-mobile__linha:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+@media (max-width: 720px) {
+  .botao-menu-mobile {
+    display: flex;
+  }
+
+  /* O menu vira um painel que desce logo abaixo do cabeçalho, largura
+     cheia, só quando aberto — reaproveita a MESMA tag <nav
+     class="topo__nav">, sem duplicar links em HTML nenhum. */
+  .topo__nav {
+    display: none;
+    position: absolute;
+    top: 100%; /* sempre gruda embaixo do cabeçalho, seja qual for a altura dele em cada página */
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    background: var(--branco, #FDFAF6);
+    border-bottom: 1px solid var(--creme-escuro, #DDD4C0);
+    box-shadow: 0 8px 24px rgba(28,23,20,0.12);
+    padding: 0.5rem clamp(1.25rem, 5vw, 3rem) 1rem;
+    z-index: 400;
+  }
+  .topo__nav.topo__nav--aberto {
+    display: flex;
+  }
+  .topo__nav a {
+    padding: 0.875rem 0.5rem; /* alvo de toque generoso, empilhado */
+    border-radius: 10px;
+    font-size: 1rem;
+  }
+  /* No painel aberto, TODOS os links aparecem, inclusive os que a regra
+     antiga de cada página escondia — sobrescreve com !important porque
+     a regra antiga é mais específica (:not(.destaque)) e viria depois. */
+  .topo__nav a:not(.destaque) {
+    display: block !important;
+  }
+  .topo__nav a.destaque {
+    margin-top: 0.5rem;
+    text-align: center;
+  }
+}
