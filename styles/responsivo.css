@@ -204,11 +204,17 @@ img, svg, video, canvas {
     display: flex;
   }
 
-  /* O menu vira um painel que desce logo abaixo do cabeçalho, largura
-     cheia, só quando aberto — reaproveita a MESMA tag <nav
-     class="topo__nav">, sem duplicar links em HTML nenhum. */
+  /* !important dos dois lados (fechado E aberto) é proposital — cada
+     página tem sua própria regra antiga de esconder link (ex:
+     `.topo__nav a:not(.destaque) { display: none; }`, sem !important).
+     Sem isso, o "fechado" perde a disputa de especificidade CSS contra a
+     regra da própria página (mesmo peso, mas a da página vem depois no
+     documento — quem vem depois empatado, vence). Com !important dos
+     dois lados, a diferença de especificidade entre ".topo__nav" (1
+     classe) e ".topo__nav.topo__nav--aberto" (2 classes) decide, não mais
+     a ordem no documento — resultado previsível em qualquer página. */
   .topo__nav {
-    display: none;
+    display: none !important;
     position: absolute;
     top: 100%; /* sempre gruda embaixo do cabeçalho, seja qual for a altura dele em cada página */
     left: 0;
@@ -223,17 +229,19 @@ img, svg, video, canvas {
     z-index: 400;
   }
   .topo__nav.topo__nav--aberto {
-    display: flex;
+    display: flex !important;
   }
   .topo__nav a {
     padding: 0.875rem 0.5rem; /* alvo de toque generoso, empilhado */
     border-radius: 10px;
     font-size: 1rem;
   }
-  /* No painel aberto, TODOS os links aparecem, inclusive os que a regra
-     antiga de cada página escondia — sobrescreve com !important porque
-     a regra antiga é mais específica (:not(.destaque)) e viria depois. */
-  .topo__nav a:not(.destaque) {
+  /* Preso à classe --aberto de propósito — só força os links visíveis
+     QUANDO o painel está aberto. Fora disso, o pai em display:none já
+     esconde tudo por dentro sozinho; não precisa (nem pode) forçar os
+     links visíveis o tempo todo, senão o "fechar" nunca aconteceria de
+     verdade — foi exatamente esse o bug antes desta correção. */
+  .topo__nav.topo__nav--aberto a:not(.destaque) {
     display: block !important;
   }
   .topo__nav a.destaque {
