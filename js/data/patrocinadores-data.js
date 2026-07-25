@@ -2,32 +2,27 @@
  * patrocinadores-data.js
  * Linde Guia — Treze Tílias
  *
- * Único canal de acesso à coleção "patrocinadores" no Firestore — mesmo
- * princípio de pois-data.js/eventos-data.js: ninguém mais no projeto fala
- * direto com essa coleção.
+ * Único canal de acesso à coleção "patrocinadores" no Firestore.
  *
  * Formato de um patrocinador:
- *   id, nome, imagemBannerUrl, linkDestino, nivel, dataInicio, dataFim, ativo
+ *   id, nome, imagemBannerUrl, nivel, tipoDestino, poiIdDestino,
+ *   linkDestino, dataInicio, dataFim, ativo
  *
- * MUDANÇA: ganhou "nivel" (ouro/prata/bronze/null) — com isso, um anúncio
- * avulso (sem ser um Local cadastrado) também entra na disputa pelos
- * carrosséis por nível, igual ao patrocínio de Local. "nivel: null" =
- * não participa dos carrosséis, só do slot único do topo (banner-patrocinado.js).
+ * MUDANÇA: "linkDestino" sozinho virou "tipoDestino" + campo específico —
+ * porque agora um banner pode levar a 3 lugares diferentes, não só um
+ * link externo colado à mão:
+ *   tipoDestino: "nenhum"   -> banner só imagem, sem clique
+ *   tipoDestino: "local"    -> leva pra pages/ponto.html?id={poiIdDestino},
+ *                              um Local JÁ CADASTRADO no app (escolhido
+ *                              por dropdown no admin, nunca digitado)
+ *   tipoDestino: "externo"  -> leva pro linkDestino (link de fora, ex:
+ *                              Instagram do patrocinador)
+ *   tipoDestino: "whatsapp" -> leva pro WhatsApp configurado no admin
+ *                              (aba Configurações) — usado no banner
+ *                              "anuncie aqui" pra virar contato direto
  *
- * MUDANÇA: imagemUrl (link colado à mão) virou imagemBannerUrl — mesma
- * convenção de arte estática que o patrocínio de Local usa
- * (/banners/{numero}.jpg, sem upload nem link externo — ver
- * js/admin/numeracao-banners.js). Sem dado antigo pra migrar: nenhum
- * patrocinador tinha sido salvo ainda quando essa troca foi feita.
- *
- * MUDANÇA: linkDestino agora é OPCIONAL. Sem ele, o banner aparece só como
- * imagem, sem levar a lugar nenhum ao tocar — cobre o caso de um anúncio
- * que é a própria mensagem (aviso, campanha, agradecimento), não uma
- * chamada pra visitar algo.
- *
- * "ativo" é uma chave geral (liga/desliga rápido, sem precisar mexer nas
- * datas). dataInicio/dataFim são opcionais — sem elas, o patrocinador vale
- * indefinidamente enquanto "ativo" for true.
+ * Compatibilidade: patrocinador antigo que só tinha linkDestino (sem
+ * tipoDestino) é lido como tipoDestino "externo" automaticamente.
  */
 import { db } from "../core/firebase-config.js";
 import {
@@ -56,10 +51,6 @@ function dentroDoPeriodoContratado(patrocinador, agora) {
   return true;
 }
 
-// Escolhe 1 entre os patrocinadores ativos no momento — se tiver mais de
-// um contratado ao mesmo tempo, cada carregamento de página sorteia um
-// diferente (revezamento simples, sem precisar de lógica de "vez de cada
-// um", que seria over-engineering pro tamanho do projeto agora).
 async function buscarPatrocinadorParaExibir() {
   const ativos = await buscarPatrocinadoresAtivos();
   if (ativos.length === 0) return null;
@@ -67,7 +58,7 @@ async function buscarPatrocinadorParaExibir() {
 }
 
 // ============================================================
-// LEITURA + ESCRITA — lado admin (todos, inclusive inativos/expirados)
+// LEITURA + ESCRITA — lado admin
 // ============================================================
 async function buscarTodosPatrocinadores() {
   const snapshot = await getDocs(collection(db, NOME_COLECAO));
@@ -103,26 +94,33 @@ async function removerPatrocinador(id) {
 }
 
 function normalizarPatrocinador(id, dadosFirestore) {
+  // Compatibilidade: doc antigo tem linkDestino mas nunca teve
+  // tipoDestino — trata como "externo" automaticamente.
+  const tipoDestino = dadosFirestore.tipoDestino
+    || (dadosFirestore.linkDestino ? "externo" : "nenhum");
+
   return {
     id,
     nome: dadosFirestore.nome || "",
     imagemBannerUrl: dadosFirestore.imagemBannerUrl || "",
-    linkDestino: dadosFirestore.linkDestino || null, // null = banner sem clique, só imagem
-    nivel: dadosFirestore.nivel || null, // null = não entra nos carrosséis por nível
+    nivel: dadosFirestore.nivel || null,
+    tipoDestino,
+    poiIdDestino: dadosFirestore.poiIdDestino || null,
+    linkDestino: dadosFirestore.linkDestino || null,
     dataInicio: dadosFirestore.dataInicio || null,
     dataFim: dadosFirestore.dataFim || null,
     ativo: dadosFirestore.ativo !== false,
   };
 }
 
-// undefined quebra o Firestore (addDoc/updateDoc rejeitam) — nunca manda
-// direto o que vier do formulário sem passar por aqui.
 function desnormalizarPatrocinador(dados) {
   const saida = {};
   if (dados.nome !== undefined) saida.nome = dados.nome;
   if (dados.imagemBannerUrl !== undefined) saida.imagemBannerUrl = dados.imagemBannerUrl;
-  if (dados.linkDestino !== undefined) saida.linkDestino = dados.linkDestino || null;
   if (dados.nivel !== undefined) saida.nivel = dados.nivel || null;
+  if (dados.tipoDestino !== undefined) saida.tipoDestino = dados.tipoDestino;
+  if (dados.poiIdDestino !== undefined) saida.poiIdDestino = dados.poiIdDestino || null;
+  if (dados.linkDestino !== undefined) saida.linkDestino = dados.linkDestino || null;
   if (dados.dataInicio !== undefined) saida.dataInicio = dados.dataInicio || null;
   if (dados.dataFim !== undefined) saida.dataFim = dados.dataFim || null;
   if (dados.ativo !== undefined) saida.ativo = dados.ativo;
