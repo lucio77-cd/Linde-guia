@@ -281,6 +281,8 @@
     #status-patrocinador-imagem[data-tipo="ok"]   { color: var(--verde); }
     #status-patrocinador-imagem[data-tipo="erro"] { color: var(--borde); }
     #relatorio-ia-status[data-tipo="erro"] { color: var(--borde); }
+    #status-configuracoes[data-tipo="ok"] { color: var(--verde); }
+    #status-configuracoes[data-tipo="erro"] { color: var(--borde); }
     .preview-patrocinio-imagem {
       max-width: 100%;
       max-height: 140px;
@@ -387,6 +389,12 @@
         <button class="aba-nav" data-aba="aba-patrocinadores">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><line x1="2" y1="9" x2="22" y2="9"/></svg>
           Patrocinadores
+        </button>
+
+        <span class="sidebar__secao-titulo">Sistema</span>
+        <button class="aba-nav" data-aba="aba-configuracoes">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Configurações
         </button>
 
         <div style="margin-top:auto;padding-top:1rem;border-top:1px solid var(--creme-escuro);">
@@ -533,6 +541,31 @@
           <div id="lista-patrocinadores" class="lista-locais-admin"></div>
         </section>
 
+        <section id="aba-configuracoes" class="aba-conteudo" hidden>
+          <div class="secao-header">
+            <div>
+              <h1>Configurações</h1>
+              <p>Ajustes gerais do app</p>
+            </div>
+          </div>
+
+          <div class="grafico-card">
+            <h2>Contato via WhatsApp</h2>
+            <p style="font-size:0.875rem;color:var(--tinta-suave);margin-bottom:1rem;">
+              Número usado no botão flutuante de contato do app e no banner
+              "Anuncie aqui" quando o destino for WhatsApp. Só dígitos, com
+              DDD, sem espaços — o código do Brasil (55) é adicionado
+              automaticamente.
+            </p>
+            <div class="form-grupo" style="max-width:320px;">
+              <label for="campo-config-whatsapp">Número (DDD + número)</label>
+              <input type="text" id="campo-config-whatsapp" placeholder="ex: 47999999999" inputmode="numeric" />
+            </div>
+            <button id="btn-salvar-configuracoes" type="button" class="btn btn--principal" style="margin-top:1rem;">Salvar</button>
+            <p id="status-configuracoes" class="form-ajuda" style="margin-top:0.75rem;"></p>
+          </div>
+        </section>
+
       </main>
     </div>
   </div>
@@ -565,16 +598,6 @@
         </div>
 
         <div class="form-grupo">
-          <label for="campo-patrocinador-nivel">Nível (entra nos carrosséis Ouro/Prata/Bronze)</label>
-          <select id="campo-patrocinador-nivel">
-            <option value="">Nenhum — só aparece no topo das páginas</option>
-            <option value="ouro">🥇 Ouro</option>
-            <option value="prata">🥈 Prata</option>
-            <option value="bronze">🥉 Bronze</option>
-          </select>
-        </div>
-
-        <div class="form-grupo">
           <p id="lista-numeros-em-uso-patrocinador" class="form-ajuda"></p>
           <label for="campo-patrocinador-numero">Número da arte (recomendado: 1200×400px, .jpg)</label>
           <input type="text" inputmode="numeric" id="campo-patrocinador-numero" placeholder="ex: 5" />
@@ -587,9 +610,30 @@
         </div>
 
         <div class="form-grupo">
-          <label for="campo-patrocinador-link">Link de destino (opcional — ao clicar no banner)</label>
+          <label for="campo-patrocinador-tipo-destino">Ao clicar no banner, leva para</label>
+          <select id="campo-patrocinador-tipo-destino">
+            <option value="nenhum">Nada — só imagem, sem link</option>
+            <option value="local">Um lugar já cadastrado no app</option>
+            <option value="externo">Um link externo (Instagram, site...)</option>
+            <option value="whatsapp">Meu WhatsApp (contato configurado em Configurações)</option>
+          </select>
+        </div>
+
+        <div class="form-grupo campo-condicional" id="grupo-destino-local" hidden>
+          <label for="campo-patrocinador-poi">Qual lugar?</label>
+          <select id="campo-patrocinador-poi">
+            <option value="">Selecione...</option>
+          </select>
+          <p class="form-ajuda">Lista dos locais já cadastrados em "Locais" — a pessoa que clicar no banner vai direto pra página desse lugar.</p>
+        </div>
+
+        <div class="form-grupo campo-condicional" id="grupo-destino-externo" hidden>
+          <label for="campo-patrocinador-link">Link de destino</label>
           <input type="url" id="campo-patrocinador-link" placeholder="https://instagram.com/hoteltirol" />
-          <p class="form-ajuda">Deixa em branco pra um anúncio que é só a mensagem em si (aviso, campanha) — o banner aparece sem link nenhum, não clicável.</p>
+        </div>
+
+        <div class="form-grupo campo-condicional" id="grupo-destino-whatsapp" hidden>
+          <p class="form-ajuda">Usa o número salvo na aba "Configurações". Se ainda não configurou nenhum número lá, o banner fica sem link até você configurar.</p>
         </div>
 
         <div class="form-linha">
@@ -823,6 +867,7 @@
   <script type="module" src="../js/admin/admin-estatisticas.js"></script>
   <script type="module" src="../js/admin/admin-locais.js"></script>
   <script type="module" src="../js/admin/admin-patrocinadores.js"></script>
+  <script type="module" src="../js/admin/admin-configuracoes.js"></script>
 
 </body>
 </html>
