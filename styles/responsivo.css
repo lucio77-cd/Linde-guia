@@ -1,0 +1,145 @@
+/**
+ * responsivo.css
+ * Linde Guia — Treze Tílias
+ *
+ * Correções universais de responsividade, compartilhadas por TODAS as
+ * páginas do site. Cada página tem seu próprio <style> solto (o projeto
+ * não usa build system nem CSS compartilhado até agora) — isso aqui é a
+ * primeira peça de CSS comum, pensada pra resolver de uma vez problemas
+ * que apareceriam repetidos em cada página se corrigidos individualmente.
+ *
+ * COMO USAR: linkar em toda página, no <head>, ANTES do <style> próprio
+ * da página — assim o CSS específico de cada página continua podendo
+ * sobrescrever o que precisar, sem perder as correções de base.
+ *
+ *   <link rel="stylesheet" href="styles/responsivo.css" />       (páginas na raiz)
+ *   <link rel="stylesheet" href="../styles/responsivo.css" />    (páginas em pages/)
+ *
+ * Foco é celular (a maioria de verdade dos visitantes acessa por aí), mas
+ * todas as regras aqui são pensadas pra também funcionar bem em notebook
+ * — nada aqui trava a tela em formato de celular à força.
+ */
+
+/* ============================================================
+   1. TELA CHEIA SEM ESTOURAR PROS LADOS
+   ============================================================
+   Erro comum em celular: algum elemento um pixel largo demais cria barra
+   de rolagem horizontal invisível, que só aparece quando alguém arrasta
+   sem querer. Trava isso na raiz, sem afetar rolagem vertical normal.
+*/
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* ============================================================
+   2. ÁREA SEGURA EM CELULARES COM ENTALHE (notch) OU BARRA INFERIOR
+   ============================================================
+   iPhones mais novos e Android com gesto de navegar têm uma faixa da tela
+   que não é segura pra conteúdo interativo (câmera, indicador de gesto).
+   env(safe-area-inset-*) é 0 em telas sem entalhe — não quebra em
+   dispositivo nenhum, só adiciona respiro onde precisa.
+*/
+body {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Elementos fixos/flutuantes (botão de WhatsApp, banners fixos) precisam
+   da mesma proteção embaixo, senão ficam por trás da barra de gestos. */
+.respeita-area-segura-inferior {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ============================================================
+   3. CAMPOS DE FORMULÁRIO NÃO DEVEM DAR ZOOM AUTOMÁTICO NO iOS
+   ============================================================
+   Safari no iPhone dá zoom automático em qualquer campo de texto com
+   font-size menor que 16px ao focar — isso já pegou os formulários do
+   admin, do roteiro manual, etc. 16px é o mínimo que evita esse
+   comportamento, sem precisar aumentar visualmente (16px = 1rem, já é o
+   tamanho padrão de leitura confortável mesmo).
+*/
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* ============================================================
+   4. ALVOS DE TOQUE — botões e links pequenos demais são o erro de
+   mobile mais comum. 44×44px é a recomendação padrão (Apple/Google) pro
+   menor alvo confortável de tocar com o dedo sem errar o vizinho.
+   ============================================================ */
+@media (max-width: 768px) {
+  button, a.botao, .btn, input[type="checkbox"], input[type="radio"] {
+    min-height: 44px;
+  }
+  a.botao, .btn, button:not(.filtro-chip):not(.chip) {
+    min-width: 44px;
+  }
+}
+
+/* ============================================================
+   5. IMAGENS E MÍDIA NUNCA ESTOURAM O CONTAINER
+   ============================================================ */
+img, svg, video, canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ============================================================
+   6. TELA GRANDE (NOTEBOOK) — LARGURA CONFORTÁVEL DE LEITURA
+   ============================================================
+   Sem isso, texto solto (parágrafos, listas) esticaria a linha inteira
+   numa tela de notebook, o que cansa a leitura. Só limita CONTEÚDO DE
+   TEXTO — grids de cards e o mapa continuam usando a largura que cada
+   página já define pra eles.
+*/
+@media (min-width: 1000px) {
+  .texto-largura-confortavel {
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* ============================================================
+   7. TABELAS EM TELA PEQUENA — rolagem horizontal só na tabela, não na
+   página inteira (evita o problema da seção 1 quando a página TEM uma
+   tabela genuinamente larga, tipo a de check-ins do admin)
+   ============================================================ */
+@media (max-width: 640px) {
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ============================================================
+   8. REDUZIR MOVIMENTO PRA QUEM PEDIU (acessibilidade, já era prática
+   comum em cada página individualmente — centralizado aqui também)
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================
+   9. GRADES DE CARDS — ajuste fino pra celular bem pequeno (320-360px)
+   ============================================================
+   auto-fit/auto-fill com minmax(280px,...) já é responsivo, mas em
+   aparelhos muito estreitos (iPhone SE, Android de entrada) 280px some
+   sobre o padding lateral e força o card a encostar na borda. Reduz o
+   mínimo só nessa faixa estreita — não afeta nada acima disso.
+*/
+@media (max-width: 380px) {
+  .grade-locais, .grade-categorias, .lista-locais-admin {
+    grid-template-columns: 1fr !important;
+  }
+}
