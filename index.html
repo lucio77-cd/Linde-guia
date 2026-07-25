@@ -668,7 +668,14 @@
       </div>
     </a>
 
-    <nav class="topo__nav" aria-label="Navegação principal">
+    <button type="button" class="botao-menu-mobile" id="botao-menu-mobile"
+            aria-label="Abrir menu" aria-expanded="false" aria-controls="menu-nav-principal">
+      <span class="botao-menu-mobile__linha"></span>
+      <span class="botao-menu-mobile__linha"></span>
+      <span class="botao-menu-mobile__linha"></span>
+    </button>
+
+    <nav class="topo__nav" id="menu-nav-principal" aria-label="Navegação principal">
       <a href="pages/explorar.html">Explorar</a>
       <a href="pages/mapa.html">Mapa</a>
       <a href="pages/eventos.html">Eventos</a>
@@ -885,6 +892,7 @@
     iniciarBannerPatrocinado("pages/ponto.html?id=");
   </script>
   <script type="module" src="js/core/registrar-acesso.js"></script>
+  <script type="module" src="js/core/menu-mobile.js"></script>
   <script type="module">
     import { iniciarContatoWhatsapp } from "./js/core/contato-whatsapp.js";
     iniciarContatoWhatsapp();
