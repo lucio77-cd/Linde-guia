@@ -1,22 +1,20 @@
 /**
  * admin-patrocinadores.js — js/admin/admin-patrocinadores.js
- * CRUD de patrocinadores (banner de publicidade avulso, sem precisar ser
- * um Local já cadastrado no app).
+ * CRUD de patrocinadores (banner de publicidade avulso).
  *
- * MUDANÇAS nesta versão:
- *  - Imagem: era um link colado à mão (imagemUrl); agora é um NÚMERO,
- *    igual ao patrocínio de Local (arte estática em /banners/{numero}.jpg,
- *    subida manualmente pelo GitHub — ver numeracao-banners.js).
- *  - Link de destino: era obrigatório; agora é OPCIONAL. Sem ele, o
- *    banner aparece só como imagem, sem link nenhum ao tocar — serve pra
- *    um anúncio que É a mensagem (aviso, campanha), não uma chamada pra
- *    visitar algo específico.
- *  - Número em uso é checado contra Locais E outros Patrocinadores juntos
- *    (mesma pasta banners/ compartilhada — ver numeracao-banners.js).
+ * MUDANÇA NESTA VERSÃO: o campo único "Link de destino" virou um seletor
+ * de TIPO DE DESTINO com 3 opções (ver patrocinadores-data.js):
+ *   - "local": dropdown com os Locais já cadastrados (buscarTodosPois) —
+ *     a pessoa escolhe da lista, nunca digita nada, e o clique no banner
+ *     leva pra pages/ponto.html?id={poiId} daquele lugar.
+ *   - "externo": link de fora, digitado (comportamento antigo).
+ *   - "whatsapp": usa o número configurado na aba Configurações — é a
+ *     opção usada no banner "Anuncie aqui" (anúncio do próprio espaço de
+ *     anúncio), pra virar contato direto em vez de link nenhum.
  *
- * A troca de aba em si (clique nos botões da sidebar) já é tratada de
- * forma genérica por configurarAbas() em admin-locais.js — esse arquivo só
- * cuida do conteúdo da aba "Patrocinadores".
+ * Corrigido nesta versão: o campo de nível estava duplicado no HTML (dois
+ * <select id="campo-patrocinador-nivel">) de uma edição anterior — só um
+ * deles sobrou.
  */
 import {
   buscarTodosPatrocinadores, criarPatrocinador, atualizarPatrocinador, removerPatrocinador,
@@ -27,6 +25,9 @@ import { montarCaminhoBanner, extrairNumeroDoCaminho, numerosDeBannerEmUso } fro
 let patrocinadoresCache = [];
 let poisCache = [];
 let imagemBannerUrlAtual = null;
+
+const LABEL_NIVEL = { ouro: "🥇 Ouro", prata: "🥈 Prata", bronze: "🥉 Bronze" };
+const LABEL_DESTINO = { nenhum: "sem link", local: "leva a um Local", externo: "link externo", whatsapp: "leva ao WhatsApp" };
 
 function iniciarAdminPatrocinadores() {
   document.addEventListener("linde-guia:admin-autenticado", carregarPatrocinadores);
@@ -42,6 +43,7 @@ function iniciarAdminPatrocinadores() {
   });
 
   document.getElementById("campo-patrocinador-numero").addEventListener("input", aoDigitarNumero);
+  document.getElementById("campo-patrocinador-tipo-destino").addEventListener("change", aoMudarTipoDestino);
 }
 
 document.addEventListener("DOMContentLoaded", iniciarAdminPatrocinadores);
@@ -49,25 +51,41 @@ document.addEventListener("DOMContentLoaded", iniciarAdminPatrocinadores);
 // ============================================================
 // CARREGAR E LISTAR
 // ============================================================
-// Carrega patrocinadores E os POIs (só pra checagem cruzada de número —
-// não é exibido nada de Local nessa tela).
 async function carregarPatrocinadores() {
   try {
     const [patrocinadores, pois] = await Promise.all([
       buscarTodosPatrocinadores(),
       buscarTodosPois({ forcarAtualizacao: false }).catch((erro) => {
-        console.warn("[admin-patrocinadores] Não consegui checar números de Locais:", erro);
-        return []; // checagem cruzada falhar não pode travar a tela de Patrocinadores
+        console.warn("[admin-patrocinadores] Não consegui carregar Locais:", erro);
+        return [];
       }),
     ]);
     patrocinadoresCache = patrocinadores;
     poisCache = pois;
+    preencherSelectDeLocais();
     renderizarListaPatrocinadores();
   } catch (erro) {
     console.error("[admin-patrocinadores] Erro ao carregar:", erro);
     document.getElementById("lista-patrocinadores").innerHTML =
       '<p class="lista-vazia">Não consegui carregar os patrocinadores agora.</p>';
   }
+}
+
+function preencherSelectDeLocais() {
+  const select = document.getElementById("campo-patrocinador-poi");
+  const valorAtual = select.value;
+  select.innerHTML = '<option value="">Selecione...</option>';
+
+  [...poisCache]
+    .sort((a, b) => (a.nome || "").localeCompare(b.nome || ""))
+    .forEach((poi) => {
+      const opcao = document.createElement("option");
+      opcao.value = poi.id;
+      opcao.textContent = poi.nome;
+      select.appendChild(opcao);
+    });
+
+  select.value = valorAtual; // mantém seleção se já havia uma (reabertura de modal)
 }
 
 function renderizarListaPatrocinadores() {
@@ -82,15 +100,13 @@ function renderizarListaPatrocinadores() {
   patrocinadoresCache.forEach((p) => container.appendChild(criarCardPatrocinador(p)));
 }
 
-const LABEL_NIVEL = { ouro: "🥇 Ouro", prata: "🥈 Prata", bronze: "🥉 Bronze" };
-
 function criarCardPatrocinador(p) {
   const card = document.createElement("article");
   card.className = "local-admin-card";
   card.dataset.id = p.id;
 
   const periodo = formatarPeriodo(p);
-  const semLink = !p.linkDestino ? " · sem link (só imagem)" : "";
+  const destinoLabel = descreverDestino(p);
   const seloNivel = p.nivel
     ? `<span class="selo-patrocinio selo-patrocinio--${p.nivel}">${LABEL_NIVEL[p.nivel]}</span>`
     : "";
@@ -102,12 +118,20 @@ function criarCardPatrocinador(p) {
         ${p.ativo ? "Ativo" : "Inativo"}
       </span>
     </div>
-    <p class="local-admin-card__detalhe">${periodo}${semLink}</p>
+    <p class="local-admin-card__detalhe">${periodo} · ${destinoLabel}</p>
     ${seloNivel}
   `;
 
   card.addEventListener("click", () => abrirModal(p));
   return card;
+}
+
+function descreverDestino(p) {
+  if (p.tipoDestino === "local") {
+    const poi = poisCache.find((x) => x.id === p.poiIdDestino);
+    return poi ? `leva a "${poi.nome}"` : "leva a um Local (removido)";
+  }
+  return LABEL_DESTINO[p.tipoDestino] || "sem link";
 }
 
 function formatarPeriodo(p) {
@@ -124,8 +148,17 @@ function escaparHtml(texto) {
 }
 
 // ============================================================
-// NÚMERO DA ARTE — mesmo padrão do patrocínio de Local, checando os dois
-// conjuntos juntos (ver numeracao-banners.js).
+// TIPO DE DESTINO — alterna qual grupo de campos aparece
+// ============================================================
+function aoMudarTipoDestino() {
+  const tipo = document.getElementById("campo-patrocinador-tipo-destino").value;
+  document.getElementById("grupo-destino-local").hidden = tipo !== "local";
+  document.getElementById("grupo-destino-externo").hidden = tipo !== "externo";
+  document.getElementById("grupo-destino-whatsapp").hidden = tipo !== "whatsapp";
+}
+
+// ============================================================
+// NÚMERO DA ARTE
 // ============================================================
 function aoDigitarNumero() {
   const numero = document.getElementById("campo-patrocinador-numero").value.trim();
@@ -192,6 +225,7 @@ function abrirModal(p) {
   const erroEl = document.getElementById("erro-form-patrocinador");
   const inputNumero = document.getElementById("campo-patrocinador-numero");
   const statusEl = document.getElementById("status-patrocinador-imagem");
+  const selectTipoDestino = document.getElementById("campo-patrocinador-tipo-destino");
 
   erroEl.hidden = true;
   document.getElementById("form-patrocinador").reset();
@@ -205,7 +239,11 @@ function abrirModal(p) {
     document.getElementById("campo-patrocinador-nivel").value = p.nivel || "";
     imagemBannerUrlAtual = p.imagemBannerUrl || null;
     inputNumero.value = extrairNumeroDoCaminho(imagemBannerUrlAtual) || "";
+
+    selectTipoDestino.value = p.tipoDestino || "nenhum";
+    document.getElementById("campo-patrocinador-poi").value = p.poiIdDestino || "";
     document.getElementById("campo-patrocinador-link").value = p.linkDestino || "";
+
     document.getElementById("campo-patrocinador-inicio").value = p.dataInicio ? p.dataInicio.slice(0, 10) : "";
     document.getElementById("campo-patrocinador-fim").value = p.dataFim ? p.dataFim.slice(0, 10) : "";
     document.getElementById("campo-patrocinador-ativo").checked = p.ativo;
@@ -216,10 +254,13 @@ function abrirModal(p) {
     document.getElementById("campo-patrocinador-nivel").value = "";
     imagemBannerUrlAtual = null;
     inputNumero.value = "";
+    selectTipoDestino.value = "nenhum";
+    document.getElementById("campo-patrocinador-poi").value = "";
     document.getElementById("campo-patrocinador-ativo").checked = true;
     btnExcluir.hidden = true;
   }
 
+  aoMudarTipoDestino();
   atualizarPreviewBanner(imagemBannerUrlAtual);
   mostrarNumerosEmUso();
   modal.hidden = false;
@@ -238,12 +279,15 @@ async function salvarPatrocinador(evento) {
 
   const dataInicio = document.getElementById("campo-patrocinador-inicio").value;
   const dataFim = document.getElementById("campo-patrocinador-fim").value;
+  const tipoDestino = document.getElementById("campo-patrocinador-tipo-destino").value;
 
   const dados = {
     nome: document.getElementById("campo-patrocinador-nome").value.trim(),
     imagemBannerUrl: imagemBannerUrlAtual || null,
-    linkDestino: document.getElementById("campo-patrocinador-link").value.trim() || null, // opcional agora
     nivel: document.getElementById("campo-patrocinador-nivel").value || null,
+    tipoDestino,
+    poiIdDestino: tipoDestino === "local" ? (document.getElementById("campo-patrocinador-poi").value || null) : null,
+    linkDestino: tipoDestino === "externo" ? (document.getElementById("campo-patrocinador-link").value.trim() || null) : null,
     dataInicio: dataInicio ? new Date(dataInicio).toISOString() : null,
     dataFim: dataFim ? new Date(dataFim).toISOString() : null,
     ativo: document.getElementById("campo-patrocinador-ativo").checked,
@@ -251,6 +295,16 @@ async function salvarPatrocinador(evento) {
 
   if (!dados.nome || !dados.imagemBannerUrl) {
     erroEl.textContent = "Preenche o nome e o número da arte antes de salvar.";
+    erroEl.hidden = false;
+    return;
+  }
+  if (tipoDestino === "local" && !dados.poiIdDestino) {
+    erroEl.textContent = "Escolhe qual Local esse banner deve levar.";
+    erroEl.hidden = false;
+    return;
+  }
+  if (tipoDestino === "externo" && !dados.linkDestino) {
+    erroEl.textContent = "Preenche o link externo, ou muda o tipo de destino.";
     erroEl.hidden = false;
     return;
   }
@@ -280,9 +334,6 @@ async function salvarPatrocinador(evento) {
     await carregarPatrocinadores();
   } catch (erro) {
     console.error("[admin-patrocinadores] Erro ao salvar:", erro);
-    // Mostra o código/mensagem real do Firestore na tela — sem isso, no
-    // celular (sem acesso a console de dev), "não consegui salvar" não diz
-    // nada sobre SE é permissão negada, campo inválido, ou rede.
     const detalhe = erro.code || erro.message || "erro desconhecido";
     erroEl.textContent = `Não consegui salvar agora (${detalhe}). Se disser "permission-denied", falta liberar a coleção "patrocinadores" nas regras do Firestore.`;
     erroEl.hidden = false;
