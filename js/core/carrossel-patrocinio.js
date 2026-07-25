@@ -12,8 +12,10 @@
  *    cadastro do Local (admin-locais.js) — clique leva pra ponto.html
  *    daquele local.
  *  - Anúncios avulsos, sem precisar ser um Local (admin-patrocinadores.js)
- *    — clique leva pro linkDestino externo (se tiver) ou não é clicável
- *    (se o anúncio for só a mensagem em si, sem link).
+ *    — destino conforme tipoDestino escolhido no admin: nenhum (só
+ *    imagem, sem clique), local (leva pro ponto.html de um Local já
+ *    cadastrado), externo (link de fora) ou whatsapp (usa o número
+ *    configurado na aba Configurações do admin).
  * As duas fontes competem pelos mesmos slots do mesmo nível, embaralhadas
  * juntas — nenhuma tem prioridade sobre a outra.
  *
@@ -30,6 +32,7 @@
  */
 import { buscarPoisAtivos } from "../data/pois-data.js";
 import { buscarPatrocinadoresAtivos } from "../data/patrocinadores-data.js";
+import { buscarConfiguracoes } from "../data/configuracoes-data.js";
 
 const INTERVALO_ROTACAO_MS = 6000;
 
@@ -84,16 +87,54 @@ async function coletarCandidatos(nivel, caminhoParaPonto) {
       externo: false,
     }));
 
-  const candidatosAvulsos = patrocinadores
-    .filter((p) => p.nivel === nivel && !!p.imagemBannerUrl)
-    .map((p) => ({
-      nome: p.nome,
-      imagemBannerUrl: p.imagemBannerUrl,
-      href: p.linkDestino || null, // sem link = banner só imagem, não clicável
-      externo: true,
-    }));
+  const candidatosAvulsos = await Promise.all(
+    patrocinadores
+      .filter((p) => p.nivel === nivel && !!p.imagemBannerUrl)
+      .map(async (p) => ({
+        nome: p.nome,
+        imagemBannerUrl: p.imagemBannerUrl,
+        href: await resolverDestinoAvulso(p, caminhoParaPonto),
+        // "externo" decide se abre em nova aba (target=_blank) — link de
+        // fora e WhatsApp sim, Local não (mesma navegação interna que já
+        // usamos pro resto do site).
+        externo: p.tipoDestino === "externo" || p.tipoDestino === "whatsapp",
+      }))
+  );
 
   return [...candidatosDeLocais, ...candidatosAvulsos];
+}
+
+// Mesma lógica de banner-patrocinado.js (resolverDestino) — mantida
+// separada porque os dois arquivos têm formatos de candidato ligeiramente
+// diferentes (banner único vs lista pro carrossel), mas a regra de
+// negócio é idêntica: nenhum/local/externo/whatsapp.
+async function resolverDestinoAvulso(patrocinador, caminhoParaPonto) {
+  switch (patrocinador.tipoDestino) {
+    case "local":
+      return patrocinador.poiIdDestino
+        ? `${caminhoParaPonto}${encodeURIComponent(patrocinador.poiIdDestino)}`
+        : null;
+
+    case "externo":
+      return patrocinador.linkDestino || null;
+
+    case "whatsapp": {
+      try {
+        const config = await buscarConfiguracoes();
+        if (!config.whatsappNumero) return null;
+        const mensagem = encodeURIComponent(
+          `Olá! Vi o anúncio "${patrocinador.nome}" no Linde Guia e quero saber mais sobre patrocínio.`
+        );
+        return `https://wa.me/55${config.whatsappNumero}?text=${mensagem}`;
+      } catch (erro) {
+        console.warn("[carrossel-patrocinio] Não consegui montar link do WhatsApp:", erro);
+        return null;
+      }
+    }
+
+    default: // "nenhum"
+      return null;
+  }
 }
 
 function embaralhar(lista) {
