@@ -202,7 +202,13 @@
       </svg>
       <span class="topo__nome">Linde Guia</span>
     </a>
-    <nav class="topo__nav" aria-label="Navegação principal">
+    <button type="button" class="botao-menu-mobile" id="botao-menu-mobile"
+            aria-label="Abrir menu" aria-expanded="false" aria-controls="menu-nav-principal">
+      <span class="botao-menu-mobile__linha"></span>
+      <span class="botao-menu-mobile__linha"></span>
+      <span class="botao-menu-mobile__linha"></span>
+    </button>
+    <nav class="topo__nav" id="menu-nav-principal" aria-label="Navegação principal">
       <a href="explorar.html">Explorar</a>
       <a href="mapa.html" class="topo__nav--mapa">Mapa</a>
       <a href="eventos.html">Eventos</a>
@@ -241,6 +247,7 @@
   <script type="module" src="../js/core/firebase-config.js"></script>
   <script type="module" src="../js/pages/mapa.js"></script>
   <script type="module" src="../js/core/registrar-acesso.js"></script>
+  <script type="module" src="../js/core/menu-mobile.js"></script>
 
   <script type="module">
     import { iniciarBannerPatrocinado } from "../js/core/banner-patrocinado.js";
