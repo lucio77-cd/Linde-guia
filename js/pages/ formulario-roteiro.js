@@ -3,33 +3,49 @@
  * Linde Guia — Treze Tílias
  *
  * Lógica da tela "Criar Roteiro" (pages/roteiro.html).
- * Lê os campos do formulário, monta o PerfilBusca, chama motor-rota.js,
- * guarda o resultado no sessionStorage e redireciona para minha-rota.html.
  *
- * Caminhos atualizados para nova estrutura:
- *   js/pages/formulario-roteiro.js
- *   js/engine/motor-rota.js
- *   js/data/pois-data.js
- *   js/data/eventos-data.js
- *   js/data/registro-data.js
+ * Fluxo do submit:
+ *   1. Monta o PerfilBusca a partir do formulário.
+ *   2. Busca POIs e eventos ativos.
+ *   3. Tenta curadoria por IA (Gemini, via curador-ia.js) DENTRO dos
+ *      candidatos já filtrados pelo motor. Se falhar, cai no motor de
+ *      pontuação padrão (gerarCapitulo).
+ *   4. Com o capítulo já decidido (por IA ou pelo motor), tenta trocar a
+ *      estimativa de deslocamento pelo tempo real de caminhada
+ *      (Directions API, via caminhada-real.js). Se falhar, mantém a
+ *      estimativa.
+ *   5. Guarda o resultado e redireciona pra minha-rota.html.
+ *
+ * Cada camada (IA, tempo real) é opcional e best-effort — nenhuma delas
+ * pode deixar o usuário sem roteiro.
  */
 
-import { gerarRota }                  from "../engine/motor-rota.js";
+import {
+  gerarCapitulo,
+  gerarCapituloDeFavoritos,
+  obterCandidatosViaveis,
+  aplicarDeslocamentosReais,
+} from "../engine/motor-rota.js";
+import { curarCapituloComIA }          from "../engine/curador-ia.js";
+import { obterDeslocamentosReaisMin }  from "../engine/caminhada-real.js";
+import { montarHistoricoDoUsuario }    from "../data/historico-data.js";
 import { buscarPoisAtivos }            from "../data/pois-data.js";
 import { buscarEventosAtivosNaData }   from "../data/eventos-data.js";
 import { registrarRotaCriada }         from "../data/registro-data.js";
+import { lerSelos }                    from "../core/selos-local.js";
+
+const MAX_PARADAS_CAPITULO_IA = 4; // mesmo teto do motor (MAX_PARADAS_POR_CAPITULO)
 
 // ============================================================
 // ESTADO DO FORMULÁRIO
 // ============================================================
 const estado = {
-  tempoDisponivelMin: 240,      // padrão = "Meio dia"
+  quando: "agora",
   horarioInicio: null,
   localizacaoPartida: null,
   enderecoManual: "",
-  orcamentoFaixa: "moderado",   // padrão = "Moderado"
-  composicaoGrupo: null,
   interesses: [],
+  refeicoesDesejadas: [],
 };
 
 // ============================================================
@@ -38,7 +54,7 @@ const estado = {
 function iniciarFormularioRoteiro() {
   configurarChipsSelecaoUnica();
   configurarChipsSelecaoMultipla();
-  configurarHorarioPadrao();
+  configurarQuando();
   configurarBotaoLocalizacao();
   configurarSubmit();
 }
@@ -46,7 +62,7 @@ function iniciarFormularioRoteiro() {
 document.addEventListener("DOMContentLoaded", iniciarFormularioRoteiro);
 
 // ============================================================
-// CHIPS — seleção única (tempo, orçamento, grupo)
+// CHIPS — seleção única
 // ============================================================
 function configurarChipsSelecaoUnica() {
   const grupos = agruparChipsPorCampo(".chip:not(.chip--multipla)");
@@ -56,15 +72,18 @@ function configurarChipsSelecaoUnica() {
       chip.addEventListener("click", () => {
         chips.forEach((c) => c.setAttribute("aria-pressed", "false"));
         chip.setAttribute("aria-pressed", "true");
-        const valor = chip.dataset.valor;
-        estado[campo] = isNaN(Number(valor)) ? valor : Number(valor);
+        estado[campo] = chip.dataset.valor;
+
+        if (campo === "quando") {
+          alternarCampoHorarioAgendado(chip.dataset.valor === "agendado");
+        }
       });
     });
   }
 }
 
 // ============================================================
-// CHIPS — seleção múltipla (interesses)
+// CHIPS — seleção múltipla (refeições, interesses)
 // ============================================================
 function configurarChipsSelecaoMultipla() {
   const chips = document.querySelectorAll(".chip--multipla");
@@ -74,11 +93,13 @@ function configurarChipsSelecaoMultipla() {
     chip.addEventListener("click", () => {
       const pressionado = chip.getAttribute("aria-pressed") === "true";
       chip.setAttribute("aria-pressed", String(!pressionado));
+      const campo = chip.dataset.campo;
       const valor = chip.dataset.valor;
+      if (!Array.isArray(estado[campo])) estado[campo] = [];
       if (!pressionado) {
-        estado.interesses.push(valor);
+        estado[campo].push(valor);
       } else {
-        estado.interesses = estado.interesses.filter((v) => v !== valor);
+        estado[campo] = estado[campo].filter((v) => v !== valor);
       }
     });
   });
@@ -96,19 +117,35 @@ function agruparChipsPorCampo(seletor) {
 }
 
 // ============================================================
-// HORÁRIO — pré-preenche com hora atual do device
+// QUANDO
 // ============================================================
-function configurarHorarioPadrao() {
-  const input = document.getElementById("input-horario");
-  const agora = new Date();
-  const horas   = String(agora.getHours()).padStart(2, "0");
-  const minutos = String(agora.getMinutes()).padStart(2, "0");
-  input.value = `${horas}:${minutos}`;
-  estado.horarioInicio = construirDataHoraDeHoje(input.value);
+function configurarQuando() {
+  atualizarHorarioParaAgora();
 
-  input.addEventListener("change", () => {
-    estado.horarioInicio = construirDataHoraDeHoje(input.value);
+  const inputAgendado = document.getElementById("input-horario-agendado");
+  inputAgendado.addEventListener("change", () => {
+    if (inputAgendado.value) {
+      estado.horarioInicio = construirDataHoraDeHoje(inputAgendado.value);
+    }
   });
+}
+
+function alternarCampoHorarioAgendado(mostrar) {
+  const grupo = document.getElementById("grupo-horario-agendado");
+  grupo.hidden = !mostrar;
+
+  if (mostrar) {
+    const inputAgendado = document.getElementById("input-horario-agendado");
+    if (inputAgendado.value) {
+      estado.horarioInicio = construirDataHoraDeHoje(inputAgendado.value);
+    }
+  } else {
+    atualizarHorarioParaAgora();
+  }
+}
+
+function atualizarHorarioParaAgora() {
+  estado.horarioInicio = new Date().toISOString();
 }
 
 function construirDataHoraDeHoje(horaTexto) {
@@ -128,9 +165,9 @@ const BBOX_TREZE_TILIAS = {
 const CENTRO_TREZE_TILIAS_NOMINATIM = "Treze Tílias, SC, Brasil";
 
 function configurarBotaoLocalizacao() {
-  const botao       = document.getElementById("btn-usar-localizacao");
-  const statusEl    = document.getElementById("localizacao-status");
-  const inputEndereco = document.getElementById("input-endereco");
+  const botao         = document.getElementById("btn-usar-localizacao");
+  const statusEl       = document.getElementById("localizacao-status");
+  const inputEndereco  = document.getElementById("input-endereco");
 
   botao.addEventListener("click", () => {
     if (!navigator.geolocation) {
@@ -240,11 +277,11 @@ function definirStatusLocalizacao(elemento, estadoVisual, texto) {
 }
 
 // ============================================================
-// SUBMIT — valida, busca dados, chama motor, redireciona
+// SUBMIT
 // ============================================================
 function configurarSubmit() {
-  const form    = document.getElementById("form-roteiro");
-  const erroEl  = document.getElementById("form-roteiro__erro");
+  const form   = document.getElementById("form-roteiro");
+  const erroEl = document.getElementById("form-roteiro__erro");
 
   form.addEventListener("submit", async (evento) => {
     evento.preventDefault();
@@ -268,12 +305,11 @@ function configurarSubmit() {
         buscarEventosAtivosNaData(perfilBusca.data),
       ]);
 
-      const rota = gerarRota(pois, eventos, perfilBusca);
+      const capitulo = await gerarCapituloCompleto(pois, eventos, perfilBusca);
 
-      sessionStorage.setItem("linde-guia:rota-gerada", JSON.stringify(rota));
-      registrarRotaCriada(perfilBusca, rota); // falha silenciosa, não bloqueia redirect
+      sessionStorage.setItem("linde-guia:capitulo-atual", JSON.stringify(capitulo));
+      registrarRotaCriada(perfilBusca, capitulo); // falha silenciosa, não bloqueia redirect
 
-      // Redireciona para minha-rota (mesmo nível em pages/)
       window.location.href = "../pages/minha-rota.html";
     } catch (erro) {
       console.error("[formulario-roteiro] Erro ao gerar rota:", erro);
@@ -284,9 +320,57 @@ function configurarSubmit() {
   });
 }
 
+// ============================================================
+// PIPELINE DO CAPÍTULO — IA (opcional) + tempo real (opcional), com
+// fallback seguro em cada etapa. Nunca deixa o usuário sem roteiro.
+// ============================================================
+async function gerarCapituloCompleto(pois, eventos, perfilBusca) {
+  const candidatosViaveis = obterCandidatosViaveis(pois, eventos, perfilBusca);
+
+  if (candidatosViaveis.length === 0) {
+    return gerarCapitulo(pois, eventos, perfilBusca); // devolve o capítulo vazio padrão
+  }
+
+  // --- Camada 1: curadoria por IA (opcional) ---
+  const historico = await montarHistoricoDoUsuario();
+  const curadoria = await curarCapituloComIA(candidatosViaveis, perfilBusca, historico, MAX_PARADAS_CAPITULO_IA);
+
+  let capitulo;
+  let explicacaoIA = "";
+
+  if (curadoria) {
+    capitulo = gerarCapituloDeFavoritos(pois, perfilBusca, curadoria.idsEscolhidos);
+    explicacaoIA = curadoria.explicacao || "";
+  }
+
+  if (!curadoria || capitulo.vazio) {
+    capitulo = gerarCapitulo(pois, eventos, perfilBusca); // fallback: IA indisponível ou escolha não sobreviveu
+    explicacaoIA = "";
+  }
+
+  if (capitulo.vazio) {
+    return capitulo; // nada a fazer, capítulo vazio não precisa de tempo real
+  }
+
+  // --- Camada 2: tempo real de caminhada (opcional) — TAMBÉM traz o
+  // traçado real da rua (polyline), usado pelo mapa em minha-rota.html
+  // pra desenhar o caminho de verdade em vez de linha reta.
+  const resultadoCaminhada = await obterDeslocamentosReaisMin(
+    perfilBusca.localizacaoPartida,
+    capitulo.paradas
+  );
+  const capituloFinal = aplicarDeslocamentosReais(
+    capitulo.paradas,
+    resultadoCaminhada?.deslocamentosMin || null,
+    perfilBusca
+  );
+
+  return { ...capituloFinal, explicacaoIA, polyline: resultadoCaminhada?.polyline || null };
+}
+
 function validarEstado() {
   if (!estado.horarioInicio) {
-    return "Diz a que horas você começa o passeio.";
+    return "Diz a que horas você quer começar o passeio.";
   }
   if (!estado.localizacaoPartida && !estado.enderecoManual.trim()) {
     return "A gente precisa saber de onde você está partindo — usa o GPS ou digita um endereço.";
@@ -308,14 +392,15 @@ function montarPerfilBusca() {
     localizacaoPartida = CENTRO_TREZE_TILIAS;
   }
 
+  const idsJaVisitados = lerSelos().map((selo) => selo.poiId).filter(Boolean);
+
   return {
     data: estado.horarioInicio,
     horarioInicio: estado.horarioInicio,
-    tempoDisponivelMin: estado.tempoDisponivelMin,
     localizacaoPartida,
-    orcamentoFaixa: estado.orcamentoFaixa,
-    composicaoGrupo: estado.composicaoGrupo,
     interesses: estado.interesses,
+    refeicoesDesejadas: estado.refeicoesDesejadas,
+    idsExcluidos: idsJaVisitados,
   };
 }
 
