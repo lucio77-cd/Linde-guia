@@ -10,6 +10,7 @@
  */
 
 import { escaparHtml } from "../core/html-utils.js";
+import { decodificarPolyline } from "../core/polyline-utils.js";
 
 const COR_MARCA = "#3C4A3E"; // var(--cor-lodengrun), Leaflet não lê CSS vars direto
 const COR_ACAO = "#9E2B25"; // var(--cor-vermelho-tirol)
@@ -18,7 +19,12 @@ const COR_USUARIO = "#2563eb";
 // ============================================================
 // MAPA COMPLETO DA ROTA (sub-vista de resultado)
 // ============================================================
-function desenharMapaCompleto(elementoId, paradas, pontoPartida) {
+// polylineCodificado (opcional): traçado real vindo da Directions API
+// (ver api/tempo-caminhada.js), seguindo rua de verdade. Quando não vem
+// (API falhou, offline, rota manual sem chamada de Directions ainda),
+// cai pra linha reta pontilhada entre os pontos — comportamento de
+// sempre, nunca deixa de mostrar alguma linha.
+function desenharMapaCompleto(elementoId, paradas, pontoPartida, polylineCodificado = null) {
   const elemento = document.getElementById(elementoId);
   if (!elemento || typeof L === "undefined") return null;
 
@@ -59,7 +65,14 @@ function desenharMapaCompleto(elementoId, paradas, pontoPartida) {
     marcador.addTo(mapa).bindPopup(`<strong>${indice + 1}. ${escaparHtml(parada.nome)}</strong>`);
   });
 
-  if (pontos.length > 1) {
+  const pontosCaminhoReal = polylineCodificado ? decodificarPolyline(polylineCodificado) : [];
+
+  if (pontosCaminhoReal.length > 1) {
+    // Linha sólida seguindo rua de verdade — o traçado real da Directions API.
+    L.polyline(pontosCaminhoReal, { color: COR_MARCA, weight: 4, opacity: 0.75 }).addTo(mapa);
+  } else if (pontos.length > 1) {
+    // Fallback: linha reta pontilhada entre os pontos, igual sempre foi —
+    // usado quando não há traçado real disponível (API falhou, offline).
     L.polyline(pontos, { color: COR_MARCA, weight: 3, opacity: 0.7, dashArray: "6 8" }).addTo(mapa);
   }
 
