@@ -78,6 +78,12 @@
 
     /* ===== Mapa da rota ===== */
     #mapa-rota { height: 220px; border-radius: var(--raio-grande); margin-bottom: 1.5rem; border: 1.5px solid var(--creme-escuro); }
+    /* Mesmo filtro tirolês do mapa.html — sepia/hue-rotate/saturate pra
+       puxar o mapa padrão OSM pro tom bordô/dourado/creme do app, sem
+       precisar de conta paga de estilo de mapa customizado. */
+    #mapa-rota .leaflet-tile-pane {
+      filter: sepia(0.35) saturate(1.5) hue-rotate(-8deg) brightness(0.96) contrast(1.05);
+    }
 
     .parada-card {
       display: flex; gap: 1rem; padding: 1.25rem;
