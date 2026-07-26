@@ -146,7 +146,8 @@ function desenharOuAtualizarMapa(capitulo) {
   mapaAtual = desenharMapaCompleto(
     "mapa-rota",
     capitulo.paradas,
-    capitulo.perfilOriginal?.localizacaoPartida
+    capitulo.perfilOriginal?.localizacaoPartida,
+    capitulo.polyline || null
   );
 }
 
