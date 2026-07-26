@@ -6,7 +6,14 @@
 // via Directions API do Google — troca a estimativa por linha reta
 // (Haversine × velocidade fixa) por ruas e ladeiras de verdade.
 //
-// Não decide ORDEM nenhuma — só mede o trajeto que já foi decidido.
+// TAMBÉM devolve o "polyline" (traçado da rota seguindo rua de verdade,
+// codificado como texto) — a Directions API já inclui isso em toda
+// resposta; antes a gente calculava só os minutos e jogava esse dado
+// fora. Quem chama decodifica com js/core/polyline-utils.js e desenha a
+// linha no Leaflet, em vez da linha reta pontilhada que cortava por cima
+// de quarteirão.
+//
+// Não decide ORDEM nenhuma — só mede/desenha o trajeto que já foi decidido.
 //
 // Variável de ambiente necessária na Vercel: GOOGLE_MAPS_API_KEY
 // (habilite SÓ a "Directions API" nessa chave, no Google Cloud Console)
@@ -21,7 +28,7 @@ export default async function handler(req, res) {
 
   if (!process.env.GOOGLE_MAPS_API_KEY) {
     console.error("[tempo-caminhada] GOOGLE_MAPS_API_KEY não configurada na Vercel.");
-    res.status(200).json({ deslocamentosMin: null }); // fallback silencioso, não trava o usuário
+    res.status(200).json({ deslocamentosMin: null, polyline: null }); // fallback silencioso, não trava o usuário
     return;
   }
 
@@ -39,7 +46,7 @@ export default async function handler(req, res) {
     (p) => p && typeof p.lat === "number" && typeof p.lng === "number"
   );
   if (!todasComCoordenada) {
-    res.status(200).json({ deslocamentosMin: null });
+    res.status(200).json({ deslocamentosMin: null, polyline: null });
     return;
   }
 
@@ -72,7 +79,7 @@ export default async function handler(req, res) {
       if (dados.status && dados.status !== "OK" && dados.status !== "ZERO_RESULTS") {
         console.warn("[tempo-caminhada] Directions status:", dados.status, dados.error_message);
       }
-      res.status(200).json({ deslocamentosMin: null });
+      res.status(200).json({ deslocamentosMin: null, polyline: null });
       return;
     }
 
@@ -82,12 +89,15 @@ export default async function handler(req, res) {
       Math.round(trecho.duration.value / 60)
     );
 
-    res.status(200).json({ deslocamentosMin });
+    // overview_polyline.points: string codificada com o traçado da rota
+    // inteira, seguindo rua de verdade. Vem de graça na mesma resposta.
+    const polyline = dados.routes[0].overview_polyline?.points || null;
+
+    res.status(200).json({ deslocamentosMin, polyline });
   } catch (erro) {
     console.error("[tempo-caminhada] Erro:", erro.name === "AbortError" ? "timeout" : erro);
-    res.status(200).json({ deslocamentosMin: null }); // nunca quebra o fluxo do usuário
+    res.status(200).json({ deslocamentosMin: null, polyline: null }); // nunca quebra o fluxo do usuário
   } finally {
     clearTimeout(timeoutId);
   }
 }
-
