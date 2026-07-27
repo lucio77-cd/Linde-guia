@@ -62,7 +62,7 @@ function avancarRota(acao) {
     salvarSeloLocal(paradaAtual); // guarda o selo no aparelho do visitante (ver perfil.html)
   }
 
-  obterPosicaoEHorarioAtuais()
+  obterPosicaoEHorarioAtuais(paradaAtual?.localizacao)
     .then(({ posicaoAtual, horarioAtual }) => {
       const rotaAtualizada = recalcularRota(rota, indiceAtual, acao, horarioAtual, posicaoAtual);
 
@@ -131,9 +131,11 @@ function gerarProximoCapitulo() {
   document.getElementById("vista-continuar__acoes").hidden = true;
   document.getElementById("vista-continuar__carregando").hidden = false;
 
-  obterPosicaoEHorarioAtuais()
+  const ultimaParadaConhecida = capituloAnterior.paradas[capituloAnterior.paradas.length - 1];
+
+  obterPosicaoEHorarioAtuais(ultimaParadaConhecida?.localizacao)
     .then(async ({ posicaoAtual, horarioAtual }) => {
-      const ultimaParada = capituloAnterior.paradas[capituloAnterior.paradas.length - 1];
+      const ultimaParada = ultimaParadaConhecida;
 
       const idsJaVisitados = new Set([
         ...capituloAnterior.paradas.map((p) => p.id),
@@ -182,26 +184,56 @@ function gerarProximoCapitulo() {
     });
 }
 
-function obterPosicaoEHorarioAtuais() {
+// Raio de tolerância entre a posição real do GPS e a última parada
+// confirmada — acima disso, a leitura é descartada por não fazer sentido
+// fisicamente (cidade pequena, poucos minutos entre uma parada e outra).
+// Sem essa checagem, uma leitura de GPS ruim (comum logo depois de abrir
+// o app, ou em ambiente fechado) fazia o app achar que a pessoa estava
+// muito mais longe do que estava de verdade — o tempo de caminhada
+// calculado explodia, o horário de chegada calculado caía fora do
+// funcionamento de TODAS as paradas restantes, e a rota era finalizada
+// mesmo sobrando parada de verdade pra visitar. Bug real, corrigido aqui.
+const RAIO_TOLERANCIA_GPS_KM = 3;
+
+function obterPosicaoEHorarioAtuais(posicaoDeReferencia) {
   const horarioAtual = new Date().toISOString();
 
   return new Promise((resolve) => {
     if (!navigator.geolocation) {
-      resolve({ posicaoAtual: null, horarioAtual });
+      resolve({ posicaoAtual: posicaoDeReferencia || null, horarioAtual });
       return;
     }
 
     navigator.geolocation.getCurrentPosition(
       (posicao) => {
-        resolve({
-          posicaoAtual: { lat: posicao.coords.latitude, lng: posicao.coords.longitude },
-          horarioAtual,
-        });
+        const posicaoGps = { lat: posicao.coords.latitude, lng: posicao.coords.longitude };
+
+        if (posicaoDeReferencia && distanciaKm(posicaoDeReferencia, posicaoGps) > RAIO_TOLERANCIA_GPS_KM) {
+          console.warn(
+            "[modo-em-rota] Leitura de GPS descartada — muito longe da última parada confirmada. Usando a posição da última parada em vez disso."
+          );
+          resolve({ posicaoAtual: posicaoDeReferencia, horarioAtual });
+          return;
+        }
+
+        resolve({ posicaoAtual: posicaoGps, horarioAtual });
       },
-      () => resolve({ posicaoAtual: null, horarioAtual }),
+      () => resolve({ posicaoAtual: posicaoDeReferencia || null, horarioAtual }),
       { timeout: 5000 }
     );
   });
+}
+
+function distanciaKm(a, b) {
+  const R = 6371;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLon = ((b.lng - a.lng) * Math.PI) / 180;
+  const lat1 = (a.lat * Math.PI) / 180;
+  const lat2 = (b.lat * Math.PI) / 180;
+  const sinDLat = Math.sin(dLat / 2);
+  const sinDLon = Math.sin(dLon / 2);
+  const aH = sinDLat * sinDLat + Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon;
+  return R * 2 * Math.atan2(Math.sqrt(aH), Math.sqrt(1 - aH));
 }
 
 // ============================================================
@@ -319,3 +351,4 @@ function mostrarAvisoRecalculo(texto) {
 function esconderAvisoRecalculo() {
   document.getElementById("aviso-recalculo").hidden = true;
 }
+
