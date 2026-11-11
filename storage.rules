@@ -16,7 +16,7 @@ service firebase.storage {
                      /databases/(default)/documents/usuarios_admin/$(request.auth.uid)
                    )
                    && request.resource != null
-                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.size <= 5 * 1024 * 1024
                    && request.resource.contentType.matches('image/(jpeg|png|webp)');
     }
   }
