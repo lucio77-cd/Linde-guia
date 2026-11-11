@@ -339,7 +339,7 @@ async function gerarCapituloCompleto(pois, eventos, perfilBusca) {
   let explicacaoIA = "";
 
   if (curadoria) {
-    capitulo = gerarCapituloDeFavoritos(pois, perfilBusca, curadoria.idsEscolhidos);
+    capitulo = gerarCapituloDeFavoritos(pois, perfilBusca, curadoria.idsEscolhidos, eventos);
     explicacaoIA = curadoria.explicacao || "";
   }
 
@@ -357,9 +357,17 @@ async function gerarCapituloCompleto(pois, eventos, perfilBusca) {
     perfilBusca.localizacaoPartida,
     capitulo.paradas
   );
-  const capituloFinal = aplicarDeslocamentosReais(capitulo.paradas, deslocamentosReaisMin, perfilBusca);
+  const capituloFinal = aplicarDeslocamentosReais(
+    capitulo.paradas,
+    deslocamentosReaisMin?.deslocamentosMin || null,
+    perfilBusca
+  );
 
-  return { ...capituloFinal, explicacaoIA };
+  return {
+    ...capituloFinal,
+    explicacaoIA,
+    polyline: deslocamentosReaisMin?.polyline || null,
+  };
 }
 
 function validarEstado() {
