@@ -27,8 +27,8 @@ export default async function handler(req, res) {
   }
 
   const { endereco } = req.body || {};
-  if (!endereco || !endereco.trim()) {
-    res.status(400).json({ erro: "Endereço é obrigatório" });
+  if (typeof endereco !== "string" || !endereco.trim() || endereco.trim().length > 200) {
+    res.status(400).json({ erro: "Endereço inválido ou acima de 200 caracteres" });
     return;
   }
 
