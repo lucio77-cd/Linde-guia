@@ -126,7 +126,7 @@ fornecidos. Se algum dado estiver zerado ou faltando, mencione isso como
 
 function obterToken(req) {
   const cabecalho = req.headers.authorization || "";
-  const correspondencia = cabecalho.match(/^Bearer\\s+(.+)$/i);
+  const correspondencia = cabecalho.match(/^Bearer\s+(.+)$/i);
   return correspondencia ? correspondencia[1].trim() : null;
 }
 
