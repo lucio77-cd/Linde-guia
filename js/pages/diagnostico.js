@@ -5,7 +5,7 @@
  * Apagar após confirmar que os 20 POIs estão no banco.
  */
 
-import { db } from "./firebase-config.js";
+import { db } from "../core/firebase-config.js";
 import {
   collection, getDocs, addDoc, query, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -24,7 +24,8 @@ function aguardar(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-ver").addEventListener("click", verBanco);
-  document.getElementById("btn-importar").addEventListener("click", reimportar);
+  const botaoImportar = document.getElementById("btn-importar");
+  if (botaoImportar) botaoImportar.disabled = true; // diagnóstico não altera dados de produção
 });
 
 // ============================================================
