@@ -14,7 +14,7 @@
  * contra os arquivos reais do seu projeto antes de usar:
  *   - lerSelos()          -> já confirmado, existe em core/selos-local.js
  *   - lerFavoritos()      -> AJUSTE se o seu arquivo/função tiver outro nome
- *   - lerRotasManuais()   -> AJUSTE se o seu arquivo/função tiver outro nome
+ *   - lerRotasSalvas()   -> AJUSTE se o seu arquivo/função tiver outro nome
  *     (sabemos que existe salvarRotaManual em core/rotas-manuais-local.js;
  *     se a função de leitura correspondente tiver outro nome, troque aqui)
  */
@@ -55,8 +55,8 @@ async function montarHistoricoDoUsuario() {
   // Rotas manuais salvas
   try {
     const modulo = await import("../core/rotas-manuais-local.js");
-    if (typeof modulo.lerRotasManuais === "function") {
-      historico.rotasManuaisSalvas = modulo.lerRotasManuais().map((r) => ({
+    if (typeof modulo.lerRotasSalvas === "function") {
+      historico.rotasManuaisSalvas = modulo.lerRotasSalvas().map((r) => ({
         nome: r.nome,
         poisIds: r.poisIds || [],
       }));
