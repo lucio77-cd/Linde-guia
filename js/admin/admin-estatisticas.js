@@ -20,7 +20,7 @@
  * js/core/selos-local.js). Não duplicamos rastreamento pra isso, só
  * deixamos o rótulo do gráfico explícito sobre a equivalência.
  */
-import { db } from "../core/firebase-config.js";
+import { db, auth } from "../core/firebase-config.js";
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const LABEL_REFEICAO = { cafeDaManha: "Café da manhã", almoco: "Almoço", tarde: "Lanche da tarde", janta: "Janta" };
@@ -295,9 +295,16 @@ async function gerarRelatorioComIA() {
   resultadoEl.hidden = true;
 
   try {
+    const usuario = auth.currentUser;
+    if (!usuario) throw new Error("Faça login novamente para gerar o relatório.");
+    const token = await usuario.getIdToken();
+
     const resposta = await fetch("/api/gerar-relatorio", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        "authorization": `Bearer ${token}`,
+      },
       body: JSON.stringify({ resumo: ultimoResumoParaIA }),
     });
 
