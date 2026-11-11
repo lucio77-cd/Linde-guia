@@ -30,7 +30,14 @@ function lerSelos() {
   }
 }
 
-function formatarDataLocal(data) {\n  const ano = data.getFullYear();\n  const mes = String(data.getMonth() + 1).padStart(2, "0");\n  const dia = String(data.getDate()).padStart(2, "0");\n  return `${ano}-${mes}-${dia}`;\n}\n\nfunction salvarSeloLocal(poi) {
+function formatarDataLocal(data) {
+  const ano = data.getFullYear();
+  const mes = String(data.getMonth() + 1).padStart(2, "0");
+  const dia = String(data.getDate()).padStart(2, "0");
+  return `${ano}-${mes}-${dia}`;
+}
+
+function salvarSeloLocal(poi) {
   if (!poi || !poi.nome) return;
 
   try {
