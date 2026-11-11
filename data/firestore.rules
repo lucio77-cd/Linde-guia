@@ -116,13 +116,9 @@ service cloud.firestore {
       function patrocinadorTemCamposValidos() {
         let dados = request.resource.data;
         return dados.nome is string && dados.nome.size() > 0
-          && dados.imagemBannerUrl is string
-          && dados.ativo is bool
-          && (!('tipoDestino' in dados) || dados.tipoDestino in ['nenhum', 'local', 'externo', 'whatsapp'])
-          && (!('linkDestino' in dados) || dados.linkDestino == null || dados.linkDestino is string)
-          && (!('poiIdDestino' in dados) || dados.poiIdDestino == null || dados.poiIdDestino is string)
-          && (!('dataInicio' in dados) || dados.dataInicio == null || dados.dataInicio is string)
-          && (!('dataFim' in dados) || dados.dataFim == null || dados.dataFim is string);
+          && dados.imagemUrl is string
+          && dados.linkDestino is string
+          && dados.ativo is bool;
       }
     }
 
@@ -216,66 +212,44 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['whatsappNumero'])
         && request.resource.data.whatsappNumero is string
         && request.resource.data.whatsappNumero.size() <= 20
-        && request.resource.data.whatsappNumero.matches('^[0-9]*
+        && (request.resource.data.whatsappNumero.size() == 0
+            || request.resource.data.whatsappNumero.matches('^[0-9]+
     // ============================================================
     match /{document=**} {
       allow read, write: if false;
     }
   }
 }
-);
+));
       allow list, delete: if false;
     }
 
     // ============================================================
-    // ACESSOS_DIARIOS — contagem agregada, sem dados pessoais
+    // ACESSOS_DIARIOS — analytics agregado, sem dados pessoais
     // ============================================================
-    // A escrita pública é necessária porque o visitante não faz login.
-    // Cada chamada só pode acrescentar exatamente um acesso ao total e
-    // exatamente uma unidade a uma única hora. A leitura fica restrita
-    // ao painel administrativo.
+    // A escrita pública é necessária para visitantes sem login. O total
+    // só pode subir uma unidade por requisição; a leitura é administrativa.
     match /acessos_diarios/{dataId} {
       allow get, list: if ehAdmin();
-      allow create: if acessoDiarioInicialValido();
-      allow update: if acessoDiarioIncrementalValido();
+      allow create: if acessoDiarioValido()
+        && request.resource.data.total == 1
+        && request.resource.data.porHora.keys().size() == 1;
+      allow update: if acessoDiarioValido()
+        && request.resource.data.total == resource.data.total + 1;
       allow delete: if false;
 
-      function horaValida(hora) {
-        return hora in [
-          '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11',
-          '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23'
-        ];
-      }
-
-      function acessoDiarioInicialValido() {
+      function acessoDiarioValido() {
         let dados = request.resource.data;
-        let horas = dados.porHora.keys();
         return dados.keys().hasOnly(['total', 'porHora'])
-          && dados.total == 1
+          && dados.total is int
+          && dados.total > 0
           && dados.porHora is map
-          && horas.size() == 1
-          && horaValida(horas[0])
-          && dados.porHora[horas[0]] == 1;
-      }
-
-      function acessoDiarioIncrementalValido() {
-        let novo = request.resource.data;
-        let anterior = resource.data;
-        let alteracoesHora = novo.porHora.diff(anterior.porHora).affectedKeys();
-        return novo.keys().hasOnly(['total', 'porHora'])
-          && novo.total == anterior.total + 1
-          && novo.porHora is map
-          && novo.porHora.keys().hasOnly([
+          && dados.porHora.keys().hasOnly([
             '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11',
             '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23'
-          ])
-          && alteracoesHora.size() == 1
-          && horaValida(alteracoesHora[0])
-          && novo.porHora.get(alteracoesHora[0], 0)
-             == anterior.porHora.get(alteracoesHora[0], 0) + 1;
+          ]);
       }
     }
-
     // ============================================================
     // PADRÃO: qualquer coisa fora do mapeado acima é NEGADA
     // ============================================================
