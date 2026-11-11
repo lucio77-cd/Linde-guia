@@ -211,16 +211,7 @@ service cloud.firestore {
       allow create, update: if ehAdmin()
         && request.resource.data.keys().hasOnly(['whatsappNumero'])
         && request.resource.data.whatsappNumero is string
-        && request.resource.data.whatsappNumero.size() <= 20
-        && (request.resource.data.whatsappNumero.size() == 0
-            || request.resource.data.whatsappNumero.matches('^[0-9]+
-    // ============================================================
-    match /{document=**} {
-      allow read, write: if false;
-    }
-  }
-}
-));
+        && request.resource.data.whatsappNumero.size() <= 20;
       allow list, delete: if false;
     }
 
