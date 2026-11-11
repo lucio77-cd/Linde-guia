@@ -21,7 +21,7 @@ const RESPONSE_SCHEMA = {
     idsEscolhidos: {
       type: "ARRAY",
       items: { type: "STRING" },
-      description: "ids dos POIs escolhidos, na ordem sugerida de visita",
+      description: "ids dos POIs e eventos escolhidos, na ordem sugerida de visita",
     },
     explicacao: {
       type: "STRING",
