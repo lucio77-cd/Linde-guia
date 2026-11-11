@@ -592,8 +592,10 @@ function horarioDentroDaJanela(horario, abre, fecha) {
 }
 
 function dataEstaNoIntervalo(data, inicio, fim) {
-  const d = new Date(data).getTime();
-  return d >= new Date(inicio).getTime() && d <= new Date(fim).getTime();
+  const referencia = new Date(data).getTime();
+  const inicioMs = inicio ? new Date(inicio).getTime() : -Infinity;
+  const fimMs = fim ? new Date(fim).getTime() : Infinity;
+  return Number.isFinite(referencia) && referencia >= inicioMs && referencia <= fimMs;
 }
 
 // ============================================================
