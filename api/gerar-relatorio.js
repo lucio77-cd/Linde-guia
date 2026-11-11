@@ -13,10 +13,25 @@
 
 const MODELO = "gemini-2.5-flash";
 const TIMEOUT_SERVIDOR_MS = 12000;
+// API key do Firebase é pública (também usada pelo cliente); necessária
+// apenas para validar o ID token no endpoint oficial de Authentication.
+const FIREBASE_API_KEY = "AIzaSyCg6wbwHsvxPDPI0VnBIR30d6aVzhYB49Q";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(405).json({ erro: "Método não permitido" });
+    return;
+  }
+
+  const token = obterToken(req);
+  if (!token) {
+    res.status(401).json({ erro: "Autenticação administrativa necessária" });
+    return;
+  }
+
+  const autorizado = await validarAdministrador(token);
+  if (!autorizado) {
+    res.status(403).json({ erro: "Usuário sem autorização administrativa" });
     return;
   }
 
@@ -27,8 +42,10 @@ export default async function handler(req, res) {
   }
 
   const { resumo } = req.body || {};
-  if (!resumo || typeof resumo !== "object") {
-    res.status(400).json({ erro: "Resumo de estatísticas é obrigatório" });
+  if (!resumo || typeof resumo !== "object" || Array.isArray(resumo)
+      || Object.keys(resumo).length > 20
+      || JSON.stringify(resumo).length > 20000) {
+    res.status(400).json({ erro: "Resumo de estatísticas inválido ou muito grande" });
     return;
   }
 
@@ -105,4 +122,39 @@ acessam por dia, qual interesse é mais pedido)
 Seja direto e concreto. Não invente números que não estão nos dados
 fornecidos. Se algum dado estiver zerado ou faltando, mencione isso como
 "ainda sem dado suficiente" em vez de inventar uma conclusão.`;
+}
+
+function obterToken(req) {
+  const cabecalho = req.headers.authorization || "";
+  const correspondencia = cabecalho.match(/^Bearer\\s+(.+)$/i);
+  return correspondencia ? correspondencia[1].trim() : null;
+}
+
+async function validarAdministrador(token) {
+  try {
+    const verificacao = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${FIREBASE_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ idToken: token }),
+      }
+    );
+    if (!verificacao.ok) return false;
+
+    const identidade = await verificacao.json();
+    const uid = identidade.users?.[0]?.localId;
+    if (!uid) return false;
+
+    // A leitura usa o próprio ID token e, portanto, respeita as regras
+    // Firestore. Só um UID existente em usuarios_admin consegue ler o doc.
+    const respostaDoc = await fetch(
+      `https://firestore.googleapis.com/v1/projects/linde-guia/databases/(default)/documents/usuarios_admin/${encodeURIComponent(uid)}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return respostaDoc.ok;
+  } catch (erro) {
+    console.error("[gerar-relatorio] Falha ao validar administrador:", erro);
+    return false;
+  }
 }
