@@ -29,6 +29,7 @@ import {
   onAuthStateChanged,
   signOut,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // TODO: trocar pelo e-mail real criado no passo 2 do setup acima.
 const EMAIL_ADMIN = "admin@linde-guia.app";
