@@ -23,7 +23,7 @@
  * Se precisar trocar a senha depois, isso é feito direto no Firebase
  * Console (Authentication > Users), sem precisar editar código.
  */
-import { auth } from "../core/firebase-config.js";
+import { auth, db } from "../core/firebase-config.js";
 import {
   signInWithEmailAndPassword,
   onAuthStateChanged,
@@ -43,9 +43,25 @@ function iniciarAuth() {
   // existe uma sessão válida (login anterior, ainda não expirado), libera
   // direto sem pedir senha de novo. Se não tem sessão, fica na tela de
   // senha até o submit abaixo logar com sucesso.
-  onAuthStateChanged(auth, (usuario) => {
-    if (usuario) {
+  onAuthStateChanged(auth, async (usuario) => {
+    if (!usuario) return;
+
+    try {
+      // A interface só é liberada quando o UID também está cadastrado
+      // em usuarios_admin — a mesma fonte de autorização das regras.
+      const cadastroAdmin = await getDoc(doc(db, "usuarios_admin", usuario.uid));
+      if (!cadastroAdmin.exists()) {
+        erroEl.textContent = "Esta conta não está autorizada como administradora.";
+        erroEl.hidden = false;
+        await signOut(auth);
+        return;
+      }
       liberarAcesso();
+    } catch (erro) {
+      console.error("[admin-auth] Não foi possível validar a autorização:", erro);
+      erroEl.textContent = "Não foi possível validar seu acesso. Tente novamente.";
+      erroEl.hidden = false;
+      await signOut(auth);
     }
   });
 
