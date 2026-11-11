@@ -11,15 +11,15 @@
  * (padrão-default do projeto). Se o projeto usar múltiplos apps Firebase
  * nomeados (pouco comum), ajusta a chamada de getApp() aqui.
  *
- * IMPORTANTE: ajusta o número de versão do SDK abaixo (10.7.0) pra bater
+ * IMPORTANTE: ajusta o número de versão do SDK abaixo (10.12.2) pra bater
  * com a mesma versão que firebase-config.js já importa, se for diferente
  * — misturar versões do SDK do Firebase costuma funcionar, mas não é
  * garantido.
  */
-import { getApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+import { getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getStorage, ref, uploadBytes, getDownloadURL,
-} from "https://www.gstatic.com/firebasejs/10.7.0/firebase-storage.js";
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 const TAMANHO_MAXIMO_MB = 5;
 const TIPOS_ACEITOS = ["image/jpeg", "image/png", "image/webp"];

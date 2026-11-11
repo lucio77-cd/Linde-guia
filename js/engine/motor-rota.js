@@ -139,9 +139,10 @@ function obterCandidatosViaveis(pois, eventos, perfilBusca) {
 // real. Devolve `idsDescartados`: ids escolhidos que não entraram, pra
 // quem chamou poder avisar o usuário em vez de a rota encolher sem
 // explicação.
-function gerarCapituloDeFavoritos(pois, perfilBusca, idsSelecionados) {
+function gerarCapituloDeFavoritos(pois, perfilBusca, idsSelecionados, eventos = []) {
   const idsUnicos = [...new Set(idsSelecionados || [])];
-  const mapaPois = new Map(pois.map((poi) => [poi.id, poi]));
+  const candidatos = injetarEventosAtivos(pois, eventos, perfilBusca.data);
+  const mapaPois = new Map(candidatos.map((poi) => [poi.id, poi]));
   const idsExcluidos = new Set(perfilBusca.idsExcluidos || []);
 
   const idsDescartados = [];
@@ -591,8 +592,10 @@ function horarioDentroDaJanela(horario, abre, fecha) {
 }
 
 function dataEstaNoIntervalo(data, inicio, fim) {
-  const d = new Date(data).getTime();
-  return d >= new Date(inicio).getTime() && d <= new Date(fim).getTime();
+  const referencia = new Date(data).getTime();
+  const inicioMs = inicio ? new Date(inicio).getTime() : -Infinity;
+  const fimMs = fim ? new Date(fim).getTime() : Infinity;
+  return Number.isFinite(referencia) && referencia >= inicioMs && referencia <= fimMs;
 }
 
 // ============================================================

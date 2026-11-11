@@ -34,8 +34,10 @@ export default async function handler(req, res) {
 
   const { origem, paradas } = req.body || {};
 
-  if (!origem || !Array.isArray(paradas) || paradas.length === 0) {
-    res.status(400).json({ erro: "origem e paradas são obrigatórios" });
+  if (!origem || !Number.isFinite(origem.lat) || !Number.isFinite(origem.lng)
+      || origem.lat < -90 || origem.lat > 90 || origem.lng < -180 || origem.lng > 180
+      || !Array.isArray(paradas) || paradas.length === 0 || paradas.length > 4) {
+    res.status(400).json({ erro: "Origem ou quantidade de paradas inválida" });
     return;
   }
 
@@ -43,7 +45,7 @@ export default async function handler(req, res) {
   // trechos devolvidos batem 1-a-1 com a ordem das paradas — melhor
   // recusar o lote inteiro e deixar o motor usar a estimativa.
   const todasComCoordenada = paradas.every(
-    (p) => p && typeof p.lat === "number" && typeof p.lng === "number"
+    (p) => p && Number.isFinite(p.lat) && Number.isFinite(p.lng) && p.lat >= -90 && p.lat <= 90 && p.lng >= -180 && p.lng <= 180
   );
   if (!todasComCoordenada) {
     res.status(200).json({ deslocamentosMin: null, polyline: null });

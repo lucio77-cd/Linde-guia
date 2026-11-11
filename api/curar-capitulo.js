@@ -21,7 +21,7 @@ const RESPONSE_SCHEMA = {
     idsEscolhidos: {
       type: "ARRAY",
       items: { type: "STRING" },
-      description: "ids dos POIs escolhidos, na ordem sugerida de visita",
+      description: "ids dos POIs e eventos escolhidos, na ordem sugerida de visita",
     },
     explicacao: {
       type: "STRING",
@@ -49,13 +49,19 @@ export default async function handler(req, res) {
 
   const { candidatos, perfilBusca, historico, maxParadas } = req.body || {};
 
-  if (!Array.isArray(candidatos) || candidatos.length === 0) {
-    res.status(400).json({ erro: "Lista de candidatos vazia ou inválida" });
+  if (!Array.isArray(candidatos) || candidatos.length === 0 || candidatos.length > 50
+      || !perfilBusca || typeof perfilBusca !== "object"
+      || candidatos.some((c) => !c || typeof c.id !== "string" || typeof c.nome !== "string")
+      || JSON.stringify(req.body).length > 40000) {
+    res.status(400).json({ erro: "Dados de curadoria inválidos ou acima do limite" });
     return;
   }
 
+  const limiteParadas = Number.isInteger(maxParadas)
+    ? Math.min(Math.max(maxParadas, 1), 4)
+    : 4;
   const idsValidos = new Set(candidatos.map((c) => c.id));
-  const prompt = montarPrompt(candidatos, perfilBusca, historico, maxParadas || 4);
+  const prompt = montarPrompt(candidatos, perfilBusca, historico, limiteParadas);
 
   const controlador = new AbortController();
   const timeoutId = setTimeout(() => controlador.abort(), TIMEOUT_SERVIDOR_MS);

@@ -30,6 +30,13 @@ function lerSelos() {
   }
 }
 
+function formatarDataLocal(data) {
+  const ano = data.getFullYear();
+  const mes = String(data.getMonth() + 1).padStart(2, "0");
+  const dia = String(data.getDate()).padStart(2, "0");
+  return `${ano}-${mes}-${dia}`;
+}
+
 function salvarSeloLocal(poi) {
   if (!poi || !poi.nome) return;
 
@@ -38,9 +45,9 @@ function salvarSeloLocal(poi) {
 
     // Evita duplicar o mesmo local no mesmo dia (várias "Cheguei" na mesma
     // parada não devem virar vários selos iguais na coleção do visitante)
-    const hoje = new Date().toISOString().slice(0, 10);
+    const hoje = formatarDataLocal(new Date());
     const jaTemHoje = selos.some(
-      (s) => s.poiId === poi.id && s.data?.slice(0, 10) === hoje
+      (s) => s.poiId === poi.id && s.data && formatarDataLocal(new Date(s.data)) === hoje
     );
     if (jaTemHoje) return;
 
