@@ -195,8 +195,15 @@ function criarParadaCard(parada, indice) {
 
   const link = document.createElement("a");
   link.className = "parada-card__link";
-  link.href = `ponto.html?id=${parada.id}`;
-  link.textContent = "Ver detalhes";
+  const ehEvento = typeof parada.id === "string" && parada.id.startsWith("evento-");
+  if (ehEvento) {
+    const eventoId = parada.id.slice("evento-".length);
+    link.href = `eventos.html?id=${encodeURIComponent(eventoId)}`;
+    link.textContent = "Ver evento";
+  } else {
+    link.href = `ponto.html?id=${encodeURIComponent(parada.id)}`;
+    link.textContent = "Ver detalhes";
+  }
   link.style.cssText = "display:inline-block; margin-top:0.375rem; font-size:0.8125rem; font-weight:600; color:var(--borde);";
 
   corpo.append(horario, nome, detalhes, link);
