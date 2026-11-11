@@ -30,7 +30,7 @@ const COLECAO_ACESSOS = "acessos_diarios";
 async function registrarAcesso() {
   try {
     const agora = new Date();
-    const dataChave = agora.toISOString().slice(0, 10); // AAAA-MM-DD
+    const dataChave = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, "0")}-${String(agora.getDate()).padStart(2, "0")}`; // data local AAAA-MM-DD
     const hora = String(agora.getHours());
 
     const ref = doc(db, COLECAO_ACESSOS, dataChave);
