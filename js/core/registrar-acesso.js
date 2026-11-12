@@ -30,7 +30,13 @@ const COLECAO_ACESSOS = "acessos_diarios";
 async function registrarAcesso() {
   try {
     const agora = new Date();
-    const dataChave = agora.toISOString().slice(0, 10); // AAAA-MM-DD
+    // Dia no horário LOCAL (a hora abaixo também é local). toISOString()
+    // usa UTC e, depois das 21h em Brasília, jogava o acesso no dia seguinte.
+    const dataChave = [
+      agora.getFullYear(),
+      String(agora.getMonth() + 1).padStart(2, "0"),
+      String(agora.getDate()).padStart(2, "0"),
+    ].join("-"); // AAAA-MM-DD
     const hora = String(agora.getHours());
 
     const ref = doc(db, COLECAO_ACESSOS, dataChave);

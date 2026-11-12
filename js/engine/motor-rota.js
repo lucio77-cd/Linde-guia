@@ -97,7 +97,7 @@ function gerarCapitulo(pois, eventos, perfilBusca) {
     return capituloVazio(perfilBusca);
   }
 
-  const refeicaoFronteira = proximaRefeicaoFronteira(perfilBusca.refeicoesDesejadas);
+  const refeicaoFronteira = proximaRefeicaoFronteira(perfilBusca.refeicoesDesejadas, perfilBusca.horarioInicio);
 
   const idsReservados = new Set();
   const experienciasGastronomicas = escolherExperienciasGastronomicasGarantidas(
@@ -194,11 +194,24 @@ function aplicarDeslocamentosReais(paradas, deslocamentosReaisMin, perfilBusca) 
   return montarResultadoCapitulo(paradasFinais, perfilBusca);
 }
 
-function proximaRefeicaoFronteira(refeicoesDesejadas) {
+// Primeira refeição desejada cuja janela AINDA não terminou no horário de
+// partida. Refeição com janela já vencida não pode ser a "fronteira": antes
+// ela travava a escolha e nenhuma refeição seguinte recebia slot garantido.
+function proximaRefeicaoFronteira(refeicoesDesejadas, horarioInicio) {
   if (!refeicoesDesejadas || refeicoesDesejadas.length === 0) return null;
-  return [...refeicoesDesejadas].sort(
-    (a, b) => REFEICAO_JANELAS[a].inicio.localeCompare(REFEICAO_JANELAS[b].inicio)
-  )[0];
+  const ordenadas = [...refeicoesDesejadas]
+    .filter((r) => REFEICAO_JANELAS[r])
+    .sort((a, b) => REFEICAO_JANELAS[a].inicio.localeCompare(REFEICAO_JANELAS[b].inicio));
+  if (horarioInicio === undefined) return ordenadas[0] || null;
+  return ordenadas.find((r) => !janelaDeRefeicaoJaPassou(r, horarioInicio)) || null;
+}
+
+function janelaDeRefeicaoJaPassou(refeicao, horario) {
+  const janela = REFEICAO_JANELAS[refeicao];
+  if (!janela) return false;
+  const h = new Date(horario);
+  const [fimH, fimM] = janela.fim.split(":").map(Number);
+  return h.getHours() * 60 + h.getMinutes() > fimH * 60 + fimM;
 }
 
 // ============================================================
@@ -207,9 +220,9 @@ function proximaRefeicaoFronteira(refeicoesDesejadas) {
 function recalcularRota(rotaAtual, paradaAtualIndex, acao, horarioAtual, posicaoAtual) {
   const paradasRestantes = rotaAtual.paradas.slice(paradaAtualIndex + 1);
 
-  if (acao === "pular") {
-    paradasRestantes.shift();
-  }
+  // "pular" não precisa remover nada aqui: slice(paradaAtualIndex + 1) já
+  // deixou a parada atual (a pulada) de fora das restantes. Um shift()
+  // extra descartava, sem aviso, a PRÓXIMA parada do roteiro.
 
   if (paradasRestantes.length === 0) {
     return { ...rotaAtual, paradas: rotaAtual.paradas.slice(0, paradaAtualIndex + 1), finalizada: true };
@@ -436,8 +449,13 @@ function montarResultadoCapitulo(paradasFinais, perfilBusca) {
     }
   }
 
-  const refeicoesRestantes = (perfilBusca.refeicoesDesejadas || []).filter((r) => !refeicoesAtendidas.has(r));
   const ultimaParada = paradasFinais[paradasFinais.length - 1];
+  const horarioDeCorte = ultimaParada ? ultimaParada.horarioSaida : perfilBusca.horarioInicio;
+  // Refeição que não foi atendida E cuja janela já acabou não volta como
+  // "pendente" pro próximo capítulo — senão ela ficava pra sempre na lista.
+  const refeicoesRestantes = (perfilBusca.refeicoesDesejadas || []).filter(
+    (r) => !refeicoesAtendidas.has(r) && !janelaDeRefeicaoJaPassou(r, horarioDeCorte)
+  );
 
   return {
     paradas: paradasFinais,
@@ -533,9 +551,9 @@ function calcularHorariosReais(paradas, horarioInicio) {
   let horarioCursor = new Date(horarioInicio);
 
   return paradas.map((parada) => {
-    horarioCursor = adicionarMinutos(horarioCursor, parada.deslocamentoMin);
+    horarioCursor = adicionarMinutos(horarioCursor, Number(parada.deslocamentoMin) || 0);
     const chegada = new Date(horarioCursor);
-    horarioCursor = adicionarMinutos(horarioCursor, parada.duracaoMediaVisitaMin);
+    horarioCursor = adicionarMinutos(horarioCursor, Number(parada.duracaoMediaVisitaMin) || 30);
     const saida = new Date(horarioCursor);
 
     return { ...parada, horarioChegada: chegada, horarioSaida: saida };
@@ -581,12 +599,20 @@ function obterDiaSemana(data) {
 }
 
 function horarioDentroDaJanela(horario, abre, fecha) {
+  // POI com dia aberto mas sem "abre"/"fecha" preenchidos: trata como
+  // aberto o dia todo (igual a POI sem horarioFuncionamento), em vez de
+  // lançar TypeError e derrubar a geração do roteiro inteiro.
+  if (typeof abre !== "string" || typeof fecha !== "string") return true;
   const h = new Date(horario);
   const minutosAtuais = h.getHours() * 60 + h.getMinutes();
   const [abreH, abreM] = abre.split(":").map(Number);
   const [fechaH, fechaM] = fecha.split(":").map(Number);
   const minutosAbre = abreH * 60 + abreM;
   const minutosFecha = fechaH * 60 + fechaM;
+  // Janela que vira a meia-noite (ex: 18:00–02:00).
+  if (minutosFecha < minutosAbre) {
+    return minutosAtuais >= minutosAbre || minutosAtuais <= minutosFecha;
+  }
   return minutosAtuais >= minutosAbre && minutosAtuais <= minutosFecha;
 }
 

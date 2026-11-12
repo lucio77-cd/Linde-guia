@@ -1,0 +1,12 @@
+# Chave de serviço do Firebase Admin (usada por data/importar-seed.mjs).
+# NUNCA commitar — dá acesso total ao banco.
+service-account-key.json
+**/service-account-key.json
+*-firebase-adminsdk-*.json
+
+# Ambiente local
+.env
+.env.*
+.vercel
+node_modules/
+.DS_Store

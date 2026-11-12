@@ -189,13 +189,13 @@ function criarParadaCard(parada, indice) {
   const detalhes = document.createElement("div");
   detalhes.className = "parada-card__detalhes";
   detalhes.innerHTML = `
-    <span>${parada.duracaoMediaVisitaMin} min de visita</span>
-    <span>${parada.precoEstimado > 0 ? "R$" + parada.precoEstimado : "Grátis"}</span>
+    <span>${Number(parada.duracaoMediaVisitaMin) || 30} min de visita</span>
+    <span>${parada.precoEstimado > 0 ? "R$" + Number(parada.precoEstimado) : "Grátis"}</span>
   `;
 
   const link = document.createElement("a");
   link.className = "parada-card__link";
-  link.href = `ponto.html?id=${parada.id}`;
+  link.href = `ponto.html?id=${encodeURIComponent(parada.id)}`;
   link.textContent = "Ver detalhes";
   link.style.cssText = "display:inline-block; margin-top:0.375rem; font-size:0.8125rem; font-weight:600; color:var(--borde);";
 

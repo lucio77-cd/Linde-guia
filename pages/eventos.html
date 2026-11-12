@@ -138,6 +138,9 @@
   <script type="module" src="../js/core/firebase-config.js"></script>
   <script type="module" src="../js/pages/eventos.js"></script>
 
-  <script type="module" src="../js/core/banner-patrocinado.js"></script>
+  <script type="module">
+    import { iniciarBannerPatrocinado } from "../js/core/banner-patrocinado.js";
+    iniciarBannerPatrocinado("ponto.html?id=");
+  </script>
 </body>
 </html>

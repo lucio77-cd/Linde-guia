@@ -273,6 +273,9 @@
   <script type="module" src="../js/pages/render-rota.js"></script>
   <script type="module" src="../js/pages/modo-em-rota.js"></script>
 
-  <script type="module" src="../js/core/banner-patrocinado.js"></script>
+  <script type="module">
+    import { iniciarBannerPatrocinado } from "../js/core/banner-patrocinado.js";
+    iniciarBannerPatrocinado("ponto.html?id=");
+  </script>
 </body>
 </html>

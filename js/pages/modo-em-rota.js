@@ -50,9 +50,13 @@ document.addEventListener("DOMContentLoaded", iniciarModoEmRota);
 // ============================================================
 // AVANÇAR NO ROTEIRO ("Cheguei" ou "Pular essa parada")
 // ============================================================
+let avancandoRota = false; // trava contra duplo clique enquanto o GPS responde (até ~5 s)
+
 function avancarRota(acao) {
+  if (avancandoRota) return;
   const rota = lerRotaDoStorage();
   if (!rota) return;
+  avancandoRota = true;
 
   const indiceAtual = obterIndiceAtual();
   const paradaAtual = rota.paradas[indiceAtual];
@@ -85,6 +89,9 @@ function avancarRota(acao) {
     .catch((erro) => {
       console.error("[modo-em-rota] Erro ao recalcular rota:", erro);
       mostrarAvisoRecalculo("Não conseguimos recalcular agora. Tenta de novo em um instante.");
+    })
+    .finally(() => {
+      avancandoRota = false;
     });
 }
 
@@ -266,7 +273,7 @@ function desenharParadaAtual(rota, indice) {
     <h2 class="card-parada-atual__nome">${escaparHtml(parada.nome)}</h2>
     <div class="card-parada-atual__info">
       <span>Chegada prevista: ${formatarHorarioLocal(parada.horarioChegada)}</span>
-      <span>${parada.duracaoMediaVisitaMin} min de visita</span>
+      <span>${Number(parada.duracaoMediaVisitaMin) || 30} min de visita</span>
     </div>
     <div class="card-parada-atual__navegacao">
       <a class="botao botao--secundario"
@@ -280,7 +287,7 @@ function desenharParadaAtual(rota, indice) {
         Navegar (Waze)
       </a>
       <a class="botao botao--secundario"
-         href="ponto.html?id=${parada.id}">
+         href="ponto.html?id=${encodeURIComponent(parada.id)}">
         Ver detalhes
       </a>
     </div>
