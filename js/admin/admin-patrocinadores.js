@@ -108,7 +108,7 @@ function criarCardPatrocinador(p) {
   const periodo = formatarPeriodo(p);
   const destinoLabel = descreverDestino(p);
   const seloNivel = p.nivel
-    ? `<span class="selo-patrocinio selo-patrocinio--${p.nivel}">${LABEL_NIVEL[p.nivel]}</span>`
+    ? `<span class="selo-patrocinio selo-patrocinio--${escaparHtml(p.nivel)}">${escaparHtml(LABEL_NIVEL[p.nivel] || p.nivel)}</span>`
     : "";
 
   card.innerHTML = `
@@ -118,7 +118,7 @@ function criarCardPatrocinador(p) {
         ${p.ativo ? "Ativo" : "Inativo"}
       </span>
     </div>
-    <p class="local-admin-card__detalhe">${periodo} · ${destinoLabel}</p>
+    <p class="local-admin-card__detalhe">${escaparHtml(periodo)} · ${escaparHtml(destinoLabel)}</p>
     ${seloNivel}
   `;
 

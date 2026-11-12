@@ -11,9 +11,15 @@
  * existe em todo lugar que injeta HTML, não só onde alguém lembrou de pôr.
  */
 function escaparHtml(texto) {
-  const div = document.createElement("div");
-  div.textContent = texto || "";
-  return div.innerHTML;
+  // Escapa também aspas, pra ser seguro dentro de atributos (class="...",
+  // href="...") e não só em conteúdo de tag. Preserva o número 0.
+  if (texto === null || texto === undefined) return "";
+  return String(texto)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 export { escaparHtml };

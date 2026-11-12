@@ -11,14 +11,20 @@
 // Usa a MESMA GEMINI_API_KEY já configurada na Vercel (Generative Language
 // API) pro curador de rota.
 
+import { exigirAdmin } from "./_auth-admin.js";
+
 const MODELO = "gemini-2.5-flash";
 const TIMEOUT_SERVIDOR_MS = 12000;
+const LIMITE_RESUMO_CARACTERES = 20000;
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(405).json({ erro: "Método não permitido" });
     return;
   }
+
+  // Recurso do painel admin: sem login de admin, não gasta cota da IA.
+  if (!(await exigirAdmin(req, res))) return;
 
   if (!process.env.GEMINI_API_KEY) {
     console.error("[gerar-relatorio] GEMINI_API_KEY não configurada na Vercel.");
@@ -29,6 +35,11 @@ export default async function handler(req, res) {
   const { resumo } = req.body || {};
   if (!resumo || typeof resumo !== "object") {
     res.status(400).json({ erro: "Resumo de estatísticas é obrigatório" });
+    return;
+  }
+
+  if (JSON.stringify(resumo).length > LIMITE_RESUMO_CARACTERES) {
+    res.status(413).json({ erro: "Resumo grande demais" });
     return;
   }
 
@@ -47,7 +58,7 @@ export default async function handler(req, res) {
         },
         body: JSON.stringify({
           contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 1536 },
+          generationConfig: { maxOutputTokens: 1536, thinkingConfig: { thinkingBudget: 0 } },
         }),
         signal: controlador.signal,
       }

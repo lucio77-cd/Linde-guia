@@ -11,6 +11,8 @@
 // Tílias — quem chama decide se avisa o admin ou não, mas a medição já
 // vem pronta daqui, pra não duplicar essa conta em vários lugares.
 
+import { exigirAdmin } from "./_auth-admin.js";
+
 const CENTRO_TREZE_TILIAS = { lat: -27.0026, lng: -51.4084 };
 const TIMEOUT_SERVIDOR_MS = 6000;
 
@@ -20,6 +22,9 @@ export default async function handler(req, res) {
     return;
   }
 
+  // Recurso do painel admin: sem login de admin, não gasta cota do Google.
+  if (!(await exigirAdmin(req, res))) return;
+
   if (!process.env.GOOGLE_MAPS_API_KEY) {
     console.error("[geocodificar] GOOGLE_MAPS_API_KEY não configurada na Vercel.");
     res.status(200).json({ encontrado: false, motivo: "erro_configuracao", detalheStatus: "CHAVE_AUSENTE" });
@@ -27,7 +32,7 @@ export default async function handler(req, res) {
   }
 
   const { endereco } = req.body || {};
-  if (!endereco || !endereco.trim()) {
+  if (typeof endereco !== "string" || !endereco.trim() || endereco.length > 200) {
     res.status(400).json({ erro: "Endereço é obrigatório" });
     return;
   }

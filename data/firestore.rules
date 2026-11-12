@@ -113,12 +113,54 @@ service cloud.firestore {
       // Nomes em camelCase — mesmo padrão que admin-locais.js já usa pra
       // "pois", pra não repetir o bug antigo de checar snake_case contra
       // dado que o app sempre escreve em camelCase.
+      // O app grava "imagemBannerUrl" (nome atual) e, conforme o tipo de
+      // destino, "linkDestino" pode ser null (destino = local ou WhatsApp).
+      // "imagemUrl" é aceito só por compatibilidade com docs antigos.
       function patrocinadorTemCamposValidos() {
         let dados = request.resource.data;
         return dados.nome is string && dados.nome.size() > 0
-          && dados.imagemUrl is string
-          && dados.linkDestino is string
+          && (!('imagemBannerUrl' in dados) || dados.imagemBannerUrl is string)
+          && (!('imagemUrl' in dados) || dados.imagemUrl is string)
+          && (!('linkDestino' in dados) || dados.linkDestino == null
+              || (dados.linkDestino is string && dados.linkDestino.matches('^https?://.*')))
           && dados.ativo is bool;
+      }
+    }
+
+    // ============================================================
+    // CONFIGURACOES — documento único "configuracoes/geral" (número do
+    // WhatsApp usado no botão flutuante e nos banners "Anuncie aqui").
+    // Leitura pública (o turista precisa do número), escrita só admin.
+    // ============================================================
+    match /configuracoes/{docId} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if ehAdmin()
+        && request.resource.data.keys().hasOnly(['whatsappNumero'])
+        && request.resource.data.whatsappNumero is string
+        && request.resource.data.whatsappNumero.matches('^[0-9]{0,15}$');
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // ACESSOS_DIARIOS — contador anônimo de visitas (registrar-acesso.js).
+    // Doc ID = AAAA-MM-DD. O cliente só pode somar +1 por escrita, então
+    // não dá pra inflar o número de uma vez nem gravar lixo.
+    // Leitura só admin (painel de estatísticas).
+    // ============================================================
+    match /acessos_diarios/{dia} {
+      allow get, list: if ehAdmin();
+      allow create: if dia.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && acessoValido() && request.resource.data.total == 1;
+      allow update: if acessoValido()
+        && request.resource.data.total == resource.data.total + 1;
+      allow delete: if false;
+
+      function acessoValido() {
+        let dados = request.resource.data;
+        return dados.keys().hasOnly(['total', 'porHora'])
+          && dados.total is int
+          && dados.porHora is map;
       }
     }
 
@@ -176,10 +218,21 @@ service cloud.firestore {
       allow get, list: if ehAdmin();
       allow update, delete: if false;
 
+      // Só os campos que registro-data.js realmente grava, com tamanho
+      // limitado, e criadoEm sempre igual ao horário do servidor.
       function registroRotaTemCamposValidos() {
         let dados = request.resource.data;
-        return dados.criadoEm is timestamp
-          && (!('tipoEvento' in dados) || dados.tipoEvento in ['criacao', 'finalizacao']);
+        return dados.keys().hasOnly([
+            'criadoEm', 'tipoEvento', 'horarioInicioEscolhido',
+            'refeicoesDesejadas', 'interesses', 'quantidadeParadas',
+            'paradasNomes', 'capituloVazio',
+            'quantidadeParadasTotal', 'quantidadeParadasVisitadas'
+          ])
+          && dados.criadoEm == request.time
+          && (!('tipoEvento' in dados) || dados.tipoEvento in ['criacao', 'finalizacao'])
+          && (!('paradasNomes' in dados) || (dados.paradasNomes is list && dados.paradasNomes.size() <= 12))
+          && (!('interesses' in dados) || (dados.interesses is list && dados.interesses.size() <= 20))
+          && (!('refeicoesDesejadas' in dados) || (dados.refeicoesDesejadas is list && dados.refeicoesDesejadas.size() <= 8));
       }
     }
 
@@ -193,13 +246,18 @@ service cloud.firestore {
       allow get, list: if ehAdmin();
       allow update, delete: if false;
 
-      // poiNome é tratado como opcional pelo próprio painel
-      // (admin-estatisticas.js cai para "Desconhecido" se ausente), então
-      // a regra não exige o campo — só valida o tipo quando ele existe.
+      // Só os campos que registro-data.js grava, com tipo e tamanho
+      // validados (o painel admin imprime esses valores, então nunca
+      // aceitar texto arbitrário e longo vindo de fora).
       function checkinTemCamposValidos() {
         let dados = request.resource.data;
-        return dados.checkinEm is timestamp
-          && (!('poiNome' in dados) || dados.poiNome is string);
+        return dados.keys().hasOnly(['poiId', 'poiNome', 'poiCategoria', 'checkinEm', 'origemDeteccao'])
+          && dados.checkinEm == request.time
+          && (!('poiNome' in dados) || (dados.poiNome is string && dados.poiNome.size() <= 200))
+          && (!('poiId' in dados) || dados.poiId == null || (dados.poiId is string && dados.poiId.size() <= 100))
+          && (!('poiCategoria' in dados) || dados.poiCategoria == null
+              || (dados.poiCategoria is string && dados.poiCategoria.size() <= 50))
+          && (!('origemDeteccao' in dados) || dados.origemDeteccao in ['gps', 'manual']);
       }
     }
 

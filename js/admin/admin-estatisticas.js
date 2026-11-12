@@ -20,7 +20,8 @@
  * js/core/selos-local.js). Não duplicamos rastreamento pra isso, só
  * deixamos o rótulo do gráfico explícito sobre a equivalência.
  */
-import { db } from "../core/firebase-config.js";
+import { db, auth } from "../core/firebase-config.js";
+import { escaparHtml } from "../core/html-utils.js";
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const LABEL_REFEICAO = { cafeDaManha: "Café da manhã", almoco: "Almoço", tarde: "Lanche da tarde", janta: "Janta" };
@@ -243,7 +244,7 @@ function desenharTabelaCheckins(checkins) {
   tbody.innerHTML = "";
   [...checkins].filter(c=>c.checkinEm).sort((a,b)=>b.checkinEm-a.checkinEm).slice(0,30).forEach(c=>{
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${c.poiNome||"—"}</td><td>${c.poiCategoria||"—"}</td><td>${diaExibicao(diaChave(c.checkinEm))}</td><td>${String(c.checkinEm.getHours()).padStart(2,"0")}:${String(c.checkinEm.getMinutes()).padStart(2,"0")}</td><td>${c.origemDeteccao||"—"}</td>`;
+    tr.innerHTML=`<td>${escaparHtml(c.poiNome||"—")}</td><td>${escaparHtml(c.poiCategoria||"—")}</td><td>${diaExibicao(diaChave(c.checkinEm))}</td><td>${String(c.checkinEm.getHours()).padStart(2,"0")}:${String(c.checkinEm.getMinutes()).padStart(2,"0")}</td><td>${escaparHtml(c.origemDeteccao||"—")}</td>`;
     tbody.appendChild(tr);
   });
 }
@@ -295,9 +296,14 @@ async function gerarRelatorioComIA() {
   resultadoEl.hidden = true;
 
   try {
+    // O endpoint exige login de admin: manda o ID token do Firebase.
+    const token = await auth.currentUser?.getIdToken();
     const resposta = await fetch("/api/gerar-relatorio", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify({ resumo: ultimoResumoParaIA }),
     });
 

@@ -2,20 +2,36 @@ rules_version = '2';
 
 // storage.rules — Linde Guia — Treze Tílias
 //
-// Novo: até agora o projeto não usava Firebase Storage (nenhum upload de
-// imagem existia). Regra propositalmente simples e no mesmo espírito do
-// firestore.rules que já existe: leitura pública (banners aparecem pro
-// turista sem estar logado), escrita só autenticado (mesmo login do
-// admin.html). Ajusta pra bater exatamente com a condição de admin que o
-// firestore.rules já usa, se ela for mais específica que só
-// "request.auth != null" (ex: checar um campo isAdmin custom claim).
+// Leitura pública (os banners aparecem pro turista sem login).
+// Escrita só para ADMIN: o mesmo critério do firestore.rules — existir um
+// documento em "usuarios_admin/{uid}". Antes bastava estar logado, o que
+// deixava qualquer pessoa com conta no projeto trocar banners pagos.
+//
+// Observação: a checagem entre serviços (firestore.exists) exige que o
+// Storage tenha permissão de ler o Firestore do projeto. O Firebase Console
+// oferece conceder isso automaticamente na primeira vez que a regra é
+// publicada.
 service firebase.storage {
   match /b/{bucket}/o {
+
+    function ehAdmin() {
+      return request.auth != null &&
+        firestore.exists(/databases/(default)/documents/usuarios_admin/$(request.auth.uid));
+    }
+
     match /banners-patrocinio/{arquivo} {
-      allow read: if true;
-      allow write: if request.auth != null
-                   && request.resource.size < 5 * 1024 * 1024
-                   && request.resource.contentType.matches('image/.*');
+      allow get: if true;
+      allow list: if false;
+
+      // create/update: só admin, até 5 MB, só PNG/JPEG/WebP (SVG pode
+      // carregar script, então fica de fora).
+      allow create, update: if ehAdmin()
+                            && request.resource.size < 5 * 1024 * 1024
+                            && request.resource.contentType.matches('image/(png|jpeg|webp)');
+
+      // delete separado: request.resource é nulo na exclusão, então a
+      // regra acima nunca permitia apagar banner antigo.
+      allow delete: if ehAdmin();
     }
   }
 }

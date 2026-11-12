@@ -196,6 +196,9 @@ function normalizarPoi(id, dadosFirestore) {
     // ["cafeDaManha","almoco","tarde","janta"]. Vazio/ausente = motor-rota.js
     // trata como "serve tudo" (não esconde local antigo ainda não preenchido).
     refeicoesServidas: dadosFirestore.refeicoesServidas || dadosFirestore.refeicoes_servidas || [],
+    // Patrocínio do local (carrossel/banner por nível): { nivel, ativo,
+    // imagemBannerUrl }. null = local sem patrocínio.
+    patrocinio: dadosFirestore.patrocinio || null,
   };
 }
 
@@ -231,6 +234,10 @@ function desnormalizarPoi(poi) {
     status_operacional: poi.statusOperacional,
     peso_institucional: poi.pesoInstitucional,
     prioridade_gastronomica: poi.prioridadeGastronomica,
+    // Estes dois campos são lidos em camelCase por normalizarPoi(); antes
+    // eram descartados aqui e o admin "salvava" sem erro mas perdia o dado.
+    refeicoesServidas: poi.refeicoesServidas,
+    patrocinio: poi.patrocinio,
   };
 
   // O Firestore rejeita a escrita inteira se qualquer campo vier `undefined`

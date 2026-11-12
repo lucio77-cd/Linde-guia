@@ -5,6 +5,7 @@
 import {
   buscarTodosPois, criarPoi, atualizarPoi, removerPoi,
 } from "../data/pois-data.js";
+import { escaparHtml } from "../core/html-utils.js";
 import { buscarTodosPatrocinadores } from "../data/patrocinadores-data.js";
 import { montarCaminhoBanner, extrairNumeroDoCaminho, numerosDeBannerEmUso } from "./numeracao-banners.js";
 
@@ -587,19 +588,19 @@ function renderizarListaLocais() {
       ? `<span class="local-admin-card__aviso" title="Coordenada distante do centro de Treze Tílias">⚠️ ${Math.round(distanciaDoCentro)} km do centro</span>`
       : "";
     const seloPatrocinio = poi.patrocinio?.nivel
-      ? `<span class="selo-patrocinio selo-patrocinio--${poi.patrocinio.nivel}">${LABEL_NIVEL[poi.patrocinio.nivel]}${poi.patrocinio.ativo ? "" : " (pausado)"}</span>`
+      ? `<span class="selo-patrocinio selo-patrocinio--${escaparHtml(poi.patrocinio.nivel)}">${escaparHtml(LABEL_NIVEL[poi.patrocinio.nivel] || poi.patrocinio.nivel)}${poi.patrocinio.ativo ? "" : " (pausado)"}</span>`
       : "";
 
     const card = document.createElement("div");
     card.className = "local-admin-card";
     card.innerHTML = `
       <div class="local-admin-card__topo">
-        <span class="local-admin-card__nome">${poi.nome}</span>
-        <span class="local-admin-card__status status--${status}">${formatarStatus(status)}</span>
+        <span class="local-admin-card__nome">${escaparHtml(poi.nome)}</span>
+        <span class="local-admin-card__status status--${escaparHtml(status)}">${escaparHtml(formatarStatus(status))}</span>
       </div>
       <div class="local-admin-card__rodape">
-        <span class="tag-categoria tag-categoria--${poi.categoria || 'lazer'}">${poi.categoria || '—'}</span>
-        <span class="local-admin-card__detalhe">${poi.duracaoMediaVisitaMin ?? poi.duracao_media_visita_min ?? 30} min · ${poi.precoEstimado > 0 ? 'R$' + poi.precoEstimado : 'Grátis'}</span>
+        <span class="tag-categoria tag-categoria--${escaparHtml(poi.categoria || 'lazer')}">${escaparHtml(poi.categoria || '—')}</span>
+        <span class="local-admin-card__detalhe">${Number(poi.duracaoMediaVisitaMin ?? poi.duracao_media_visita_min ?? 30) || 30} min · ${poi.precoEstimado > 0 ? 'R$' + Number(poi.precoEstimado) : 'Grátis'}</span>
         ${avisoDistancia}
         ${seloPatrocinio}
       </div>
