@@ -1,27 +1,28 @@
 // firestore.rules
-// Linde Guia — Treze Tílias
+// Linde Guia — Treze Tílias (projeto Firebase "linde-guia")
 //
-// Modelo: leitura pública dos dados turísticos (pois, eventos) — é um guia
-// pra visitantes, não precisa de login pra ver conteúdo.
-// Escrita restrita a administradores (Secretaria de Turismo / ASTURTILIAS),
-// que usam o painel admin/admin.html.
-// Dados de usuário (perfil, rotas salvas) só o próprio dono acessa.
+// ⚠️ Estas regras são SÓ do Linde Guia. Cada app (Linde Guia, Los Pombitos,
+// FayDai, etc.) tem o seu próprio projeto Firebase e as suas próprias
+// regras — nunca cole as regras de um app no projeto de outro: tudo que
+// não estiver listado aqui é NEGADO, então o app inteiro "some".
 //
-// IMPORTANTE: este arquivo precisa de uma coleção "usuarios_admin" no
-// Firestore, com um documento por admin autorizado (doc ID = uid do Firebase
-// Auth daquele admin). Sem isso, ninguém consegue escrever em "pois"/"eventos".
-// Crie esse documento manualmente no Console depois que o primeiro admin
-// fizer login pela primeira vez.
+// MODELO
+//   • Turista NÃO faz login. Os favoritos, selos e rotas salvas ficam no
+//     aparelho (localStorage) e não passam pelo Firestore.
+//   • Conteúdo turístico (pois, eventos, patrocinadores, configuracoes):
+//     leitura pública; escrita só administrador.
+//   • Analytics anônimo (acessos_diarios, rotas_criadas, checkins): o
+//     turista só pode CRIAR registros no formato exato que o app grava;
+//     só o administrador lê.
+//   • Administrador = existe um documento em "usuarios_admin/{uid}" com o
+//     UID da conta do Firebase Auth (e-mail/senha) usada no painel /admin.
+//     Esse documento é criado manualmente no Console do Firebase.
 //
-// RESOLVIDO (era uma pendencia conhecida): admin-auth.js agora loga de
-// verdade no Firebase Auth (signInWithEmailAndPassword, uma unica conta
-// e-mail/senha compartilhada - ver comentario de setup em admin-auth.js).
-// Antes, o painel so autenticava com senha local em sessionStorage, entao
-// toda chamada de admin-locais.js/admin-estatisticas.js caia em
-// "permission-denied" contra a funcao ehAdmin() abaixo, mesmo com a senha
-// certa. Passo que falta pra funcionar de ponta a ponta: criar a conta no
-// Firebase Console (Authentication) e o documento correspondente em
-// usuarios_admin com o UID dessa conta - ver checklist em admin-auth.js.
+// COLEÇÕES USADAS PELO CÓDIGO
+//   pois, eventos, patrocinadores, configuracoes/geral, acessos_diarios,
+//   rotas_criadas, checkins, usuarios_admin.
+//   (usuarios e rotas_geradas ficam reservadas para um futuro login de
+//   turista; nenhum código grava nelas hoje.)
 
 rules_version = '2';
 
@@ -31,106 +32,88 @@ service cloud.firestore {
     // ============================================================
     // FUNÇÕES AUXILIARES
     // ============================================================
-
     function estaLogado() {
       return request.auth != null;
     }
 
-    // Verifica se o uid logado tem um documento em "usuarios_admin".
-    // Só usar quando estaLogado() já for verdade (senão request.auth.uid é nulo).
+    function ehDonoDoDocumento(uid) {
+      return estaLogado() && request.auth.uid == uid;
+    }
+
     function ehAdmin() {
       return estaLogado() &&
         exists(/databases/$(database)/documents/usuarios_admin/$(request.auth.uid));
     }
 
-    // O usuário só pode tocar no PRÓPRIO documento (users/{uid})
-    function ehDonoDoDocumento(userId) {
-      return estaLogado() && request.auth.uid == userId;
-    }
-
     // ============================================================
-    // POIS — leitura pública, escrita só admin, com validação de campo
+    // POIS — locais turísticos
+    // Leitura pública. Escrita só admin.
+    // O painel grava em snake_case (preco_estimado, status_operacional) e o
+    // seed/legado pode usar camelCase — a validação aceita os dois.
     // ============================================================
     match /pois/{poiId} {
       allow get, list: if true;
-
-      allow create: if ehAdmin() && poiTemCamposValidos();
-      allow update: if ehAdmin() && poiTemCamposValidos();
+      allow create, update: if ehAdmin() && poiTemCamposValidos();
       allow delete: if ehAdmin();
 
-      // Validação mínima: nunca aceitar POI sem nome, com preço negativo,
-      // ou com statusOperacional fora do conjunto permitido.
-      //
-      // CORRIGIDO: a validação antes checava os campos em snake_case
-      // (preco_estimado / status_operacional), mas nenhum código do
-      // projeto escreve nesse formato — admin-locais.js e o seed usam
-      // camelCase (precoEstimado / statusOperacional). Isso fazia a
-      // validação nunca disparar de verdade (o campo checado nunca
-      // existia com aquele nome, então a condição sempre passava).
       function poiTemCamposValidos() {
-        let dados = request.resource.data;
-        return dados.nome is string && dados.nome.size() > 0
-          && dados.categoria is string
-          && (!('precoEstimado' in dados) || dados.precoEstimado is number && dados.precoEstimado >= 0)
-          && (!('statusOperacional' in dados) ||
-              dados.statusOperacional in ['ativo', 'sazonal', 'em_reforma', 'fechado_temporariamente']);
+        let d = request.resource.data;
+        return d.nome is string && d.nome.size() > 0
+          && d.categoria is string
+          && (!('preco_estimado' in d) || (d.preco_estimado is number && d.preco_estimado >= 0))
+          && (!('precoEstimado' in d)  || (d.precoEstimado is number && d.precoEstimado >= 0))
+          && (!('status_operacional' in d) ||
+              d.status_operacional in ['ativo', 'sazonal', 'em_reforma', 'fechado_temporariamente'])
+          && (!('statusOperacional' in d) ||
+              d.statusOperacional in ['ativo', 'sazonal', 'em_reforma', 'fechado_temporariamente']);
       }
     }
 
     // ============================================================
-    // EVENTOS — mesmo padrão dos POIs
+    // EVENTOS — leitura pública. Escrita só admin.
+    // Datas podem vir como timestamp ou texto (eventos-data.js converte).
     // ============================================================
     match /eventos/{eventoId} {
       allow get, list: if true;
-
       allow create, update: if ehAdmin() && eventoTemCamposValidos();
       allow delete: if ehAdmin();
 
-      // ATENÇÃO: ainda não existe um admin-eventos.js confirmado no projeto.
-      // Quando ele for criado, usar os MESMOS nomes de campo checados aqui
-      // (data_inicio / data_fim, snake_case) — senão essa validação cai no
-      // mesmo problema que a de "pois" tinha (checar um nome de campo que
-      // o app nunca escreve, e por isso nunca validar nada de verdade).
       function eventoTemCamposValidos() {
-        let dados = request.resource.data;
-        return dados.nome is string && dados.nome.size() > 0
-          && (!('data_inicio' in dados) || dados.data_inicio is timestamp)
-          && (!('data_fim' in dados) || dados.data_fim is timestamp);
+        let d = request.resource.data;
+        return d.nome is string && d.nome.size() > 0
+          && (!('data_inicio' in d) || d.data_inicio is timestamp || d.data_inicio is string)
+          && (!('data_fim' in d)    || d.data_fim is timestamp    || d.data_fim is string)
+          && (!('dataInicio' in d)  || d.dataInicio is timestamp  || d.dataInicio is string)
+          && (!('dataFim' in d)     || d.dataFim is timestamp     || d.dataFim is string);
       }
     }
 
     // ============================================================
-    // PATROCINADORES — banner de anúncio pago, mostrado em todas as
-    // páginas voltadas pro turista. Leitura pública (senão o banner nunca
-    // carregaria pra ninguém), escrita só pelo admin master.
+    // PATROCINADORES — banners de anúncio pago
+    // Leitura pública (senão o banner não carrega pro turista).
+    // Escrita só admin. O app grava "imagemBannerUrl" e "linkDestino"
+    // (que é null quando o destino é um local ou o WhatsApp).
     // ============================================================
     match /patrocinadores/{patrocinadorId} {
       allow get, list: if true;
-
       allow create, update: if ehAdmin() && patrocinadorTemCamposValidos();
       allow delete: if ehAdmin();
 
-      // Nomes em camelCase — mesmo padrão que admin-locais.js já usa pra
-      // "pois", pra não repetir o bug antigo de checar snake_case contra
-      // dado que o app sempre escreve em camelCase.
-      // O app grava "imagemBannerUrl" (nome atual) e, conforme o tipo de
-      // destino, "linkDestino" pode ser null (destino = local ou WhatsApp).
-      // "imagemUrl" é aceito só por compatibilidade com docs antigos.
       function patrocinadorTemCamposValidos() {
-        let dados = request.resource.data;
-        return dados.nome is string && dados.nome.size() > 0
-          && (!('imagemBannerUrl' in dados) || dados.imagemBannerUrl is string)
-          && (!('imagemUrl' in dados) || dados.imagemUrl is string)
-          && (!('linkDestino' in dados) || dados.linkDestino == null
-              || (dados.linkDestino is string && dados.linkDestino.matches('^https?://.*')))
-          && dados.ativo is bool;
+        let d = request.resource.data;
+        return d.nome is string && d.nome.size() > 0
+          && d.ativo is bool
+          && (!('imagemBannerUrl' in d) || d.imagemBannerUrl is string)
+          && (!('imagemUrl' in d) || d.imagemUrl is string)
+          && (!('nivel' in d) || d.nivel == null || d.nivel in ['ouro', 'prata', 'bronze'])
+          && (!('linkDestino' in d) || d.linkDestino == null
+              || (d.linkDestino is string && d.linkDestino.matches('^https?://.*')));
       }
     }
 
     // ============================================================
-    // CONFIGURACOES — documento único "configuracoes/geral" (número do
-    // WhatsApp usado no botão flutuante e nos banners "Anuncie aqui").
-    // Leitura pública (o turista precisa do número), escrita só admin.
+    // CONFIGURACOES — documento único "configuracoes/geral"
+    // (número de WhatsApp do botão flutuante e dos banners).
     // ============================================================
     match /configuracoes/{docId} {
       allow get: if true;
@@ -143,10 +126,8 @@ service cloud.firestore {
     }
 
     // ============================================================
-    // ACESSOS_DIARIOS — contador anônimo de visitas (registrar-acesso.js).
-    // Doc ID = AAAA-MM-DD. O cliente só pode somar +1 por escrita, então
-    // não dá pra inflar o número de uma vez nem gravar lixo.
-    // Leitura só admin (painel de estatísticas).
+    // ACESSOS_DIARIOS — contador anônimo de visitas (registrar-acesso.js)
+    // Doc ID = AAAA-MM-DD. O cliente só soma +1 por escrita.
     // ============================================================
     match /acessos_diarios/{dia} {
       allow get, list: if ehAdmin();
@@ -157,112 +138,88 @@ service cloud.firestore {
       allow delete: if false;
 
       function acessoValido() {
-        let dados = request.resource.data;
-        return dados.keys().hasOnly(['total', 'porHora'])
-          && dados.total is int
-          && dados.porHora is map;
+        let d = request.resource.data;
+        return d.keys().hasOnly(['total', 'porHora'])
+          && d.total is int
+          && d.porHora is map;
       }
     }
 
     // ============================================================
-    // USUARIOS_ADMIN — quem é admin. Só admin LÊ; ninguém escreve via app.
+    // ROTAS_CRIADAS — analytics (criação/finalização de roteiro)
+    // Turista cria sem login; só admin lê. Histórico: nunca edita/apaga.
     // ============================================================
-    // Escrita nesta coleção é feita manualmente pelo Console do Firebase
-    // (ou Admin SDK em um script de setup), nunca pelo client. Por isso
-    // não existe "allow write" aqui — fica negado por padrão.
-    match /usuarios_admin/{adminId} {
-      allow get: if ehAdmin();
-      allow list: if false; // impede listar todos os admins por enumeração
-    }
-
-    // ============================================================
-    // USUARIOS — perfil, favoritos. Só o próprio dono acessa.
-    // ============================================================
-    match /usuarios/{userId} {
-      allow read, write: if ehDonoDoDocumento(userId);
-    }
-
-    // ============================================================
-    // ROTAS_GERADAS — histórico de rotas (analytics interno)
-    // ============================================================
-    // Usuário logado pode salvar/ler a própria rota. Admin pode ler tudo
-    // (pra entender o que mais é pedido), mas não escreve aqui diretamente.
-    //
-    // ATENÇÃO: nenhum código do app atual grava nesta coleção — o fluxo
-    // real (formulario-roteiro.js / modo-em-rota.js) usa "rotas_criadas"
-    // e "checkins" (ver regras abaixo). Mantida aqui caso "Minhas Rotas"
-    // (perfil de usuário logado) seja implementado no futuro; se não for
-    // usada, pode ser removida.
-    match /rotas_geradas/{rotaId} {
-      allow create: if estaLogado() && request.resource.data.userId == request.auth.uid;
-      allow get: if estaLogado() &&
-        (resource.data.userId == request.auth.uid || ehAdmin());
-      allow list: if ehAdmin();
-      allow update, delete: if false; // rota gerada é histórico, não se edita
-    }
-
-    // ============================================================
-    // ROTAS_CRIADAS — eventos de analytics (criação/finalização de roteiro)
-    // ============================================================
-    // Gravada por registro-data.js a partir do fluxo público do turista
-    // (formulario-roteiro.js no "Criar roteiro", modo-em-rota.js ao
-    // finalizar) — SEM login, então a escrita precisa ser pública, como
-    // qualquer analytics anônimo. Só o painel admin lê os dados
-    // agregados (admin-estatisticas.js). Histórico: nunca se edita ou
-    // apaga por aqui.
-    //
-    // create exige tipoEvento válido para impedir que a coleção pública
-    // seja usada para gravar lixo arbitrário sem relação com o app.
     match /rotas_criadas/{registroId} {
       allow create: if registroRotaTemCamposValidos();
       allow get, list: if ehAdmin();
       allow update, delete: if false;
 
-      // Só os campos que registro-data.js realmente grava, com tamanho
-      // limitado, e criadoEm sempre igual ao horário do servidor.
       function registroRotaTemCamposValidos() {
-        let dados = request.resource.data;
-        return dados.keys().hasOnly([
+        let d = request.resource.data;
+        return d.keys().hasOnly([
             'criadoEm', 'tipoEvento', 'horarioInicioEscolhido',
             'refeicoesDesejadas', 'interesses', 'quantidadeParadas',
             'paradasNomes', 'capituloVazio',
             'quantidadeParadasTotal', 'quantidadeParadasVisitadas'
           ])
-          && dados.criadoEm == request.time
-          && (!('tipoEvento' in dados) || dados.tipoEvento in ['criacao', 'finalizacao'])
-          && (!('paradasNomes' in dados) || (dados.paradasNomes is list && dados.paradasNomes.size() <= 12))
-          && (!('interesses' in dados) || (dados.interesses is list && dados.interesses.size() <= 20))
-          && (!('refeicoesDesejadas' in dados) || (dados.refeicoesDesejadas is list && dados.refeicoesDesejadas.size() <= 8));
+          && d.criadoEm == request.time
+          && (!('tipoEvento' in d) || d.tipoEvento in ['criacao', 'finalizacao'])
+          && (!('paradasNomes' in d) || (d.paradasNomes is list && d.paradasNomes.size() <= 12))
+          && (!('interesses' in d) || (d.interesses is list && d.interesses.size() <= 20))
+          && (!('refeicoesDesejadas' in d) || (d.refeicoesDesejadas is list && d.refeicoesDesejadas.size() <= 8));
       }
     }
 
     // ============================================================
-    // CHECKINS — eventos de analytics (check-in manual "Cheguei")
+    // CHECKINS — analytics (botão "Cheguei")
+    // Mesmo padrão de rotas_criadas.
     // ============================================================
-    // Mesmo padrão de rotas_criadas: gravado sem login pelo turista
-    // durante o passeio (modo-em-rota.js), lido só pelo admin.
     match /checkins/{checkinId} {
       allow create: if checkinTemCamposValidos();
       allow get, list: if ehAdmin();
       allow update, delete: if false;
 
-      // Só os campos que registro-data.js grava, com tipo e tamanho
-      // validados (o painel admin imprime esses valores, então nunca
-      // aceitar texto arbitrário e longo vindo de fora).
       function checkinTemCamposValidos() {
-        let dados = request.resource.data;
-        return dados.keys().hasOnly(['poiId', 'poiNome', 'poiCategoria', 'checkinEm', 'origemDeteccao'])
-          && dados.checkinEm == request.time
-          && (!('poiNome' in dados) || (dados.poiNome is string && dados.poiNome.size() <= 200))
-          && (!('poiId' in dados) || dados.poiId == null || (dados.poiId is string && dados.poiId.size() <= 100))
-          && (!('poiCategoria' in dados) || dados.poiCategoria == null
-              || (dados.poiCategoria is string && dados.poiCategoria.size() <= 50))
-          && (!('origemDeteccao' in dados) || dados.origemDeteccao in ['gps', 'manual']);
+        let d = request.resource.data;
+        return d.keys().hasOnly(['poiId', 'poiNome', 'poiCategoria', 'checkinEm', 'origemDeteccao'])
+          && d.checkinEm == request.time
+          && (!('poiNome' in d) || (d.poiNome is string && d.poiNome.size() <= 200))
+          && (!('poiId' in d) || d.poiId == null || (d.poiId is string && d.poiId.size() <= 100))
+          && (!('poiCategoria' in d) || d.poiCategoria == null
+              || (d.poiCategoria is string && d.poiCategoria.size() <= 50))
+          && (!('origemDeteccao' in d) || d.origemDeteccao in ['gps', 'manual']);
       }
     }
 
     // ============================================================
-    // PADRÃO: qualquer coisa fora do mapeado acima é NEGADA
+    // USUARIOS_ADMIN — quem é administrador.
+    // Só o próprio admin lê o seu documento (a API /api/gerar-relatorio usa
+    // isso pra validar o login). Ninguém escreve pelo app: crie os
+    // documentos manualmente no Console (ID do documento = UID do admin).
+    // ============================================================
+    match /usuarios_admin/{adminId} {
+      allow get: if ehAdmin();
+      allow list: if false;
+      allow write: if false;
+    }
+
+    // ============================================================
+    // RESERVADAS para um futuro login de turista (nada grava aqui hoje).
+    // ============================================================
+    match /usuarios/{userId} {
+      allow read, write: if ehDonoDoDocumento(userId);
+    }
+
+    match /rotas_geradas/{rotaId} {
+      allow create: if estaLogado() && request.resource.data.userId == request.auth.uid;
+      allow get: if estaLogado() &&
+        (resource.data.userId == request.auth.uid || ehAdmin());
+      allow list: if ehAdmin();
+      allow update, delete: if false;
+    }
+
+    // ============================================================
+    // PADRÃO: tudo que não estiver acima é NEGADO.
     // ============================================================
     match /{document=**} {
       allow read, write: if false;
