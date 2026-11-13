@@ -31,6 +31,7 @@
  */
 import { buscarPatrocinadorParaExibir } from "../data/patrocinadores-data.js";
 import { buscarConfiguracoes } from "../data/configuracoes-data.js";
+import { registrarEventoPatrocinio } from "../data/metricas-patrocinio-data.js";
 
 async function iniciarBannerPatrocinado(caminhoParaPonto = "ponto.html?id=") {
   const banner = document.getElementById("banner-patrocinado");
@@ -65,6 +66,22 @@ async function iniciarBannerPatrocinado(caminhoParaPonto = "ponto.html?id=") {
   }
 
   banner.hidden = false;
+
+  registrarEventoPatrocinio({
+    tipoEvento: "impressao",
+    origem: "banner",
+    patrocinadorId: patrocinador.id,
+    nivel: patrocinador.nivel,
+  });
+
+  if (href) {
+    linkEl.onclick = () => registrarEventoPatrocinio({
+      tipoEvento: "clique",
+      origem: "banner",
+      patrocinadorId: patrocinador.id,
+      nivel: patrocinador.nivel,
+    });
+  }
 }
 
 async function resolverDestino(patrocinador, caminhoParaPonto) {
