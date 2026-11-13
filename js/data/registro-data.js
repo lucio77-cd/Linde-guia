@@ -113,10 +113,11 @@ async function registrarCapituloAdicional(capitulo) {
 // ============================================================
 async function registrarRoteiroFinalizado(rota, quantidadeParadasVisitadas) {
   try {
+    const rotaId = obterRotaIdAtual(false);
     await addDoc(collection(db, COLECAO_ROTAS_CRIADAS), {
       criadoEm: serverTimestamp(),
       tipoEvento: "finalizacao",
-      rotaId: obterRotaIdAtual(false),
+      ...(rotaId ? { rotaId } : {}),
       quantidadeParadasTotal: rota.paradas.length,
       quantidadeParadasVisitadas,
     });
