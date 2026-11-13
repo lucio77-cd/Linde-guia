@@ -299,9 +299,27 @@
         </div>
       </div>
 
-      <!-- 3. Refeições desejadas (opcional, múltipla) -->
-      <fieldset class="campo">
+      <!-- 3. Quanto tempo (opcional) -->
+      <div class="campo">
         <span class="campo__numero">03</span>
+        <span class="campo__rotulo">
+          Quanto tempo você tem?
+          <span class="campo__opcional-marca">opcional</span>
+        </span>
+        <div class="chips" role="radiogroup" aria-label="Tempo disponível">
+          <button type="button" class="chip" data-campo="duracao" data-valor="" aria-pressed="true">Sem pressa</button>
+          <button type="button" class="chip" data-campo="duracao" data-valor="60">1 hora</button>
+          <button type="button" class="chip" data-campo="duracao" data-valor="120">2 horas</button>
+          <button type="button" class="chip" data-campo="duracao" data-valor="180">3 horas</button>
+          <button type="button" class="chip" data-campo="duracao" data-valor="240">Meio dia</button>
+          <button type="button" class="chip" data-campo="duracao" data-valor="480">O dia todo</button>
+        </div>
+        <p class="campo__ajuda">A gente monta o roteiro pra caber nesse tempo, contando visita e caminhada.</p>
+      </div>
+
+      <!-- 4. Refeições desejadas (opcional, múltipla) -->
+      <fieldset class="campo">
+        <span class="campo__numero">04</span>
         <legend class="campo__rotulo">
           Quer incluir alguma refeição no passeio?
           <span class="campo__opcional-marca">opcional · pode marcar mais de uma</span>
@@ -315,9 +333,9 @@
         <p class="campo__ajuda">A gente só sugere restaurantes que servem a refeição marcada no horário certo.</p>
       </fieldset>
 
-      <!-- 4. Interesses (opcional, múltipla) -->
+      <!-- 5. Interesses (opcional, múltipla) -->
       <fieldset class="campo">
-        <span class="campo__numero">04</span>
+        <span class="campo__numero">05</span>
         <legend class="campo__rotulo">
           O que você mais gosta?
           <span class="campo__opcional-marca">opcional · pode marcar mais de um</span>

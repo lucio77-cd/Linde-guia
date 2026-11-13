@@ -5,10 +5,11 @@
  * Controla a sub-vista "Em Rota": desenha o card da parada atual e os
  * botões de checklist manual ("Cheguei" / "Pular essa parada").
  *
- * PAUSADO NESTA VERSÃO: GPS contínuo (watchPosition) e mapa focado.
- * O foco agora é confiabilidade do dado de check-in (botão manual,
- * sempre certo) em vez de detecção automática por proximidade.
- * Quando o trabalho do mapa for retomado, reintroduzir aqui.
+ * Mapa de orientação (parada atual + posição + traçado): lê o GPS UMA vez
+ * por parada e no botão "Atualizar minha posição". Não há GPS contínuo
+ * (watchPosition) nem check-in automático — o "Cheguei" continua manual,
+ * que é o que mantém o dado do painel confiável. Navegação curva a curva
+ * fica por conta dos botões do Google Maps/Waze.
  *
  * Cada "Cheguei" grava um check-in real no Firestore via
  * registro-data.js, que alimenta o painel admin (estatísticas de
@@ -25,11 +26,14 @@ import { salvarSeloLocal, lerSelos } from "../core/selos-local.js";
 import { buscarPoisAtivos } from "../data/pois-data.js";
 import { buscarEventosAtivosNaData } from "../data/eventos-data.js";
 import { escaparHtml } from "../core/html-utils.js";
+import { criarMapaFocado } from "./mapa-rota.js";
 
 const CHAVE_INDEX = "linde-guia:parada-atual-index";
 
 function iniciarModoEmRota() {
   document.addEventListener("linde-guia:iniciar-em-rota", (evento) => {
+    // Capítulo novo: o traçado do anterior não vale mais.
+    polylineNoMapa = evento.detail.rota.polyline || null;
     desenharParadaAtual(evento.detail.rota, obterIndiceAtual());
   });
 
@@ -40,6 +44,13 @@ function iniciarModoEmRota() {
   document.getElementById("btn-cheguei").addEventListener("click", () => {
     avancarRota("chegou");
   });
+
+  const btnAtualizarPosicao = document.getElementById("btn-atualizar-posicao");
+  if (btnAtualizarPosicao) {
+    btnAtualizarPosicao.addEventListener("click", () => {
+      if (paradaNoMapa) atualizarMapaEmRota(paradaNoMapa);
+    });
+  }
 
   document.getElementById("btn-nao-continuar").addEventListener("click", finalizarPasseio);
   document.getElementById("btn-sim-continuar").addEventListener("click", gerarProximoCapitulo);
@@ -295,6 +306,79 @@ function desenharParadaAtual(rota, indice) {
 
   esconderAvisoRecalculo();
   avisarSeRiscoDeFechar(parada);
+  atualizarMapaEmRota(parada);
+}
+
+// ============================================================
+// MAPA DA PARADA ATUAL
+// ============================================================
+let mapaFocado = null;
+let paradaNoMapa = null;
+let polylineNoMapa = null;
+let leituraDePosicaoEmAndamento = false;
+
+// Posição uma vez só, precisão normal (economiza bateria), sem cache velho.
+function lerPosicaoUmaVez() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) { resolve(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
+      () => resolve(null),
+      { timeout: 8000, maximumAge: 30000 }
+    );
+  });
+}
+
+function formatarDistancia(km) {
+  return km < 1 ? `${Math.max(10, Math.round((km * 1000) / 10) * 10)} m` : `${km.toFixed(1).replace(".", ",")} km`;
+}
+
+async function atualizarMapaEmRota(parada) {
+  const infoEl = document.getElementById("info-distancia-parada");
+  if (!document.getElementById("mapa-em-rota")) return;
+
+  if (!mapaFocado) mapaFocado = criarMapaFocado("mapa-em-rota");
+  if (!mapaFocado) return; // Leaflet não carregou: o card continua funcionando sem mapa
+
+  paradaNoMapa = parada;
+
+  // 1) Mostra já a parada (sem esperar o GPS)
+  mapaFocado.atualizar(parada.localizacao, null, parada.nome, polylineNoMapa);
+  if (infoEl) infoEl.textContent = "Buscando sua posição...";
+
+  if (leituraDePosicaoEmAndamento) return;
+  leituraDePosicaoEmAndamento = true;
+
+  try {
+    const posicao = await lerPosicaoUmaVez();
+
+    // A pessoa pode ter avançado de parada enquanto o GPS respondia
+    if (paradaNoMapa !== parada) return;
+
+    mapaFocado.atualizar(parada.localizacao, posicao, parada.nome, polylineNoMapa);
+
+    if (!infoEl) return;
+
+    if (!posicao) {
+      infoEl.textContent = "Não consegui pegar sua posição. Você ainda pode usar os botões de navegação acima.";
+    } else if (!parada.localizacao) {
+      infoEl.textContent = "";
+    } else {
+      const km = distanciaKm(posicao, parada.localizacao);
+      if (km > 5) {
+        infoEl.textContent = "Você parece estar longe de Treze Tílias. O mapa mostra só a parada.";
+      } else if (km * 1000 <= 60) {
+        infoEl.innerHTML = "<strong>Você está bem perto!</strong> Chegou? Toque em \"Cheguei\".";
+      } else {
+        const minutos = Math.max(1, Math.round((km / 4.5) * 60 * 1.3)); // 4,5 km/h + 30% de desvio de ruas
+        infoEl.innerHTML = `Você está a <strong>${formatarDistancia(km)}</strong> · cerca de <strong>${minutos} min</strong> a pé`;
+      }
+    }
+  } finally {
+    leituraDePosicaoEmAndamento = false;
+    // Se a pessoa avançou de parada enquanto o GPS respondia, atualiza a atual.
+    if (paradaNoMapa && paradaNoMapa !== parada) atualizarMapaEmRota(paradaNoMapa);
+  }
 }
 
 // Busca por NOME do local + cidade, em vez de coordenada crua. Decisão

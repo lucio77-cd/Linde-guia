@@ -84,32 +84,60 @@ function desenharMapaCompleto(elementoId, paradas, pontoPartida, polylineCodific
 // ============================================================
 // MAPA FOCADO (sub-vista Em Rota) — parada atual + usuário, atualizável
 // ============================================================
+// Mapa de ORIENTAÇÃO: mostra onde a pessoa está, onde fica a parada atual
+// e o traçado da rota. Não é navegação passo a passo — pra isso o card tem
+// os botões do Google Maps e do Waze. Não usa GPS contínuo: quem chama
+// decide quando buscar a posição (uma vez por parada + botão "atualizar"),
+// pra não pesar bateria nem o app.
+const DISTANCIA_MAXIMA_USUARIO_NO_ENQUADRAMENTO_KM = 5;
+
+function localizacaoValida(l) {
+  return !!l && Number.isFinite(l.lat) && Number.isFinite(l.lng);
+}
+
 function criarMapaFocado(elementoId) {
   const elemento = document.getElementById(elementoId);
   if (!elemento || typeof L === "undefined") return null;
 
-  const mapa = L.map(elementoId, { scrollWheelZoom: false, zoomControl: false });
+  const mapa = L.map(elementoId, { scrollWheelZoom: false });
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "© OpenStreetMap",
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom: 19,
   }).addTo(mapa);
 
   let marcadorParada = null;
   let marcadorUsuario = null;
-  let linha = null;
+  let linhaDireta = null;
+  let linhaTracado = null;
+  let tracadoDesenhado = null;
 
-  function atualizar(localizacaoParada, localizacaoUsuario, nomeParada) {
+  function atualizar(localizacaoParada, localizacaoUsuario, nomeParada, polylineCodificado = null) {
+    // O container pode ter estado escondido quando o mapa foi criado.
+    mapa.invalidateSize();
+
     const pontos = [];
 
-    if (localizacaoParada) {
-      if (marcadorParada) mapa.removeLayer(marcadorParada);
+    if (marcadorParada) { mapa.removeLayer(marcadorParada); marcadorParada = null; }
+    if (localizacaoValida(localizacaoParada)) {
       marcadorParada = criarMarcadorDestino(localizacaoParada);
       marcadorParada.addTo(mapa).bindPopup(escaparHtml(nomeParada || "Próxima parada"));
       pontos.push([localizacaoParada.lat, localizacaoParada.lng]);
     }
 
-    if (localizacaoUsuario) {
-      if (marcadorUsuario) mapa.removeLayer(marcadorUsuario);
+    // Traçado da rota inteira (fraco, só de referência). Redesenha só se mudou.
+    if (polylineCodificado !== tracadoDesenhado) {
+      if (linhaTracado) { mapa.removeLayer(linhaTracado); linhaTracado = null; }
+      const caminho = polylineCodificado ? decodificarPolyline(polylineCodificado) : [];
+      if (caminho.length > 1) {
+        linhaTracado = L.polyline(caminho, { color: COR_MARCA, weight: 4, opacity: 0.35 }).addTo(mapa);
+      }
+      tracadoDesenhado = polylineCodificado;
+    }
+
+    if (marcadorUsuario) { mapa.removeLayer(marcadorUsuario); marcadorUsuario = null; }
+    if (linhaDireta) { mapa.removeLayer(linhaDireta); linhaDireta = null; }
+
+    if (localizacaoValida(localizacaoUsuario)) {
       marcadorUsuario = L.circleMarker([localizacaoUsuario.lat, localizacaoUsuario.lng], {
         radius: 8,
         color: COR_USUARIO,
@@ -117,12 +145,19 @@ function criarMapaFocado(elementoId) {
         fillOpacity: 1,
       });
       marcadorUsuario.addTo(mapa).bindPopup("Você está aqui");
-      pontos.push([localizacaoUsuario.lat, localizacaoUsuario.lng]);
-    }
 
-    if (linha) mapa.removeLayer(linha);
-    if (pontos.length === 2) {
-      linha = L.polyline(pontos, { color: COR_ACAO, weight: 3, opacity: 0.7, dashArray: "6 8" }).addTo(mapa);
+      // Se a pessoa está longe (fora da cidade), não distorce o zoom nem
+      // desenha uma linha enorme: o mapa continua focado na parada.
+      const perto =
+        !localizacaoValida(localizacaoParada) ||
+        calcularDistanciaKm(localizacaoUsuario, localizacaoParada) <= DISTANCIA_MAXIMA_USUARIO_NO_ENQUADRAMENTO_KM;
+
+      if (perto) {
+        pontos.push([localizacaoUsuario.lat, localizacaoUsuario.lng]);
+        if (pontos.length === 2) {
+          linhaDireta = L.polyline(pontos, { color: COR_ACAO, weight: 3, opacity: 0.7, dashArray: "6 8" }).addTo(mapa);
+        }
+      }
     }
 
     ajustarVisualizacao(mapa, pontos);

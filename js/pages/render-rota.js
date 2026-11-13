@@ -11,6 +11,9 @@
  */
 
 import { desenharMapaCompleto } from "./mapa-rota.js";
+import { gerarCapituloDeFavoritos } from "../engine/motor-rota.js";
+import { buscarPoisAtivos } from "../data/pois-data.js";
+import { salvarRotaManual } from "../core/rotas-manuais-local.js";
 
 const CHAVE_SESSION_STORAGE = "linde-guia:capitulo-atual";
 
@@ -27,9 +30,17 @@ let mapaAtual = null;
 // INICIALIZAÇÃO
 // ============================================================
 function iniciarRenderRota() {
-  const capitulo = lerRotaDoStorage();
-
   esconderTodosOsEstados();
+
+  // Link compartilhado (?paradas=id1,id2,...) tem prioridade sobre a rota
+  // que já estivesse na sessão: quem abriu o link quer ver ESSA rota.
+  const idsCompartilhados = lerIdsCompartilhados();
+  if (idsCompartilhados.length > 0) {
+    montarRotaCompartilhada(idsCompartilhados);
+    return;
+  }
+
+  const capitulo = lerRotaDoStorage();
   mostrarAvisoSeHouver();
 
   if (!capitulo) {
@@ -120,6 +131,16 @@ function mostrarEstado(id) {
 function renderizarResultado(capitulo) {
   const resumoEl = document.getElementById("resumo-texto");
   resumoEl.textContent = montarTextoResumo(capitulo);
+
+  // Por que a IA escolheu esses lugares — antes era gerado e nunca aparecia.
+  // textContent: o texto vem de um modelo, nunca vai como HTML.
+  const explicacaoEl = document.getElementById("explicacao-ia");
+  if (explicacaoEl) {
+    explicacaoEl.textContent = capitulo.explicacaoIA || "";
+    explicacaoEl.hidden = !capitulo.explicacaoIA;
+  }
+
+  configurarSalvarECompartilhar(capitulo);
 
   const listaEl = document.getElementById("lista-paradas");
   listaEl.innerHTML = "";
@@ -218,12 +239,140 @@ function formatarHorario(dataHorario) {
 // ============================================================
 function configurarBotaoIniciar(rota) {
   const botao = document.getElementById("btn-iniciar-roteiro");
-  botao.addEventListener("click", () => {
+  // onclick (e não addEventListener): esta função roda de novo a cada
+  // capítulo novo e os listeners se acumulavam, disparando N vezes.
+  botao.onclick = () => {
     sessionStorage.setItem("linde-guia:parada-atual-index", "0");
     mostrarEstado("vista-em-rota");
     // modo-em-rota.js escuta esse evento customizado pra desenhar o card inicial
     document.dispatchEvent(new CustomEvent("linde-guia:iniciar-em-rota", { detail: { rota } }));
-  });
+  };
+}
+
+// ============================================================
+// SALVAR E COMPARTILHAR
+// ============================================================
+// Só locais "de verdade" entram: eventos (id "evento-...") são temporários
+// e não existem como POI pra remontar a rota depois.
+const CENTRO_TREZE_TILIAS = { lat: -27.0026, lng: -51.4084 };
+const MAX_PARADAS_COMPARTILHADAS = 12;
+
+function idsDePois(capitulo) {
+  return (capitulo.paradas || []).map((p) => p.id).filter((id) => id && !String(id).startsWith("evento-"));
+}
+
+function mostrarFeedback(texto) {
+  const el = document.getElementById("feedback-roteiro");
+  if (!el) return;
+  el.textContent = texto;
+  el.hidden = !texto;
+}
+
+function configurarSalvarECompartilhar(capitulo) {
+  const btnSalvar = document.getElementById("btn-salvar-roteiro");
+  const btnCompartilhar = document.getElementById("btn-compartilhar-roteiro");
+  if (!btnSalvar || !btnCompartilhar) return;
+
+  const ids = idsDePois(capitulo);
+  mostrarFeedback("");
+
+  // Estado inicial a cada capítulo novo (a mesma tela é reaproveitada)
+  btnSalvar.disabled = ids.length === 0;
+  btnSalvar.textContent = "Salvar roteiro";
+  btnCompartilhar.disabled = ids.length === 0;
+
+  btnSalvar.onclick = () => {
+    const inicio = new Date(capitulo.perfilOriginal?.horarioInicio || Date.now());
+    const nome = `Roteiro de ${inicio.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}`;
+    const salvo = salvarRotaManual({ nome, poisIds: ids, dataHoraAgendada: inicio.toISOString() });
+
+    if (salvo) {
+      btnSalvar.disabled = true;
+      btnSalvar.textContent = "Salvo ✓";
+      mostrarFeedback("Roteiro salvo neste aparelho. Você encontra ele em Perfil, em \"Meus roteiros salvos\".");
+    } else {
+      mostrarFeedback("Não consegui salvar agora. O navegador pode estar bloqueando o armazenamento.");
+    }
+  };
+
+  btnCompartilhar.onclick = () => compartilharRoteiro(capitulo, ids);
+}
+
+async function compartilharRoteiro(capitulo, ids) {
+  const url = `${location.origin}/pages/minha-rota.html?paradas=${ids.map(encodeURIComponent).join(",")}`;
+  const nomes = capitulo.paradas.map((p) => p.nome).join(" → ");
+  const texto = `Roteiro em Treze Tílias: ${nomes}`;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: "Roteiro no Linde Guia", text: texto, url });
+      return;
+    } catch (erro) {
+      if (erro && erro.name === "AbortError") return; // a pessoa fechou o menu de compartilhar
+    }
+  }
+
+  try {
+    await navigator.clipboard.writeText(url);
+    mostrarFeedback("Link copiado! É só colar numa conversa.");
+  } catch {
+    window.prompt("Copie o link do roteiro:", url);
+  }
+}
+
+// ============================================================
+// ROTA ABERTA POR LINK COMPARTILHADO
+// ============================================================
+// O link leva só os ids dos locais. A rota é remontada aqui com os dados
+// ATUAIS do Firestore e o horário de AGORA (o de quem compartilhou já
+// passou) — por isso algum local pode não entrar se estiver fechado.
+function lerIdsCompartilhados() {
+  const bruto = new URLSearchParams(window.location.search).get("paradas");
+  if (!bruto) return [];
+  return bruto
+    .split(",")
+    .map((id) => id.trim())
+    .filter((id) => /^[A-Za-z0-9_-]{1,64}$/.test(id))
+    .slice(0, MAX_PARADAS_COMPARTILHADAS);
+}
+
+async function montarRotaCompartilhada(ids) {
+  mostrarEstado("estado-carregando");
+
+  try {
+    const agora = new Date().toISOString();
+    const perfilBusca = {
+      data: agora,
+      horarioInicio: agora,
+      localizacaoPartida: CENTRO_TREZE_TILIAS,
+      interesses: [],
+      refeicoesDesejadas: [],
+      idsExcluidos: [],
+    };
+
+    const pois = await buscarPoisAtivos();
+    const capitulo = gerarCapituloDeFavoritos(pois, perfilBusca, ids);
+
+    if (capitulo.vazio || capitulo.paradas.length === 0) {
+      mostrarEstado("estado-rota-vazia");
+      return;
+    }
+
+    salvarRotaNoStorage(capitulo);
+    mostrarEstado("vista-resultado");
+    renderizarResultado(capitulo);
+    configurarBotaoIniciar(capitulo);
+
+    const n = (capitulo.idsDescartados || []).length;
+    const avisoEl = document.getElementById("aviso-descartados");
+    if (n > 0 && avisoEl) {
+      avisoEl.textContent = `${n} ${n === 1 ? "parada do roteiro compartilhado não entrou" : "paradas do roteiro compartilhado não entraram"} (fechado agora ou removido). Seguimos com o resto.`;
+      avisoEl.hidden = false;
+    }
+  } catch (erro) {
+    console.error("[render-rota] Erro ao montar rota compartilhada:", erro);
+    mostrarEstado("estado-sem-rota");
+  }
 }
 
 // ============================================================
