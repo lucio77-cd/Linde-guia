@@ -45,7 +45,7 @@ async function carregarEstatisticas() {
     buscarAcessosDiarios(),
   ]);
 
-  const criacoes     = rotasCriadas.filter((r) => r.tipoEvento !== "finalizacao");
+  const criacoes     = rotasCriadas.filter((r) => !r.tipoEvento || r.tipoEvento === "criacao");
   const finalizacoes = rotasCriadas.filter((r) => r.tipoEvento === "finalizacao");
   const totalAcessos = acessosDiarios.reduce((soma, d) => soma + (d.total || 0), 0);
 
@@ -194,7 +194,7 @@ function desenharConclusao(criacoes, finalizacoes) {
 // ============================================================
 function desenharDiaDaSemana(criacoes) {
   const arr = new Array(7).fill(0);
-  criacoes.forEach((r) => { if (r.criadoEm) arr[r.criadoEm.getDay()]++; });
+  criacoes.forEach((r) => { if (r.criadoEm) arr[diaSemanaBrasilia(r.criadoEm)]++; });
   grafico(
     "grafico-dia-semana", "bar",
     DIAS_SEMANA_LABEL,
@@ -346,6 +346,13 @@ function diaChave(d) {
   }).formatToParts(d);
   const data = Object.fromEntries(partes.map((parte) => [parte.type, parte.value]));
   return `${data.year}-${data.month}-${data.day}`;
+}
+function diaSemanaBrasilia(d) {
+  const nome = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Sao_Paulo",
+    weekday: "long",
+  }).format(d);
+  return ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].indexOf(nome);
 }
 function horaBrasilia(d) {
   return Number(new Intl.DateTimeFormat("en-US", {
