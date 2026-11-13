@@ -33,6 +33,7 @@
 import { buscarPoisAtivos } from "../data/pois-data.js";
 import { buscarPatrocinadoresAtivos } from "../data/patrocinadores-data.js";
 import { buscarConfiguracoes } from "../data/configuracoes-data.js";
+import { registrarEventoPatrocinio } from "../data/metricas-patrocinio-data.js";
 
 const INTERVALO_ROTACAO_MS = 6000;
 
@@ -82,6 +83,9 @@ async function coletarCandidatos(nivel, caminhoParaPonto) {
     )
     .map((poi) => ({
       nome: poi.nome,
+      poiId: poi.id,
+      patrocinadorId: null,
+      nivel,
       imagemBannerUrl: poi.patrocinio.imagemBannerUrl,
       href: `${caminhoParaPonto}${poi.id}`,
       externo: false,
@@ -92,6 +96,9 @@ async function coletarCandidatos(nivel, caminhoParaPonto) {
       .filter((p) => p.nivel === nivel && !!p.imagemBannerUrl)
       .map(async (p) => ({
         nome: p.nome,
+        poiId: null,
+        patrocinadorId: p.id,
+        nivel,
         imagemBannerUrl: p.imagemBannerUrl,
         href: await resolverDestinoAvulso(p, caminhoParaPonto),
         // "externo" decide se abre em nova aba (target=_blank) — link de
@@ -239,6 +246,39 @@ function criarBannerEl(candidato) {
 
   wrapper.appendChild(imagem);
   wrapper.appendChild(selo);
+
+  const registrarImpressao = () => registrarEventoPatrocinio({
+    tipoEvento: "impressao",
+    origem: "carrossel",
+    poiId: candidato.poiId,
+    patrocinadorId: candidato.patrocinadorId,
+    nivel: candidato.nivel,
+  });
+
+  if (typeof IntersectionObserver === "function") {
+    const observador = new IntersectionObserver((entradas) => {
+      if (entradas.some((entrada) => entrada.isIntersecting && entrada.intersectionRatio >= 0.5)) {
+        observador.disconnect();
+        registrarImpressao();
+      }
+    }, { threshold: [0.5] });
+    observador.observe(wrapper);
+  } else {
+    registrarImpressao();
+  }
+
+  if (clicavel) {
+    wrapper.addEventListener("click", () => {
+      registrarEventoPatrocinio({
+        tipoEvento: "clique",
+        origem: "carrossel",
+        poiId: candidato.poiId,
+        patrocinadorId: candidato.patrocinadorId,
+        nivel: candidato.nivel,
+      });
+    }, { once: true });
+  }
+
   return wrapper;
 }
 
