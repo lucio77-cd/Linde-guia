@@ -11,7 +11,7 @@
 //     aparelho (localStorage) e não passam pelo Firestore.
 //   • Conteúdo turístico (pois, eventos, patrocinadores, configuracoes):
 //     leitura pública; escrita só administrador.
-//   • Analytics anônimo (acessos_diarios, rotas_criadas, checkins): o
+//   • Analytics anônimo (acessos_diarios, rotas_criadas, checkins e eventos_patrocinio): o
 //     turista só pode CRIAR registros no formato exato que o app grava;
 //     só o administrador lê.
 //   • Administrador = existe um documento em "usuarios_admin/{uid}" com o
@@ -20,7 +20,7 @@
 //
 // COLEÇÕES USADAS PELO CÓDIGO
 //   pois, eventos, patrocinadores, configuracoes/geral, acessos_diarios,
-//   rotas_criadas, checkins, usuarios_admin.
+//   rotas_criadas, checkins, eventos_patrocinio, usuarios_admin.
 //   (usuarios e rotas_geradas ficam reservadas para um futuro login de
 //   turista; nenhum código grava nelas hoje.)
 
