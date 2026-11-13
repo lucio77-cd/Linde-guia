@@ -159,11 +159,13 @@ service cloud.firestore {
         return d.keys().hasOnly([
             'criadoEm', 'tipoEvento', 'horarioInicioEscolhido',
             'refeicoesDesejadas', 'interesses', 'quantidadeParadas',
-            'paradasNomes', 'capituloVazio',
+            'paradasNomes', 'paradasIds', 'rotaId', 'capituloVazio',
             'quantidadeParadasTotal', 'quantidadeParadasVisitadas'
           ])
           && d.criadoEm == request.time
-          && (!('tipoEvento' in d) || d.tipoEvento in ['criacao', 'finalizacao'])
+          && (!('tipoEvento' in d) || d.tipoEvento in ['criacao', 'capitulo', 'finalizacao'])
+          && (!('rotaId' in d) || (d.rotaId is string && d.rotaId.size() <= 36))
+          && (!('paradasIds' in d) || (d.paradasIds is list && d.paradasIds.size() <= 12))
           && (!('paradasNomes' in d) || (d.paradasNomes is list && d.paradasNomes.size() <= 12))
           && (!('interesses' in d) || (d.interesses is list && d.interesses.size() <= 20))
           && (!('refeicoesDesejadas' in d) || (d.refeicoesDesejadas is list && d.refeicoesDesejadas.size() <= 8));
@@ -181,13 +183,48 @@ service cloud.firestore {
 
       function checkinTemCamposValidos() {
         let d = request.resource.data;
-        return d.keys().hasOnly(['poiId', 'poiNome', 'poiCategoria', 'checkinEm', 'origemDeteccao'])
+        return d.keys().hasOnly(['rotaId', 'poiId', 'poiNome', 'poiCategoria', 'checkinEm', 'origemDeteccao'])
           && d.checkinEm == request.time
+          && (!('rotaId' in d) || (d.rotaId is string && d.rotaId.size() <= 36))
           && (!('poiNome' in d) || (d.poiNome is string && d.poiNome.size() <= 200))
           && (!('poiId' in d) || d.poiId == null || (d.poiId is string && d.poiId.size() <= 100))
           && (!('poiCategoria' in d) || d.poiCategoria == null
               || (d.poiCategoria is string && d.poiCategoria.size() <= 50))
           && (!('origemDeteccao' in d) || d.origemDeteccao in ['gps', 'manual']);
+      }
+    }
+
+    // ============================================================
+    // EVENTOS_PATROCINIO — trilha anônima de exposição e interação
+    // Append-only: turista pode criar eventos estritamente validados;
+    // apenas admin pode consultar. Não armazenar dados pessoais ou GPS.
+    // ============================================================
+    match /eventos_patrocinio/{eventoId} {
+      allow create: if eventoPatrocinioTemCamposValidos();
+      allow get, list: if ehAdmin();
+      allow update, delete: if false;
+
+      function eventoPatrocinioTemCamposValidos() {
+        let d = request.resource.data;
+        return d.keys().hasOnly([
+            'tipoEvento', 'origem', 'criadoEm',
+            'poiId', 'patrocinadorId', 'rotaId', 'nivel'
+          ])
+          && d.keys().hasAll(['tipoEvento', 'origem', 'criadoEm'])
+          && d.criadoEm == request.time
+          && d.tipoEvento in [
+            'impressao', 'clique', 'whatsapp', 'instagram',
+            'direcoes', 'checkin', 'parada_pulada'
+          ]
+          && d.origem in ['carrossel', 'banner', 'pagina-local', 'modo-rota']
+          && (('poiId' in d && d.poiId is string && d.poiId.size() > 0 && d.poiId.size() <= 100)
+            || ('patrocinadorId' in d && d.patrocinadorId is string
+                && d.patrocinadorId.size() > 0 && d.patrocinadorId.size() <= 100))
+          && (!('patrocinadorId' in d) ||
+              (d.patrocinadorId is string && d.patrocinadorId.size() <= 100))
+          && (!('poiId' in d) || (d.poiId is string && d.poiId.size() <= 100))
+          && (!('rotaId' in d) || (d.rotaId is string && d.rotaId.size() <= 36))
+          && (!('nivel' in d) || d.nivel in ['ouro', 'prata', 'bronze']);
       }
     }
 
