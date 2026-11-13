@@ -9,6 +9,7 @@
  */
 import { buscarPoiPorId } from "../data/pois-data.js";
 import { alternarFavorito, ehFavorito } from "../core/favoritos-local.js";
+import { registrarEventoPatrocinio } from "../data/metricas-patrocinio-data.js";
 
 const NOMES_DIAS = {
   domingo: "Domingo", segunda: "Segunda", terca: "Terça", quarta: "Quarta",
@@ -130,6 +131,7 @@ function desenharBotaoMapa(poi) {
     return;
   }
   btn.href = `https://www.google.com/maps/dir/?api=1&destination=${poi.localizacao.lat},${poi.localizacao.lng}&travelmode=walking`;
+  if (poi.patrocinio?.ativo === true) btn.addEventListener("click", () => registrarInteracaoPatrocinada(poi, "direcoes"));
 }
 
 // ============================================================
@@ -152,6 +154,7 @@ function desenharContato(poi) {
     const mensagem = encodeURIComponent(`Olá! Vim pelo aplicativo Linde Guia e queria saber mais sobre o ${poi.nome}.`);
     btnWhats.href = `https://wa.me/${numeroComPais}?text=${mensagem}`;
     btnWhats.hidden = false;
+    if (poi.patrocinio?.ativo === true) btnWhats.addEventListener("click", () => registrarInteracaoPatrocinada(poi, "whatsapp"));
     temAlgum = true;
   }
 
@@ -159,10 +162,18 @@ function desenharContato(poi) {
     const usuario = poi.instagram.replace(/^@/, "").trim();
     btnInsta.href = `https://instagram.com/${usuario}`;
     btnInsta.hidden = false;
+    if (poi.patrocinio?.ativo === true) btnInsta.addEventListener("click", () => registrarInteracaoPatrocinada(poi, "instagram"));
     temAlgum = true;
   }
 
   secao.hidden = !temAlgum;
+}
+
+// ============================================================
+// INTERAÇÕES COM LOCAIS PATROCINADOS
+// ============================================================
+function registrarInteracaoPatrocinada(poi, tipoEvento) {
+  registrarEventoPatrocinio({ tipoEvento, origem: "pagina-local", poiId: poi.id, nivel: poi.patrocinio?.nivel });
 }
 
 // ============================================================
