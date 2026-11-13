@@ -153,7 +153,7 @@ function desenharFunilConversao(totalAcessos, qtdCriacoes, qtdFinalizacoes) {
     "grafico-funil-conversao", "bar",
     ["Acessos", "Rotas criadas", "Concluídas"],
     [{
-      label: "Pessoas",
+      label: "Acessos",
       data: [totalAcessos, qtdCriacoes, qtdFinalizacoes],
       backgroundColor: ["#4A6B9E", "#3C4A3E", "#9E2B25"],
       borderRadius: 6,
@@ -174,7 +174,7 @@ function desenharRotasPorDia(criacoes) {
 
 function desenharRotasPorHorario(criacoes) {
   const arr = new Array(24).fill(0);
-  criacoes.forEach((r) => { if (r.criadoEm) arr[r.criadoEm.getHours()]++; });
+  criacoes.forEach((r) => { if (r.criadoEm) arr[horaBrasilia(r.criadoEm)]++; });
   grafico("grafico-rotas-por-horario","bar",arr.map((_,h)=>`${String(h).padStart(2,"0")}h`),[{label:"Rotas",data:arr,backgroundColor:"#9E2B25",borderRadius:4}]);
 }
 
@@ -244,7 +244,7 @@ function desenharTabelaCheckins(checkins) {
   tbody.innerHTML = "";
   [...checkins].filter(c=>c.checkinEm).sort((a,b)=>b.checkinEm-a.checkinEm).slice(0,30).forEach(c=>{
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td>${escaparHtml(c.poiNome||"—")}</td><td>${escaparHtml(c.poiCategoria||"—")}</td><td>${diaExibicao(diaChave(c.checkinEm))}</td><td>${String(c.checkinEm.getHours()).padStart(2,"0")}:${String(c.checkinEm.getMinutes()).padStart(2,"0")}</td><td>${escaparHtml(c.origemDeteccao||"—")}</td>`;
+    tr.innerHTML=`<td>${escaparHtml(c.poiNome||"—")}</td><td>${escaparHtml(c.poiCategoria||"—")}</td><td>${diaExibicao(diaChave(c.checkinEm))}</td><td>${formatarHorarioBrasilia(c.checkinEm)}</td><td>${escaparHtml(c.origemDeteccao||"—")}</td>`;
     tbody.appendChild(tr);
   });
 }
@@ -337,5 +337,29 @@ function grafico(id, tipo, labels, datasets, extra={}) {
   canvas._chartInstance = new Chart(canvas,{type:tipo,data:{labels,datasets},options:{responsive:true,plugins:{legend:{display:datasets.length>1}},...extra}});
 }
 
-function diaChave(d) { return d.toISOString().slice(0,10); }
+function diaChave(d) {
+  const partes = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(d);
+  const data = Object.fromEntries(partes.map((parte) => [parte.type, parte.value]));
+  return `${data.year}-${data.month}-${data.day}`;
+}
+function horaBrasilia(d) {
+  return Number(new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    hourCycle: "h23",
+  }).format(d));
+}
+function formatarHorarioBrasilia(d) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(d);
+}
 function diaExibicao(k) { const [,m,d]=k.split("-"); return `${d}/${m}`; }
