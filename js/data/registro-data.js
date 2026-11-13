@@ -43,7 +43,7 @@ async function registrarRotaCriada(perfilBusca, capitulo) {
       interesses: perfilBusca.interesses || [],
       quantidadeParadas: capitulo.paradas.length,
       paradasNomes: capitulo.paradas.map((p) => p.nome),
-      paradasIds: capitulo.paradas.map((p) => String(p.id)).filter(Boolean),
+      paradasIds: capitulo.paradas.map((p) => p.id).filter(Boolean).map(String),
       capituloVazio: !!capitulo.vazio,
     });
   } catch (erro) {
@@ -100,7 +100,7 @@ async function registrarCapituloAdicional(capitulo) {
       ...(rotaId ? { rotaId } : {}),
       quantidadeParadas: capitulo.paradas.length,
       paradasNomes: capitulo.paradas.map((p) => p.nome),
-      paradasIds: capitulo.paradas.map((p) => String(p.id)).filter(Boolean),
+      paradasIds: capitulo.paradas.map((p) => p.id).filter(Boolean).map(String),
       capituloVazio: !!capitulo.vazio,
     });
   } catch (erro) {
