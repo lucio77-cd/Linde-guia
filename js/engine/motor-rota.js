@@ -66,6 +66,42 @@ const MARGEM_SEGURANCA_MIN = 10; // minutos de "colchão" entre paradas, pra nã
 // um bloco fechado sem se perder.
 const MAX_PARADAS_POR_CAPITULO = 4;
 
+// "Quanto tempo você tem?" (duracaoDisponivelMin no perfilBusca, opcional).
+// Sem duração, nada muda: capítulo curto de até MAX_PARADAS_POR_CAPITULO.
+// Com duração, o roteiro é dimensionado pra caber: o teto de paradas sobe
+// (aprox. 1 parada a cada MINUTOS_POR_PARADA_ESTIMADO, contando visita +
+// caminhada) e, depois de calcular os horários reais, o que ultrapassa o
+// tempo disponível (mais a margem) é cortado do fim.
+const MAX_PARADAS_ABSOLUTO = 8;
+const MINUTOS_POR_PARADA_ESTIMADO = 35;
+
+function limiteDeParadas(perfilBusca) {
+  const duracao = Number(perfilBusca?.duracaoDisponivelMin);
+  if (!duracao || duracao <= 0) return MAX_PARADAS_POR_CAPITULO;
+  // +15: o corte por horário real (cortarPeloTempoDisponivel) tira o que não couber.
+  const porTempo = Math.floor((duracao + 15) / MINUTOS_POR_PARADA_ESTIMADO);
+  return Math.min(MAX_PARADAS_ABSOLUTO, Math.max(1, porTempo));
+}
+
+// Corta do fim as paradas que terminam depois do tempo disponível. A ordem
+// já é a da rota, então o que sobra é sempre um começo válido (horários
+// continuam corretos). Nunca devolve vazio por causa do tempo: a primeira
+// parada fica mesmo que sozinha estoure o prazo.
+function cortarPeloTempoDisponivel(paradas, perfilBusca) {
+  const duracao = Number(perfilBusca?.duracaoDisponivelMin);
+  if (!duracao || duracao <= 0 || paradas.length <= 1) return paradas;
+
+  const limiteMs =
+    new Date(perfilBusca.horarioInicio).getTime() + (duracao + MARGEM_SEGURANCA_MIN) * 60000;
+
+  let quantas = 0;
+  for (const parada of paradas) {
+    if (new Date(parada.horarioSaida).getTime() > limiteMs) break;
+    quantas++;
+  }
+  return paradas.slice(0, Math.max(1, quantas));
+}
+
 // Nível mínimo de prioridade gastronômica (definido no admin, escala 1-5)
 // que GARANTE o lugar no capítulo — não é só um bônus de pontuação, é uma
 // reserva de slot.
@@ -408,8 +444,10 @@ function montarCapitulo(candidatosPontuados, perfilBusca, experienciasGarantidas
   const selecionados = [];
   let posicaoAtual = perfilBusca.localizacaoPartida;
 
+  const limiteParadas = limiteDeParadas(perfilBusca);
+
   for (const experiencia of experienciasGarantidas || []) {
-    if (selecionados.length >= MAX_PARADAS_POR_CAPITULO) break;
+    if (selecionados.length >= limiteParadas) break;
 
     const deslocamento = estimarDeslocamentoMin(posicaoAtual, experiencia.localizacao);
     selecionados.push({ ...experiencia, deslocamentoMin: deslocamento });
@@ -422,7 +460,7 @@ function montarCapitulo(candidatosPontuados, perfilBusca, experienciasGarantidas
     .sort((a, b) => b.score - a.score);
 
   for (const candidato of ordenadosPorScore) {
-    if (selecionados.length >= MAX_PARADAS_POR_CAPITULO) break;
+    if (selecionados.length >= limiteParadas) break;
 
     const deslocamento = estimarDeslocamentoMin(posicaoAtual, candidato.localizacao);
     selecionados.push({ ...candidato, deslocamentoMin: deslocamento });
@@ -493,7 +531,7 @@ function calcularERevalidarAteEstabilizar(paradas, perfilBusca) {
     );
 
     if (validas.length === comHorario.length) {
-      return validas;
+      return cortarPeloTempoDisponivel(validas, perfilBusca);
     }
 
     atuais = validas;
@@ -503,7 +541,7 @@ function calcularERevalidarAteEstabilizar(paradas, perfilBusca) {
     }
   }
 
-  return atuais;
+  return cortarPeloTempoDisponivel(atuais, perfilBusca);
 }
 
 function respeitaJanelaDeRefeicao(parada, refeicoesDesejadas) {
@@ -632,5 +670,6 @@ export {
   recalcularRota,
   PESOS,
   MAX_PARADAS_POR_CAPITULO,
+  limiteDeParadas,
   estaAbertoNoHorario,
 };

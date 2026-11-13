@@ -25,6 +25,7 @@ import {
   gerarCapituloDeFavoritos,
   obterCandidatosViaveis,
   aplicarDeslocamentosReais,
+  limiteDeParadas,
 } from "../engine/motor-rota.js";
 import { curarCapituloComIA }          from "../engine/curador-ia.js";
 import { obterDeslocamentosReaisMin }  from "../engine/caminhada-real.js";
@@ -34,13 +35,13 @@ import { buscarEventosAtivosNaData }   from "../data/eventos-data.js";
 import { registrarRotaCriada }         from "../data/registro-data.js";
 import { lerSelos }                    from "../core/selos-local.js";
 
-const MAX_PARADAS_CAPITULO_IA = 4; // mesmo teto do motor (MAX_PARADAS_POR_CAPITULO)
 
 // ============================================================
 // ESTADO DO FORMULÁRIO
 // ============================================================
 const estado = {
   quando: "agora",
+  duracao: "", // "" = sem limite (capítulo curto de sempre); senão minutos disponíveis
   horarioInicio: null,
   localizacaoPartida: null,
   enderecoManual: "",
@@ -293,6 +294,9 @@ function configurarSubmit() {
       return;
     }
 
+    // "Agora" é o instante do clique, não o de quando a página abriu.
+    if (estado.quando === "agora") atualizarHorarioParaAgora();
+
     const botaoSubmit = form.querySelector("button[type=submit]");
     botaoSubmit.disabled = true;
     mostrarOverlayCarregando();
@@ -332,8 +336,13 @@ async function gerarCapituloCompleto(pois, eventos, perfilBusca) {
   }
 
   // --- Camada 1: curadoria por IA (opcional) ---
-  const historico = await montarHistoricoDoUsuario();
-  const curadoria = await curarCapituloComIA(candidatosViaveis, perfilBusca, historico, MAX_PARADAS_CAPITULO_IA);
+  let curadoria = null;
+  try {
+    const historico = await montarHistoricoDoUsuario();
+    curadoria = await curarCapituloComIA(candidatosViaveis, perfilBusca, historico, limiteDeParadas(perfilBusca));
+  } catch (erro) {
+    console.warn("[formulario-roteiro] Curadoria por IA indisponível, usando o motor:", erro);
+  }
 
   let capitulo;
   let explicacaoIA = "";
@@ -352,14 +361,33 @@ async function gerarCapituloCompleto(pois, eventos, perfilBusca) {
     return capitulo; // nada a fazer, capítulo vazio não precisa de tempo real
   }
 
-  // --- Camada 2: tempo real de caminhada (opcional) ---
-  const deslocamentosReaisMin = await obterDeslocamentosReaisMin(
+  // --- Camada 2: tempo real de caminhada (opcional) — TAMBÉM traz o
+  // traçado real da rua (polyline), usado pelo mapa em minha-rota.html
+  // pra desenhar o caminho de verdade em vez de linha reta.
+  // obterDeslocamentosReaisMin devolve { deslocamentosMin, polyline } (ou
+  // null); antes esse objeto inteiro ia pra aplicarDeslocamentosReais, que
+  // espera só a lista — então o tempo real e o traçado eram sempre
+  // descartados e a chamada à Directions API era paga à toa.
+  const resultadoCaminhada = await obterDeslocamentosReaisMin(
     perfilBusca.localizacaoPartida,
     capitulo.paradas
   );
-  const capituloFinal = aplicarDeslocamentosReais(capitulo.paradas, deslocamentosReaisMin, perfilBusca);
+  const capituloFinal = aplicarDeslocamentosReais(
+    capitulo.paradas,
+    resultadoCaminhada?.deslocamentosMin || null,
+    perfilBusca
+  );
 
-  return { ...capituloFinal, explicacaoIA };
+  // Se o tempo real mudou a ordem de grandeza (ex.: rua em subida) e a lista
+  // encolheu por causa do tempo disponível, o traçado deixaria de bater com
+  // as paradas — nesse caso fica sem traçado e o mapa usa a linha reta.
+  const mesmasParadas = capituloFinal.paradas.length === capitulo.paradas.length;
+
+  return {
+    ...capituloFinal,
+    explicacaoIA,
+    polyline: mesmasParadas ? resultadoCaminhada?.polyline || null : null,
+  };
 }
 
 function validarEstado() {
@@ -395,6 +423,8 @@ function montarPerfilBusca() {
     interesses: estado.interesses,
     refeicoesDesejadas: estado.refeicoesDesejadas,
     idsExcluidos: idsJaVisitados,
+    // null = sem limite de tempo (comportamento de sempre)
+    duracaoDisponivelMin: estado.duracao ? Number(estado.duracao) : null,
   };
 }
 

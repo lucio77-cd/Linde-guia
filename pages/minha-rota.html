@@ -142,6 +142,41 @@
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
     :focus-visible { outline: 3px solid var(--borde); outline-offset: 3px; border-radius: 4px; }
   
+    /* ===== Marcadores do mapa (antes viviam num CSS que a página não carregava) ===== */
+    .marcador-numerado {
+      background: var(--borde); color: var(--branco);
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--fonte-display); font-weight: 700; font-size: 0.8125rem;
+      border: 2px solid var(--branco); box-shadow: 0 1px 3px rgba(38,35,33,0.3);
+    }
+    .marcador-destino {
+      font-size: 1.5rem; display: flex; align-items: center; justify-content: center;
+      filter: drop-shadow(0 1px 2px rgba(38,35,33,0.4));
+    }
+
+    /* ===== Explicação da IA, salvar e compartilhar ===== */
+    .vista-resultado__explicacao {
+      margin-top: 0.75rem; padding: 0.875rem 1.125rem; background: var(--creme-medio);
+      border-left: 3px solid var(--dourado); border-radius: 8px;
+      font-size: 0.9375rem; line-height: 1.55; color: var(--tinta-suave);
+    }
+    .vista-resultado__explicacao[hidden] { display: none; }
+    .vista-resultado__extras { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+    .vista-resultado__extras .botao { flex: 1; min-width: 140px; text-align: center; padding: 0.75rem 1rem; font-size: 0.875rem; }
+    .feedback-roteiro { font-size: 0.875rem; color: var(--tinta-suave); margin-bottom: 0.75rem; }
+    .feedback-roteiro[hidden] { display: none; }
+
+    /* ===== Mapa da parada atual (Em rota) ===== */
+    .mapa-em-rota-bloco { margin-bottom: 1.5rem; }
+    #mapa-em-rota { height: 240px; border-radius: var(--raio-grande); border: 1.5px solid var(--creme-escuro); }
+    #mapa-em-rota .leaflet-tile-pane {
+      filter: sepia(0.35) saturate(1.5) hue-rotate(-8deg) brightness(0.96) contrast(1.05);
+    }
+    .info-distancia { margin: 0.625rem 0; font-size: 0.9375rem; color: var(--tinta-suave); }
+    .info-distancia strong { color: var(--tinta); }
+    .mapa-em-rota-bloco .botao { width: 100%; padding: 0.625rem 1rem; font-size: 0.875rem; }
+
     /* ===== Banner de patrocinador ===== */
     .banner-patrocinado { border-bottom: 1px solid var(--creme-escuro); background: var(--branco); }
     .banner-patrocinado[hidden] { display: none; }
@@ -205,11 +240,18 @@
       <div class="vista-resultado__resumo">
         <h1>Sua rota está pronta</h1>
         <p id="resumo-texto" class="vista-resultado__texto-resumo"></p>
+        <p id="explicacao-ia" class="vista-resultado__explicacao" hidden></p>
       </div>
 
       <ol id="lista-paradas" class="lista-paradas"></ol>
 
       <div id="mapa-rota" aria-label="Mapa da rota"></div>
+
+      <div class="vista-resultado__extras">
+        <button id="btn-salvar-roteiro" type="button" class="botao botao--secundario">Salvar roteiro</button>
+        <button id="btn-compartilhar-roteiro" type="button" class="botao botao--secundario">Compartilhar</button>
+      </div>
+      <p id="feedback-roteiro" class="feedback-roteiro" role="status" aria-live="polite" hidden></p>
 
       <div class="vista-resultado__acoes">
         <a class="botao botao--secundario" href="roteiro.html">Ajustar preferências</a>
@@ -228,6 +270,12 @@
       </div>
 
       <article id="card-parada-atual" class="card-parada-atual"></article>
+
+      <div class="mapa-em-rota-bloco">
+        <div id="mapa-em-rota" role="region" aria-label="Mapa até a parada atual"></div>
+        <p id="info-distancia-parada" class="info-distancia" aria-live="polite"></p>
+        <button id="btn-atualizar-posicao" type="button" class="botao botao--secundario">Atualizar minha posição</button>
+      </div>
 
       <div class="vista-em-rota__acoes">
         <button id="btn-pular-parada" type="button" class="botao botao--secundario">
