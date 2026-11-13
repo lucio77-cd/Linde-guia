@@ -57,7 +57,6 @@ async function registrarRotaCriada(perfilBusca, capitulo) {
 async function registrarCheckin(poi, origemDeteccao) {
   try {
     const rotaId = obterRotaIdAtual(false);
-    registrarVisitaDaRota();
     await addDoc(collection(db, COLECAO_CHECKINS), {
       ...(rotaId ? { rotaId } : {}),
       poiId: poi.id || null,
@@ -66,6 +65,7 @@ async function registrarCheckin(poi, origemDeteccao) {
       checkinEm: serverTimestamp(),
       origemDeteccao, // "gps" ou "manual" — útil pra saber a confiabilidade do dado
     });
+    registrarVisitaDaRota();
     if (poi.patrocinio?.ativo === true) {
       await registrarEventoPatrocinio({
         tipoEvento: "checkin", origem: "modo-rota", poiId: poi.id,
