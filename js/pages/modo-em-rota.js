@@ -21,7 +21,13 @@ import {
   lerRotaDoStorage, salvarRotaNoStorage, mostrarEstado,
   renderizarResultado, configurarBotaoIniciar,
 } from "./render-rota.js";
-import { registrarCheckin, registrarRoteiroFinalizado } from "../data/registro-data.js";
+import {
+  registrarCheckin,
+  registrarParadaPulada,
+  registrarCapituloAdicional,
+  registrarRoteiroFinalizado,
+} from "../data/registro-data.js";
+import { obterQuantidadeParadasVisitadas } from "../data/metricas-patrocinio-data.js";
 import { salvarSeloLocal, lerSelos } from "../core/selos-local.js";
 import { buscarPoisAtivos } from "../data/pois-data.js";
 import { buscarEventosAtivosNaData } from "../data/eventos-data.js";
@@ -75,6 +81,8 @@ function avancarRota(acao) {
   if (acao === "chegou" && paradaAtual) {
     registrarCheckin(paradaAtual, "manual"); // não bloqueia o fluxo, falha silenciosa
     salvarSeloLocal(paradaAtual); // guarda o selo no aparelho do visitante (ver perfil.html)
+  } else if (acao === "pular" && paradaAtual) {
+    registrarParadaPulada(paradaAtual); // mede a parada oferecida que não virou visita
   }
 
   obterPosicaoEHorarioAtuais(paradaAtual?.localizacao)
@@ -130,7 +138,7 @@ function mostrarPerguntaContinuar(capituloTerminado) {
 function finalizarPasseio() {
   const capitulo = lerRotaDoStorage();
   if (capitulo) {
-    registrarRoteiroFinalizado(capitulo, capitulo.paradas.length);
+    registrarRoteiroFinalizado(capitulo, obterQuantidadeParadasVisitadas());
   }
   mostrarEstado("vista-finalizada");
 }
@@ -189,6 +197,7 @@ function gerarProximoCapitulo() {
         return;
       }
 
+      registrarCapituloAdicional(novoCapitulo);
       salvarRotaNoStorage(novoCapitulo);
       mostrarEstado("vista-resultado");
       renderizarResultado(novoCapitulo);
