@@ -34,9 +34,10 @@ const COLECAO_CHECKINS = "checkins";
 // ============================================================
 async function registrarRotaCriada(perfilBusca, capitulo) {
   try {
+    const rotaId = iniciarNovaRotaAnalytics();
     await addDoc(collection(db, COLECAO_ROTAS_CRIADAS), {
       criadoEm: serverTimestamp(),
-      rotaId: iniciarNovaRotaAnalytics(),
+      ...(rotaId ? { rotaId } : {}),
       horarioInicioEscolhido: perfilBusca.horarioInicio,
       refeicoesDesejadas: perfilBusca.refeicoesDesejadas || [],
       interesses: perfilBusca.interesses || [],
@@ -96,7 +97,7 @@ async function registrarCapituloAdicional(capitulo) {
     await addDoc(collection(db, COLECAO_ROTAS_CRIADAS), {
       criadoEm: serverTimestamp(),
       tipoEvento: "capitulo",
-      rotaId,
+      ...(rotaId ? { rotaId } : {}),
       quantidadeParadas: capitulo.paradas.length,
       paradasNomes: capitulo.paradas.map((p) => p.nome),
       paradasIds: capitulo.paradas.map((p) => String(p.id)).filter(Boolean),
