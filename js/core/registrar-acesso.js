@@ -30,14 +30,21 @@ const COLECAO_ACESSOS = "acessos_diarios";
 async function registrarAcesso() {
   try {
     const agora = new Date();
-    // Dia no horário LOCAL (a hora abaixo também é local). toISOString()
-    // usa UTC e, depois das 21h em Brasília, jogava o acesso no dia seguinte.
-    const dataChave = [
-      agora.getFullYear(),
-      String(agora.getMonth() + 1).padStart(2, "0"),
-      String(agora.getDate()).padStart(2, "0"),
-    ].join("-"); // AAAA-MM-DD
-    const hora = String(agora.getHours());
+    // Analytics sempre usa o fuso de Treze Tílias/Brasília, mesmo se o
+    // aparelho estiver configurado em outro fuso.
+    const partesData = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Sao_Paulo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(agora);
+    const data = Object.fromEntries(partesData.map((parte) => [parte.type, parte.value]));
+    const dataChave = `${data.year}-${data.month}-${data.day}`;
+    const hora = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Sao_Paulo",
+      hour: "2-digit",
+      hourCycle: "h23",
+    }).format(agora);
 
     const ref = doc(db, COLECAO_ACESSOS, dataChave);
     await setDoc(
