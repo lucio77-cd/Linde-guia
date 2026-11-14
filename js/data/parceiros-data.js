@@ -11,6 +11,7 @@ import {
   collection,
   doc,
   getDocs,
+  getDoc,
   serverTimestamp,
   setDoc,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -42,7 +43,11 @@ async function definirAtivacaoPortal(poiId, ativo, portalAtual = null) {
   };
 
   await setDoc(referencia, dados, { merge: false });
-  return { ...dados, id: poiId };
+  const salvo = await getDoc(referencia);
+  if (!salvo.exists()) {
+    throw new Error("Não foi possível confirmar a gravação do portal.");
+  }
+  return { id: salvo.id, ...salvo.data() };
 }
 
 export { buscarTodosPortaisParceiros, definirAtivacaoPortal };
