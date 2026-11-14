@@ -2,23 +2,16 @@
  * registrar-acesso.js — js/core/registrar-acesso.js
  * Linde Guia — Treze Tílias
  *
- * Conta acessos ao site de forma AGREGADA — decisão registrada com o
- * cliente: 1 documento por VISITA seria simples de ler, mas custaria uma
- * escrita no Firestore a cada carregamento de página, o que aproxima do
- * limite do plano gratuito bem mais rápido se o tráfego crescer.
+ * Registra uma visita aproximada por aparelho por dia, sem criar um
+ * documento por carregamento. Não identifica pessoas: localStorage pode
+ * ser apagado, navegação anônima e aparelhos diferentes contam novamente.
  *
- * Em vez disso: 1 único documento por DIA (acessos_diarios/{AAAA-MM-DD}),
- * incrementado a cada carregamento. `merge: true` + `increment()` fazem
- * o incremento ser atômico (duas pessoas acessando ao mesmo tempo não
- * perdem contagem uma da outra), tanto no total do dia quanto no total
- * daquela hora específica.
+ * Os dados anteriores à implantação desta regra continuam representando
+ * carregamentos de página e não são diretamente comparáveis aos novos.
  *
- * Incluir em TODA página voltada pro turista:
- *   <script type="module" src="../js/core/registrar-acesso.js"></script>
- * (ou "js/core/..." sem "../" nas páginas que ficam na raiz, como index.html)
- *
- * Nunca lança erro pra quem inclui o script — falha aqui é só log,
- * silenciosa pro turista, igual ao padrão de registro-data.js.
+ * Falhas de gravação não interrompem a navegação. A coleção e os campos
+ * Firestore permanecem os mesmos: acessos_diarios/{AAAA-MM-DD}, total e
+ * porHora. Nenhum registro histórico é alterado.
  */
 import { db } from "./firebase-config.js";
 import {
@@ -26,18 +19,45 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const COLECAO_ACESSOS = "acessos_diarios";
+const CHAVE_LOCAL = "linde-guia:acesso-contado-em";
+
+function jaContouHoje(dataChave) {
+  try {
+    return localStorage.getItem(CHAVE_LOCAL) === dataChave;
+  } catch {
+    return false;
+  }
+}
+
+function marcarContado(dataChave) {
+  try {
+    localStorage.setItem(CHAVE_LOCAL, dataChave);
+  } catch {
+    // Sem armazenamento local, a contagem continua funcionando por carga.
+  }
+}
+
+function desmarcarContado() {
+  try {
+    localStorage.removeItem(CHAVE_LOCAL);
+  } catch {
+    // Nada a desfazer.
+  }
+}
 
 async function registrarAcesso() {
+  let dataChave = null;
   try {
     const agora = new Date();
-    // Dia no horário LOCAL (a hora abaixo também é local). toISOString()
-    // usa UTC e, depois das 21h em Brasília, jogava o acesso no dia seguinte.
-    const dataChave = [
+    dataChave = [
       agora.getFullYear(),
       String(agora.getMonth() + 1).padStart(2, "0"),
       String(agora.getDate()).padStart(2, "0"),
-    ].join("-"); // AAAA-MM-DD
+    ].join("-");
     const hora = String(agora.getHours());
+
+    if (jaContouHoje(dataChave)) return;
+    marcarContado(dataChave);
 
     const ref = doc(db, COLECAO_ACESSOS, dataChave);
     await setDoc(
@@ -49,10 +69,15 @@ async function registrarAcesso() {
       { merge: true }
     );
   } catch (erro) {
+    if (dataChave) desmarcarContado();
     console.warn("[registrar-acesso] Falha ao registrar acesso (não afeta o usuário):", erro);
   }
 }
 
-document.addEventListener("DOMContentLoaded", registrarAcesso);
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", registrarAcesso, { once: true });
+} else {
+  registrarAcesso();
+}
 
 export { registrarAcesso };
