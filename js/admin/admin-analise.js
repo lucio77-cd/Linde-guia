@@ -7,7 +7,7 @@
  * admin-estatisticas.js só com a parte de tela.
  *
  * Limites conhecidos dos dados (para ninguém tirar conclusão errada):
- *  - "Acessos" = carregamentos de página (acessos_diarios), não pessoas.
+ *  - A métrica atual estima aparelhos únicos por dia; os dias antigos podem contar carregamentos de página. Não comparar diretamente.
  *  - "Concluídas" não está ligada à rota que a originou; a razão
  *    concluídas/criadas é uma aproximação, não uma taxa exata.
  *  - paradasNomes = locais OFERECIDOS pelo roteiro; não diz se a pessoa
@@ -500,7 +500,7 @@ export function montarTextoResumo(a) {
   const linhas = [
     `📊 Linde Guia — ${rotuloPeriodo(a.periodo)}`,
     "",
-    `Acessos: ${k.acessos.valor}${seta(k.acessos.variacaoPct)}`,
+    `Acessos registrados: ${k.acessos.valor}${seta(k.acessos.variacaoPct)}`,
     `Rotas criadas: ${k.rotas.valor}${seta(k.rotas.variacaoPct)}`,
     `Rotas concluídas: ${k.concluidas.valor}`,
     `Check-ins (visitas): ${k.checkins.valor}${seta(k.checkins.variacaoPct)}`,
@@ -541,6 +541,6 @@ export function montarResumoParaIA(a) {
     top5LocaisMaisVisitados: topVisitados.map((l) => `${l.nome} (${l.visitas})`),
     locaisNuncaSugeridos: a.nuncaSugeridos.length,
     patrocinados: a.patrocinados.map((p) => ({ nivel: p.nivel, vezesSugerido: p.oferecido, visitas: p.visitas })),
-    observacao: "Acessos são carregamentos de página, não pessoas. Concluídas/criadas é aproximação.",
+    observacao: "A contagem atual estima visitantes (aparelhos), uma vez por aparelho por dia. Dias anteriores à mudança podem contar carregamentos de página e não são diretamente comparáveis. Não chamar de pessoas. Concluídas/criadas é aproximação.",
   };
 }
