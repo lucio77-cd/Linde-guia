@@ -229,6 +229,39 @@ service cloud.firestore {
     }
 
     // ============================================================
+    // PORTAIS_PARCEIROS — configuração administrativa do portal de cada POI.
+    // Nesta etapa, somente administradores podem consultar e ativar/desativar.
+    // Acesso do parceiro e chave inicial serão adicionados em etapas próprias.
+    // ============================================================
+    match /portais_parceiros/{poiId} {
+      allow get, list: if ehAdmin();
+      allow create: if ehAdmin() && portalParceiroValido()
+        && request.resource.data.poiId == poiId
+        && request.resource.data.criadoEm == request.time
+        && request.resource.data.atualizadoEm == request.time;
+      allow update: if ehAdmin() && portalParceiroValido()
+        && request.resource.data.poiId == resource.data.poiId
+        && request.resource.data.poiId == poiId
+        && request.resource.data.criadoEm == resource.data.criadoEm
+        && request.resource.data.atualizadoEm == request.time;
+      allow delete: if false;
+
+      function portalParceiroValido() {
+        let d = request.resource.data;
+        return d.keys().hasOnly([
+            'poiId', 'ativo', 'modulosAtivos', 'criadoEm', 'atualizadoEm'
+          ])
+          && d.keys().hasAll(['poiId', 'ativo', 'modulosAtivos', 'criadoEm', 'atualizadoEm'])
+          && d.poiId is string
+          && d.ativo is bool
+          && d.modulosAtivos is list
+          && d.modulosAtivos.size() <= 10
+          && d.criadoEm is timestamp
+          && d.atualizadoEm is timestamp;
+      }
+    }
+
+    // ============================================================
     // USUARIOS_ADMIN — quem é administrador.
     // Só o próprio admin lê o seu documento (a API /api/gerar-relatorio usa
     // isso pra validar o login). Ninguém escreve pelo app: crie os
