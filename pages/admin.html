@@ -380,6 +380,10 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
           Locais
         </button>
+        <button class="aba-nav" data-aba="aba-parceiros">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v.01M9 12v.01M9 15v.01M9 18v.01"/></svg>
+          Portal dos parceiros
+        </button>
         <button class="aba-nav" data-aba="aba-estatisticas">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           Estatísticas
@@ -514,6 +518,27 @@
           </div>
 
           <div id="lista-locais-admin" class="lista-locais-admin"></div>
+        </section>
+
+        <section id="aba-parceiros" class="aba-conteudo" hidden>
+          <div class="secao-header">
+            <div>
+              <h1>Portal dos parceiros</h1>
+              <p>Ative ou suspenda o acesso de cada estabelecimento ao futuro painel de gestão.</p>
+            </div>
+          </div>
+          <div class="grafico-card">
+            <h2>Como funciona nesta etapa</h2>
+            <p style="font-size:.875rem;color:var(--tinta-suave);line-height:1.6;">
+              A ativação prepara o estabelecimento para receber uma conta de parceiro.
+              Ainda não libera login nem edição de dados: essas permissões serão implementadas
+              com chave de ativação individual e validação de propriedade nas próximas etapas.
+            </p>
+          </div>
+          <div id="lista-portais-parceiros" class="lista-locais-admin" aria-live="polite">
+            <p class="lista-vazia">Carregando estabelecimentos...</p>
+          </div>
+          <p id="status-portais-parceiros" class="form-ajuda" role="status" aria-live="polite"></p>
         </section>
 
         <section id="aba-estatisticas" class="aba-conteudo" hidden>
@@ -866,6 +891,7 @@
   <script type="module" src="../js/admin/admin-auth.js"></script>
   <script type="module" src="../js/admin/admin-estatisticas.js"></script>
   <script type="module" src="../js/admin/admin-locais.js"></script>
+  <script type="module" src="../js/admin/admin-parceiros.js"></script>
   <script type="module" src="../js/admin/admin-patrocinadores.js"></script>
   <script type="module" src="../js/admin/admin-configuracoes.js"></script>
 
