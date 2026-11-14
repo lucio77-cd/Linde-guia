@@ -258,14 +258,14 @@ function blocoKpis(a) {
   const comparando = a.janela.anteriorInicio != null;
   return `
     <div class="kpis">
-      ${kpiCard("Acessos", Number(k.acessos.valor), delta(k.acessos))}
+      ${kpiCard("Acessos registrados", Number(k.acessos.valor), delta(k.acessos))}
       ${kpiCard("Rotas criadas", Number(k.rotas.valor), delta(k.rotas))}
       ${kpiCard("Check-ins", Number(k.checkins.valor), delta(k.checkins))}
       ${kpiCard("Rotas concluídas", Number(k.concluidas.valor), delta(k.concluidas))}
       ${kpiCard("Viram rota", `${Number(k.conversaoPct)}%`, `<span class="kpi-card__nota">acessos → rotas</span>`, true)}
       ${kpiCard("Concluem", `${Number(k.conclusaoPct)}%`, `<span class="kpi-card__nota">concluídas ÷ criadas</span>`, true)}
     </div>
-    <p class="dash-rodape">${comparando ? "Setas comparam com os " + escaparHtml(String(a.janela.dias)) + " dias anteriores. " : ""}Acessos contam carregamentos de página, não pessoas.</p>`;
+    <p class="dash-rodape">${comparando ? "Setas comparam com os " + escaparHtml(String(a.janela.dias)) + " dias anteriores. " : ""}A contagem atual estima aparelhos únicos por dia. Dias anteriores podem contar carregamentos de página e não são diretamente comparáveis.</p>`;
 }
 
 // ---------- Série por dia ----------
