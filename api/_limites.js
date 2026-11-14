@@ -8,6 +8,10 @@ const contadores = new Map();
 const MAX_CHAVES_GUARDADAS = 5000;
 
 function ipDe(req) {
+  // A Vercel fornece x-real-ip com o IP observado na borda.
+  const ipReal = req.headers["x-real-ip"];
+  if (typeof ipReal === "string" && ipReal.trim()) return ipReal.trim();
+
   const encaminhado = req.headers["x-forwarded-for"];
   if (typeof encaminhado === "string" && encaminhado.trim()) {
     return encaminhado.split(",")[0].trim();
