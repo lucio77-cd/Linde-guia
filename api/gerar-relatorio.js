@@ -8,7 +8,7 @@
 import { exigirAdmin } from "./_auth-admin.js";
 
 const MODELO = "gemini-2.5-flash";
-const TIMEOUT_SERVIDOR_MS = 12000;
+const TIMEOUT_SERVIDOR_MS = 8000; // abaixo do limite padrão de 10s da Vercel Hobby
 const LIMITE_RESUMO_CARACTERES = 20000;
 
 export default async function handler(req, res) {
