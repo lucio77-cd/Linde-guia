@@ -18,6 +18,22 @@
  *
  * Cada camada (IA, tempo real) é opcional e best-effort — nenhuma delas
  * pode deixar o usuário sem roteiro.
+ *
+ * ------------------------------------------------------------
+ * HISTÓRICO DE ALTERAÇÕES (revisão de código)
+ * ------------------------------------------------------------
+ * [Item 1] O QUE FOI FEITO: o submit agora ESPERA (com limite de 2 s) a
+ *   gravação de registrarRotaCriada() antes de redirecionar.
+ *   POR QUÊ: antes a chamada não era aguardada e o redirect logo em
+ *   seguida podia cancelar a gravação no Firestore — o painel perdia
+ *   rotas criadas. O limite de 2 s evita travar o turista se a rede
+ *   estiver ruim (registrarRotaCriada nunca lança erro).
+ * [Item 4] O QUE FOI FEITO: idsExcluidos passou a usar lerSelosDeHoje().
+ *   POR QUÊ: antes usava TODOS os selos já coletados, então um lugar
+ *   visitado em outra viagem nunca mais era sugerido.
+ * O QUE FALTA: nada neste arquivo para os itens 1 e 4. Pendentes em
+ *   outros itens da revisão: campo de endereço que fica desabilitado
+ *   depois do GPS e corrida entre o blur do endereço e o submit.
  */
 
 import {
@@ -33,7 +49,7 @@ import { montarHistoricoDoUsuario }    from "../data/historico-data.js";
 import { buscarPoisAtivos }            from "../data/pois-data.js";
 import { buscarEventosAtivosNaData }   from "../data/eventos-data.js";
 import { registrarRotaCriada }         from "../data/registro-data.js";
-import { lerSelos }                    from "../core/selos-local.js";
+import { lerSelosDeHoje }              from "../core/selos-local.js";
 
 
 // ============================================================
@@ -312,7 +328,15 @@ function configurarSubmit() {
       const capitulo = await gerarCapituloCompleto(pois, eventos, perfilBusca);
 
       sessionStorage.setItem("linde-guia:capitulo-atual", JSON.stringify(capitulo));
-      registrarRotaCriada(perfilBusca, capitulo); // falha silenciosa, não bloqueia redirect
+
+      // [Item 1] Espera a gravação do analytics antes de sair da página —
+      // sem isso o redirect abaixo podia cancelar o addDoc no meio do caminho.
+      // Limite de 2 s: se a rede estiver ruim, o turista não fica preso aqui
+      // (registrarRotaCriada nunca lança erro, só loga no console).
+      await Promise.race([
+        registrarRotaCriada(perfilBusca, capitulo),
+        new Promise((resolve) => setTimeout(resolve, 2000)),
+      ]);
 
       window.location.href = "../pages/minha-rota.html";
     } catch (erro) {
@@ -414,7 +438,9 @@ function montarPerfilBusca() {
     localizacaoPartida = CENTRO_TREZE_TILIAS;
   }
 
-  const idsJaVisitados = lerSelos().map((selo) => selo.poiId).filter(Boolean);
+  // [Item 4] Só o que foi visitado HOJE sai das sugestões. Antes eram todos
+  // os selos de todas as visitas, e o turista nunca mais via esses lugares.
+  const idsJaVisitados = lerSelosDeHoje().map((selo) => selo.poiId).filter(Boolean);
 
   return {
     data: estado.horarioInicio,
