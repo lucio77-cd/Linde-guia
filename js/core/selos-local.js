@@ -16,18 +16,47 @@
  * Limitação conhecida: selos ficam presos ao aparelho/navegador. Se o
  * projeto evoluir para ter login de turista, isso pode migrar pra
  * Firestore em "usuarios/{uid}/selos".
+ *
+ * ------------------------------------------------------------
+ * HISTÓRICO DE ALTERAÇÕES
+ * ------------------------------------------------------------
+ * O QUE FOI FEITO: nova função lerSelosDeHoje(); "hoje" agora é a data
+ * LOCAL do aparelho (antes salvarSeloLocal usava a data em UTC); lerSelos()
+ * devolve sempre um array, mesmo se o localStorage estiver corrompido.
+ * POR QUÊ: formulario-roteiro.js e modo-em-rota.js usavam lerSelos() inteiro
+ * pra excluir lugares "já visitados" das rotas novas — então quem voltava
+ * à cidade nunca mais recebia um lugar visitado meses antes. Agora só o
+ * que foi visitado HOJE é excluído. Em UTC, depois das 21h (Brasil) o
+ * "dia" virava e o mesmo lugar gerava selo duplicado.
+ * O QUE FALTA: nada neste arquivo. perfil.js e roteiro-manual.js
+ * continuam usando lerSelos() (histórico completo) de propósito.
  */
 
 const CHAVE_STORAGE = "linde-guia:selos";
 
+// Chave AAAA-MM-DD no fuso do aparelho (não em UTC).
+function chaveDoDiaLocal(valor) {
+  const d = new Date(valor);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 function lerSelos() {
   try {
     const bruto = localStorage.getItem(CHAVE_STORAGE);
-    return bruto ? JSON.parse(bruto) : [];
+    const lista = bruto ? JSON.parse(bruto) : [];
+    return Array.isArray(lista) ? lista : [];
   } catch (erro) {
     console.warn("[selos-local] Erro ao ler selos:", erro);
     return [];
   }
+}
+
+// Só os selos coletados no dia de hoje (data local). Usado pra decidir o
+// que já foi visitado NESTE passeio, sem bloquear lugares de visitas antigas.
+function lerSelosDeHoje() {
+  const hoje = chaveDoDiaLocal(new Date());
+  return lerSelos().filter((s) => s && s.data && chaveDoDiaLocal(s.data) === hoje);
 }
 
 function salvarSeloLocal(poi) {
@@ -38,9 +67,9 @@ function salvarSeloLocal(poi) {
 
     // Evita duplicar o mesmo local no mesmo dia (várias "Cheguei" na mesma
     // parada não devem virar vários selos iguais na coleção do visitante)
-    const hoje = new Date().toISOString().slice(0, 10);
+    const hoje = chaveDoDiaLocal(new Date());
     const jaTemHoje = selos.some(
-      (s) => s.poiId === poi.id && s.data?.slice(0, 10) === hoje
+      (s) => s && s.poiId === poi.id && s.data && chaveDoDiaLocal(s.data) === hoje
     );
     if (jaTemHoje) return;
 
@@ -57,4 +86,4 @@ function salvarSeloLocal(poi) {
   }
 }
 
-export { lerSelos, salvarSeloLocal };
+export { lerSelos, lerSelosDeHoje, salvarSeloLocal };
