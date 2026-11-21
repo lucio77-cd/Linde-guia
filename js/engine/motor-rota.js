@@ -47,6 +47,22 @@
  *
  * As duas camadas são OPCIONAIS por design: se qualquer uma falhar, o
  * capítulo continua válido com o motor de pontuação e a estimativa padrão.
+ *
+ * ============================================================
+ * HISTÓRICO DE ALTERAÇÕES (revisão de código)
+ * ============================================================
+ * [Item 3] O QUE FOI FEITO: recalcularRota() agora, quando a ação é
+ *   "chegou", começa a contar os horários das paradas restantes DEPOIS do
+ *   tempo de visita da parada atual (duracaoMediaVisitaMin, padrão 30 min).
+ *   POR QUÊ: o "Cheguei" é apertado na chegada, mas a pessoa ainda passa a
+ *   visita inteira naquele lugar. Antes os horários seguintes partiam de
+ *   "agora", ficavam adiantados pela duração da visita, a checagem de
+ *   "aberto no horário" usava o horário errado e a tela mostrava aviso
+ *   falso de "você está atrasado". Em "pular" nada muda: a pessoa sai
+ *   agora mesmo.
+ * O QUE FALTA: nada neste arquivo para o item 3. Pendentes em outros
+ *   itens da revisão: eventos sem dataFim (dataEstaNoIntervalo) e
+ *   gerarCapituloDeFavoritos aceitando locais "em_reforma".
  */
 
 // ============================================================
@@ -264,8 +280,19 @@ function recalcularRota(rotaAtual, paradaAtualIndex, acao, horarioAtual, posicao
     return { ...rotaAtual, paradas: rotaAtual.paradas.slice(0, paradaAtualIndex + 1), finalizada: true };
   }
 
+  // [Item 3] Horário em que a pessoa SAI da parada atual e começa a andar
+  // até a próxima. Em "chegou" ela ainda vai passar a visita inteira ali
+  // (duracaoMediaVisitaMin), então somamos esse tempo. Em "pular" ela sai
+  // agora mesmo, então o ponto de partida continua sendo o horário atual.
+  let horarioPartida = new Date(horarioAtual);
+  if (acao === "chegou") {
+    const paradaAtual = rotaAtual.paradas[paradaAtualIndex];
+    const duracaoVisitaMin = Number(paradaAtual?.duracaoMediaVisitaMin) || 30;
+    horarioPartida = adicionarMinutos(horarioPartida, duracaoVisitaMin);
+  }
+
   const reordenadas = ordenarPorProximidadeGeografica(paradasRestantes, posicaoAtual);
-  const comHorario = calcularHorariosReais(reordenadas, horarioAtual);
+  const comHorario = calcularHorariosReais(reordenadas, horarioPartida);
   const validas = comHorario.filter((p) =>
     estaAbertoNoHorario(p, p.horarioChegada, rotaAtual.perfilOriginal.data)
   );
