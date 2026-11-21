@@ -14,6 +14,31 @@
  * Cada "Cheguei" grava um check-in real no Firestore via
  * registro-data.js, que alimenta o painel admin (estatísticas de
  * locais visitados, horário, dia).
+ *
+ * ------------------------------------------------------------
+ * HISTÓRICO DE ALTERAÇÕES (revisão de código)
+ * ------------------------------------------------------------
+ * [Item 2] O QUE FOI FEITO: o app agora conta de verdade as paradas
+ *   visitadas ("Cheguei") e o total de paradas do passeio, somando todos
+ *   os capítulos (contadores em sessionStorage). finalizarPasseio() envia
+ *   esses números pro registrarRoteiroFinalizado(). Também travei o
+ *   "finalizar" contra clique duplo.
+ *   POR QUÊ: antes "visitadas" recebia capitulo.paradas.length, que
+ *   inclui as paradas PULADAS — então visitadas era sempre igual ao
+ *   total e a taxa de conclusão do painel (e do relatório pra
+ *   patrocinadores) ficava sempre em 100%.
+ *   COMO FUNCIONA: CHAVE_VISITADAS soma cada "Cheguei" do passeio;
+ *   CHAVE_TOTAL_ANTERIOR soma as paradas dos capítulos já encerrados.
+ *   Quando a pessoa escolhe "continuar", gerarProximoCapitulo marca
+ *   CHAVE_CONTINUANDO pra que o próximo "Iniciar" NÃO zere os contadores.
+ *   Um passeio novo (sem essa marca) zera tudo.
+ * [Item 4] O QUE FOI FEITO: o próximo capítulo exclui só os selos de HOJE
+ *   (lerSelosDeHoje), não todos os selos de sempre.
+ * O QUE FALTA: se a pessoa escolhe "continuar" e fecha o app sem iniciar o
+ *   capítulo novo, a marca CHAVE_CONTINUANDO fica na sessão e o próximo
+ *   passeio da mesma aba não zera os contadores (raro; some ao fechar a
+ *   aba). Pendentes em outros itens: traçado do mapa desatualizado depois
+ *   de recalcular a rota e progresso perdido ao recarregar a página.
  */
 
 import { recalcularRota, gerarCapitulo } from "../engine/motor-rota.js";
@@ -22,7 +47,7 @@ import {
   renderizarResultado, configurarBotaoIniciar,
 } from "./render-rota.js";
 import { registrarCheckin, registrarRoteiroFinalizado } from "../data/registro-data.js";
-import { salvarSeloLocal, lerSelos } from "../core/selos-local.js";
+import { salvarSeloLocal, lerSelosDeHoje } from "../core/selos-local.js";
 import { buscarPoisAtivos } from "../data/pois-data.js";
 import { buscarEventosAtivosNaData } from "../data/eventos-data.js";
 import { escaparHtml } from "../core/html-utils.js";
@@ -30,8 +55,37 @@ import { criarMapaFocado } from "./mapa-rota.js";
 
 const CHAVE_INDEX = "linde-guia:parada-atual-index";
 
+// [Item 2] Contadores do passeio inteiro (todos os capítulos), em sessionStorage.
+const CHAVE_VISITADAS = "linde-guia:passeio-visitadas";
+const CHAVE_TOTAL_ANTERIOR = "linde-guia:passeio-total-anterior";
+const CHAVE_CONTINUANDO = "linde-guia:passeio-continuando";
+
+function lerNumeroDaSessao(chave) {
+  const n = Number(sessionStorage.getItem(chave));
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+function somarNaSessao(chave, quantidade) {
+  sessionStorage.setItem(chave, String(lerNumeroDaSessao(chave) + quantidade));
+}
+
+function reiniciarContagemDoPasseio() {
+  sessionStorage.removeItem(CHAVE_VISITADAS);
+  sessionStorage.removeItem(CHAVE_TOTAL_ANTERIOR);
+  sessionStorage.removeItem(CHAVE_CONTINUANDO);
+}
+
+// Trava o registro de finalização contra clique duplo em "Não, obrigado".
+let finalizacaoRegistrada = false;
+
 function iniciarModoEmRota() {
   document.addEventListener("linde-guia:iniciar-em-rota", (evento) => {
+    // [Item 2] Se não veio de um "continuar", é um passeio novo: zera os contadores.
+    const continuando = sessionStorage.getItem(CHAVE_CONTINUANDO) === "1";
+    sessionStorage.removeItem(CHAVE_CONTINUANDO);
+    if (!continuando) reiniciarContagemDoPasseio();
+    finalizacaoRegistrada = false;
+
     // Capítulo novo: o traçado do anterior não vale mais.
     polylineNoMapa = evento.detail.rota.polyline || null;
     desenharParadaAtual(evento.detail.rota, obterIndiceAtual());
@@ -75,6 +129,7 @@ function avancarRota(acao) {
   if (acao === "chegou" && paradaAtual) {
     registrarCheckin(paradaAtual, "manual"); // não bloqueia o fluxo, falha silenciosa
     salvarSeloLocal(paradaAtual); // guarda o selo no aparelho do visitante (ver perfil.html)
+    somarNaSessao(CHAVE_VISITADAS, 1); // [Item 2] conta a parada realmente visitada
   }
 
   obterPosicaoEHorarioAtuais(paradaAtual?.localizacao)
@@ -127,10 +182,20 @@ function mostrarPerguntaContinuar(capituloTerminado) {
   mostrarEstado("vista-continuar");
 }
 
+// [Item 2] Registra a finalização com os números REAIS do passeio inteiro:
+// visitadas = quantos "Cheguei" foram apertados; total = paradas dos
+// capítulos anteriores + paradas do capítulo atual. O registro-data.js lê
+// só rota.paradas.length, então passamos um objeto com o total certo.
 function finalizarPasseio() {
-  const capitulo = lerRotaDoStorage();
-  if (capitulo) {
-    registrarRoteiroFinalizado(capitulo, capitulo.paradas.length);
+  if (!finalizacaoRegistrada) {
+    const capitulo = lerRotaDoStorage();
+    if (capitulo) {
+      finalizacaoRegistrada = true;
+      const totalDoPasseio = lerNumeroDaSessao(CHAVE_TOTAL_ANTERIOR) + capitulo.paradas.length;
+      const visitadas = Math.min(lerNumeroDaSessao(CHAVE_VISITADAS), totalDoPasseio);
+      registrarRoteiroFinalizado({ paradas: new Array(totalDoPasseio) }, visitadas);
+      reiniciarContagemDoPasseio();
+    }
   }
   mostrarEstado("vista-finalizada");
 }
@@ -155,9 +220,12 @@ function gerarProximoCapitulo() {
     .then(async ({ posicaoAtual, horarioAtual }) => {
       const ultimaParada = ultimaParadaConhecida;
 
+      // [Item 4] Exclui as paradas deste passeio + os selos de HOJE. Antes
+      // eram todos os selos de sempre, e lugares de visitas antigas nunca
+      // mais voltavam.
       const idsJaVisitados = new Set([
         ...capituloAnterior.paradas.map((p) => p.id),
-        ...lerSelos().map((selo) => selo.poiId).filter(Boolean),
+        ...lerSelosDeHoje().map((selo) => selo.poiId).filter(Boolean),
       ]);
 
       const perfilBusca = {
@@ -188,6 +256,11 @@ function gerarProximoCapitulo() {
         document.getElementById("btn-sim-continuar").hidden = true;
         return;
       }
+
+      // [Item 2] O capítulo anterior fecha aqui: soma as paradas dele ao total
+      // do passeio e avisa que o próximo "Iniciar" é continuação (não zera).
+      somarNaSessao(CHAVE_TOTAL_ANTERIOR, capituloAnterior.paradas.length);
+      sessionStorage.setItem(CHAVE_CONTINUANDO, "1");
 
       salvarRotaNoStorage(novoCapitulo);
       mostrarEstado("vista-resultado");
@@ -442,4 +515,3 @@ function mostrarAvisoRecalculo(texto) {
 function esconderAvisoRecalculo() {
   document.getElementById("aviso-recalculo").hidden = true;
 }
-
