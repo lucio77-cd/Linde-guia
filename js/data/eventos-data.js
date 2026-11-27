@@ -24,6 +24,8 @@ import {
   Timestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+import { lerCache, gravarCache, limparCache } from "../core/cache-persistente.js";
+
 const NOME_COLECAO = "eventos";
 
 // ============================================================
@@ -40,6 +42,7 @@ function cacheEstaValido() {
 function invalidarCache() {
   cacheEventos = null;
   cacheTimestamp = null;
+  limparCache("eventos");
 }
 
 // ============================================================
@@ -50,12 +53,22 @@ async function buscarTodosEventos({ forcarAtualizacao = false } = {}) {
     return cacheEventos;
   }
 
+  if (!forcarAtualizacao) {
+    const salvo = lerCache("eventos", CACHE_VALIDADE_MS);
+    if (salvo) {
+      cacheEventos = salvo;
+      cacheTimestamp = Date.now();
+      return cacheEventos;
+    }
+  }
+
   try {
     const snapshot = await getDocs(collection(db, NOME_COLECAO));
     const eventos = snapshot.docs.map((docSnap) => normalizarEvento(docSnap.id, docSnap.data()));
 
     cacheEventos = eventos;
     cacheTimestamp = Date.now();
+    gravarCache("eventos", eventos);
 
     return eventos;
   } catch (erro) {

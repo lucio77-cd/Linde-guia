@@ -29,19 +29,26 @@ import {
   collection, getDocs, query, where, addDoc, updateDoc, deleteDoc, doc,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+import { lerCache, gravarCache, limparCache } from "../core/cache-persistente.js";
+
 const NOME_COLECAO = "patrocinadores";
+const CACHE_VALIDADE_MS = 5 * 60 * 1000;
 
 // ============================================================
 // LEITURA — lado do turista (só ativos e dentro do período)
 // ============================================================
 async function buscarPatrocinadoresAtivos() {
-  const consulta = query(collection(db, NOME_COLECAO), where("ativo", "==", true));
-  const snapshot = await getDocs(consulta);
+  let candidatos = lerCache("patrocinadores", CACHE_VALIDADE_MS);
+  if (!candidatos) {
+    const consulta = query(collection(db, NOME_COLECAO), where("ativo", "==", true));
+    const snapshot = await getDocs(consulta);
+    candidatos = snapshot.docs.map((doc) => normalizarPatrocinador(doc.id, doc.data()));
+    gravarCache("patrocinadores", candidatos);
+  }
 
   const agora = new Date();
 
-  return snapshot.docs
-    .map((doc) => normalizarPatrocinador(doc.id, doc.data()))
+  return candidatos
     .filter((p) => dentroDoPeriodoContratado(p, agora));
 }
 
@@ -68,6 +75,7 @@ async function buscarTodosPatrocinadores() {
 async function criarPatrocinador(dados) {
   try {
     const docRef = await addDoc(collection(db, NOME_COLECAO), desnormalizarPatrocinador(dados));
+    limparCache("patrocinadores");
     return docRef.id;
   } catch (erro) {
     console.error("[patrocinadores-data] Erro ao criar patrocinador:", erro);
@@ -78,6 +86,7 @@ async function criarPatrocinador(dados) {
 async function atualizarPatrocinador(id, dadosParciais) {
   try {
     await updateDoc(doc(db, NOME_COLECAO, id), desnormalizarPatrocinador(dadosParciais));
+    limparCache("patrocinadores");
   } catch (erro) {
     console.error(`[patrocinadores-data] Erro ao atualizar patrocinador ${id}:`, erro);
     throw erro;
@@ -87,6 +96,7 @@ async function atualizarPatrocinador(id, dadosParciais) {
 async function removerPatrocinador(id) {
   try {
     await deleteDoc(doc(db, NOME_COLECAO, id));
+    limparCache("patrocinadores");
   } catch (erro) {
     console.error(`[patrocinadores-data] Erro ao remover patrocinador ${id}:`, erro);
     throw erro;

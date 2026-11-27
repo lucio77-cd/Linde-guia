@@ -40,6 +40,8 @@ import {
   deleteDoc,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+import { lerCache, gravarCache, limparCache } from "../core/cache-persistente.js";
+
 const NOME_COLECAO = "pois";
 
 // ============================================================
@@ -58,6 +60,7 @@ function cacheEstaValido() {
 function invalidarCache() {
   cachePois = null;
   cacheTimestamp = null;
+  limparCache("pois");
 }
 
 // ============================================================
@@ -68,12 +71,22 @@ async function buscarTodosPois({ forcarAtualizacao = false } = {}) {
     return cachePois;
   }
 
+  if (!forcarAtualizacao) {
+    const salvo = lerCache("pois", CACHE_VALIDADE_MS);
+    if (salvo) {
+      cachePois = salvo;
+      cacheTimestamp = Date.now();
+      return cachePois;
+    }
+  }
+
   try {
     const snapshot = await getDocs(collection(db, NOME_COLECAO));
     const pois = snapshot.docs.map((docSnap) => normalizarPoi(docSnap.id, docSnap.data()));
 
     cachePois = pois;
     cacheTimestamp = Date.now();
+    gravarCache("pois", pois);
 
     return pois;
   } catch (erro) {
