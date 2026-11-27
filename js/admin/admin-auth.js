@@ -30,7 +30,9 @@ import {
   signOut,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-// TODO: trocar pelo e-mail real criado no passo 2 do setup acima.
+// E-mail da conta de administrador criada no Firebase Auth (passo 2 do
+// setup acima). Se a sua conta usa outro e-mail, troque aqui — o README
+// explica como criar a conta e o documento usuarios_admin/{uid}.
 const EMAIL_ADMIN = "admin@linde-guia.app";
 
 function iniciarAuth() {
@@ -46,6 +48,14 @@ function iniciarAuth() {
   onAuthStateChanged(auth, (usuario) => {
     if (usuario) {
       liberarAcesso();
+    }
+  });
+
+  document.getElementById("btn-sair")?.addEventListener("click", async () => {
+    try {
+      await sair();
+    } finally {
+      window.location.reload();
     }
   });
 
@@ -75,8 +85,7 @@ function liberarAcesso() {
   document.dispatchEvent(new CustomEvent("linde-guia:admin-autenticado"));
 }
 
-// Exportado pra um eventual botão "Sair" no painel (não existe ainda na
-// tela). Chamar isso desloga de verdade do Firebase Auth.
+// Usado pelo botão "Sair" do painel: desloga de verdade do Firebase Auth.
 function sair() {
   return signOut(auth);
 }
