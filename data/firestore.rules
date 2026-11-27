@@ -21,8 +21,8 @@
 // COLEÇÕES USADAS PELO CÓDIGO
 //   pois, eventos, patrocinadores, configuracoes/geral, acessos_diarios,
 //   rotas_criadas, checkins, usuarios_admin.
-//   (usuarios e rotas_geradas ficam reservadas para um futuro login de
-//   turista; nenhum código grava nelas hoje.)
+//   (As coleções reservadas "usuarios" e "rotas_geradas" foram removidas:
+//   nenhum código usa. Quando houver login de turista, recrie com regras novas.)
 
 rules_version = '2';
 
@@ -34,10 +34,6 @@ service cloud.firestore {
     // ============================================================
     function estaLogado() {
       return request.auth != null;
-    }
-
-    function ehDonoDoDocumento(uid) {
-      return estaLogado() && request.auth.uid == uid;
     }
 
     function ehAdmin() {
@@ -141,7 +137,8 @@ service cloud.firestore {
         let d = request.resource.data;
         return d.keys().hasOnly(['total', 'porHora'])
           && d.total is int
-          && d.porHora is map;
+          && d.porHora is map
+          && d.porHora.size() <= 24;
       }
     }
 
@@ -164,6 +161,7 @@ service cloud.firestore {
           ])
           && d.criadoEm == request.time
           && (!('tipoEvento' in d) || d.tipoEvento in ['criacao', 'finalizacao'])
+          && (!('horarioInicioEscolhido' in d) || (d.horarioInicioEscolhido is string && d.horarioInicioEscolhido.size() <= 10))
           && (!('paradasNomes' in d) || (d.paradasNomes is list && d.paradasNomes.size() <= 12))
           && (!('interesses' in d) || (d.interesses is list && d.interesses.size() <= 20))
           && (!('refeicoesDesejadas' in d) || (d.refeicoesDesejadas is list && d.refeicoesDesejadas.size() <= 8));
@@ -201,21 +199,6 @@ service cloud.firestore {
       allow get: if ehAdmin();
       allow list: if false;
       allow write: if false;
-    }
-
-    // ============================================================
-    // RESERVADAS para um futuro login de turista (nada grava aqui hoje).
-    // ============================================================
-    match /usuarios/{userId} {
-      allow read, write: if ehDonoDoDocumento(userId);
-    }
-
-    match /rotas_geradas/{rotaId} {
-      allow create: if estaLogado() && request.resource.data.userId == request.auth.uid;
-      allow get: if estaLogado() &&
-        (resource.data.userId == request.auth.uid || ehAdmin());
-      allow list: if ehAdmin();
-      allow update, delete: if false;
     }
 
     // ============================================================
