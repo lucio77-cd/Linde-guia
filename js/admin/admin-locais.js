@@ -6,6 +6,7 @@ import {
   buscarTodosPois, criarPoi, atualizarPoi, removerPoi,
 } from "../data/pois-data.js";
 import { escaparHtml } from "../core/html-utils.js";
+import { auth } from "../core/firebase-config.js";
 import { buscarTodosPatrocinadores } from "../data/patrocinadores-data.js";
 import { montarCaminhoBanner, extrairNumeroDoCaminho, numerosDeBannerEmUso } from "./numeracao-banners.js";
 
@@ -433,9 +434,9 @@ function lerPatrocinioDoFormulario() {
 }
 
 // ============================================================
-// BUSCA DE ENDEREÇO — preenche lat/lng automaticamente via Nominatim/OSM
-// (grátis, sem faturamento vinculado — decisão consciente em vez do
-// Google Geocoding, que exige cartão de crédito no projeto).
+// BUSCA DE ENDEREÇO — preenche lat/lng via Google Geocoding
+// (/api/geocodificar, mesma chave do tempo de caminhada). Se a API não
+// estiver disponível, cai no Nominatim/OSM como reserva.
 // ============================================================
 // Camadas de proteção pra compensar a precisão menor do Nominatim:
 //   1. Busca primeiro DENTRO de uma caixa ao redor de Treze Tílias.
@@ -458,19 +459,30 @@ function configurarBuscaEndereco() {
     definirStatusEndereco(statusEl, null, "Buscando...");
 
     try {
-      let resultado = await buscarNominatim(montarUrlComBbox(texto));
-      if (!resultado) {
-        resultado = await buscarNominatim(montarUrlSemBbox(texto));
-      }
+      // Preferência: Google Geocoding via /api/geocodificar (mais preciso).
+      // Se a API não estiver configurada/disponível, cai pro Nominatim.
+      let lat, lng, distancia, rotulo;
+      const g = await geocodificarNoServidor(texto);
 
-      if (!resultado) {
+      if (g && g.encontrado) {
+        ({ lat, lng } = g);
+        distancia = g.distanciaKmDoCentro;
+        rotulo = g.enderecoFormatado || "";
+      } else if (g && g.motivo === "nao_encontrado") {
         definirStatusEndereco(statusEl, "erro", "Não encontrei esse endereço — confere a latitude/longitude na mão.");
         return;
+      } else {
+        let resultado = await buscarNominatim(montarUrlComBbox(texto));
+        if (!resultado) resultado = await buscarNominatim(montarUrlSemBbox(texto));
+        if (!resultado) {
+          definirStatusEndereco(statusEl, "erro", "Não encontrei esse endereço — confere a latitude/longitude na mão.");
+          return;
+        }
+        lat = parseFloat(resultado.lat);
+        lng = parseFloat(resultado.lon);
+        distancia = distanciaKm(CENTRO_TREZE_TILIAS, { lat, lng });
+        rotulo = resultado.display_name.split(",").slice(0, 3).join(",");
       }
-
-      const lat = parseFloat(resultado.lat);
-      const lng = parseFloat(resultado.lon);
-      const distancia = distanciaKm(CENTRO_TREZE_TILIAS, { lat, lng });
 
       document.getElementById("campo-lat").value = lat;
       document.getElementById("campo-lng").value = lng;
@@ -479,7 +491,7 @@ function configurarBuscaEndereco() {
         definirStatusEndereco(
           statusEl, "aviso",
           `⚠️ Esse resultado está a ${Math.round(distancia)} km do centro de Treze Tílias ` +
-          `(${resultado.display_name.split(",").slice(0, 3).join(",")}). ` +
+          `(${rotulo}). ` +
           `Confere com atenção antes de salvar — pode ser um endereço de mesmo nome em outra cidade.`
         );
       } else {
@@ -490,6 +502,25 @@ function configurarBuscaEndereco() {
       definirStatusEndereco(statusEl, "erro", "Erro ao buscar — confere a latitude/longitude na mão.");
     }
   });
+}
+
+// Chama o endpoint protegido (só admin logado). Devolve null se falhar.
+async function geocodificarNoServidor(endereco) {
+  try {
+    const usuario = auth.currentUser;
+    if (!usuario) return null;
+    const token = await usuario.getIdToken();
+    const resposta = await fetch("/api/geocodificar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ endereco }),
+    });
+    if (!resposta.ok) return null;
+    return await resposta.json();
+  } catch (erro) {
+    console.warn("[admin-locais] /api/geocodificar indisponível, usando Nominatim:", erro);
+    return null;
+  }
 }
 
 function montarUrlComBbox(texto) {
