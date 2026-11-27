@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#8B1A1A" />
+  <title>Privacidade — Linde Guia</title>
+  <meta name="description" content="Quais dados o Linde Guia usa, onde ficam guardados e como você controla isso." />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <style>
+    :root { --borde:#8B1A1A; --creme:#F5F0E8; --papel:#FDFAF6; --tinta:#1C1714; --suave:#4A3F38; --linha:#DDD4C0; }
+    @media (prefers-color-scheme: dark) {
+      :root { --borde:#E5B96A; --creme:#1C1714; --papel:#26201C; --tinta:#F5F0E8; --suave:#D8CFC0; --linha:#3A322C; }
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--creme); color:var(--tinta);
+           font:1rem/1.7 Georgia,"Times New Roman",serif; }
+    main { max-width:42rem; margin:0 auto; padding:2rem 16px 4rem; }
+    h1 { font-size:clamp(1.8rem,6vw,2.4rem); line-height:1.15; margin:1rem 0 .5rem; }
+    h2 { font-size:1.25rem; margin:2.2rem 0 .5rem; }
+    p, li { color:var(--suave); }
+    ul { padding-left:1.2rem; }
+    li { margin:.35rem 0; }
+    a { color:var(--borde); }
+    a:focus-visible { outline:3px solid currentColor; outline-offset:2px; }
+    .voltar { font-family:system-ui,sans-serif; font-size:.95rem; }
+    .atualizado { font-family:system-ui,sans-serif; font-size:.9rem; color:var(--suave); }
+  </style>
+</head>
+<body>
+  <main>
+    <a class="voltar" href="/">← Voltar ao Linde Guia</a>
+    <h1>Privacidade</h1>
+    <p class="atualizado">Atualizada em 27 de novembro de 2026</p>
+
+    <p>O Linde Guia não pede cadastro nem login para turistas. Esta página explica, em linguagem simples, o que o app guarda e para quê.</p>
+
+    <h2>O que fica só no seu aparelho</h2>
+    <ul>
+      <li>Favoritos, selos, rotas salvas e o andamento do passeio atual (guardado por até 12 horas).</li>
+      <li>Nada disso é enviado para nós. Limpar os dados do navegador apaga tudo.</li>
+    </ul>
+
+    <h2>O que enviamos e guardamos, sem identificar você</h2>
+    <ul>
+      <li>Contagem de visitas por dia e por hora.</li>
+      <li>Quando você cria ou termina um roteiro: horário de início escolhido, refeições e interesses marcados e os nomes das paradas.</li>
+      <li>Quando você toca em "Cheguei": o nome do local e se a chegada foi detectada pelo GPS ou confirmada por você. A sua coordenada não é gravada.</li>
+      <li>Esses registros não têm nome, e-mail ou telefone. Servem para a Secretaria de Turismo entender o uso do guia.</li>
+    </ul>
+
+    <h2>Localização</h2>
+    <p>Se você permitir, o app usa a localização do aparelho para saber quando você chegou a uma parada. Você pode negar a permissão e continuar usando o app com o botão "Cheguei" manual.</p>
+
+    <h2>Serviços de terceiros</h2>
+    <ul>
+      <li>Google Firebase (banco de dados e estatísticas de uso) e Google Maps (tempo de caminhada entre as paradas).</li>
+      <li>Gemini, da Google, ajuda a escolher as paradas do roteiro. Recebe os locais candidatos e as suas preferências do passeio, sem dados pessoais.</li>
+      <li>Mapas exibidos com Leaflet e OpenStreetMap.</li>
+    </ul>
+
+    <h2>Seus direitos</h2>
+    <p>Como não identificamos você, não há perfil para consultar ou apagar. Se tiver dúvidas ou quiser falar sobre seus dados, use o botão de WhatsApp do app.</p>
+  </main>
+</body>
+</html>

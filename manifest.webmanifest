@@ -1,0 +1,13 @@
+{
+  "name": "Linde Guia — Treze Tílias",
+  "short_name": "Linde Guia",
+  "description": "Monte seu passeio por Treze Tílias com o horário e as refeições que você quiser.",
+  "lang": "pt-BR",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5F0E8",
+  "theme_color": "#8B1A1A",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /pages/admin.html
+Disallow: /api/
+
+Sitemap: https://linde-guia.vercel.app/sitemap.xml

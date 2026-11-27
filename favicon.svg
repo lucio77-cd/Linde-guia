@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Linde Guia">
+  <rect width="64" height="64" rx="14" fill="#8B1A1A"/>
+  <path d="M32 11c9 5 15 13 15 22 0 8-6 14-15 20-9-6-15-12-15-20 0-9 6-17 15-22z" fill="#F5F0E8"/>
+  <path d="M32 19v30M32 30l-7-5M32 37l8-6" stroke="#8B1A1A" stroke-width="3" stroke-linecap="round" fill="none"/>
+</svg>
