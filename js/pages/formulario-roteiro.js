@@ -50,6 +50,7 @@ import { buscarPoisAtivos }            from "../data/pois-data.js";
 import { buscarEventosAtivosNaData }   from "../data/eventos-data.js";
 import { registrarRotaCriada }         from "../data/registro-data.js";
 import { lerSelosDeHoje }              from "../core/selos-local.js";
+import { passeioStorage } from "../core/passeio-storage.js";
 
 
 // ============================================================
@@ -327,7 +328,7 @@ function configurarSubmit() {
 
       const capitulo = await gerarCapituloCompleto(pois, eventos, perfilBusca);
 
-      sessionStorage.setItem("linde-guia:capitulo-atual", JSON.stringify(capitulo));
+      passeioStorage.setItem("linde-guia:capitulo-atual", JSON.stringify(capitulo));
 
       // [Item 1] Espera a gravação do analytics antes de sair da página —
       // sem isso o redirect abaixo podia cancelar o addDoc no meio do caminho.
@@ -372,7 +373,7 @@ async function gerarCapituloCompleto(pois, eventos, perfilBusca) {
   let explicacaoIA = "";
 
   if (curadoria) {
-    capitulo = gerarCapituloDeFavoritos(pois, perfilBusca, curadoria.idsEscolhidos);
+    capitulo = gerarCapituloDeFavoritos(candidatosViaveis, perfilBusca, curadoria.idsEscolhidos);
     explicacaoIA = curadoria.explicacao || "";
   }
 

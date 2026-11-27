@@ -60,9 +60,9 @@
  *   "aberto no horário" usava o horário errado e a tela mostrava aviso
  *   falso de "você está atrasado". Em "pular" nada muda: a pessoa sai
  *   agora mesmo.
- * O QUE FALTA: nada neste arquivo para o item 3. Pendentes em outros
- *   itens da revisão: eventos sem dataFim (dataEstaNoIntervalo) e
- *   gerarCapituloDeFavoritos aceitando locais "em_reforma".
+ * REVISÃO (correções): eventos sem dataInicio/dataFim ou com data só
+ *   "AAAA-MM-DD" agora funcionam (dataEstaNoIntervalo), e locais
+ *   "em_reforma" são descartados também em gerarCapituloDeFavoritos.
  */
 
 // ============================================================
@@ -204,7 +204,7 @@ function gerarCapituloDeFavoritos(pois, perfilBusca, idsSelecionados) {
 
     if (!poi) { idsDescartados.push(id); continue; }
     if (idsExcluidos.has(id)) { idsDescartados.push(id); continue; }
-    if (poi.statusOperacional === "fechado_temporariamente") { idsDescartados.push(id); continue; }
+    if (statusImpedeVisita(poi)) { idsDescartados.push(id); continue; }
     if (!estaAbertoNoHorario(poi, perfilBusca.horarioInicio, perfilBusca.data)) { idsDescartados.push(id); continue; }
 
     viaveis.push(poi);
@@ -335,7 +335,7 @@ function injetarEventosAtivos(pois, eventos, dataReferencia) {
 // ============================================================
 function filtrarCandidatos(pois, perfilBusca) {
   return pois.filter((poi) => {
-    if (poi.statusOperacional === "fechado_temporariamente") return false;
+    if (statusImpedeVisita(poi)) return false;
     if (!estaAbertoNoHorario(poi, perfilBusca.horarioInicio, perfilBusca.data)) return false;
     if (!candidatoCombinaComRefeicoesDesejadas(poi, perfilBusca.refeicoesDesejadas)) return false;
     return true;
@@ -660,7 +660,12 @@ function adicionarMinutos(data, minutos) {
 
 function obterDiaSemana(data) {
   const dias = ["domingo", "segunda", "terca", "quarta", "quinta", "sexta", "sabado"];
-  return dias[new Date(data).getDay()];
+  // "AAAA-MM-DD" puro seria lido como UTC e cairia no dia anterior no
+  // Brasil; trata como data local.
+  const d = typeof data === "string" && /^\d{4}-\d{2}-\d{2}$/.test(data)
+    ? new Date(`${data}T12:00:00`)
+    : new Date(data);
+  return dias[d.getDay()];
 }
 
 function horarioDentroDaJanela(horario, abre, fecha) {
@@ -681,9 +686,29 @@ function horarioDentroDaJanela(horario, abre, fecha) {
   return minutosAtuais >= minutosAbre && minutosAtuais <= minutosFecha;
 }
 
+// Locais que não podem receber visita agora.
+function statusImpedeVisita(poi) {
+  return poi.statusOperacional === "fechado_temporariamente"
+      || poi.statusOperacional === "em_reforma";
+}
+
+// Datas "YYYY-MM-DD" valem o dia inteiro; sem início = já começou;
+// sem fim = sem data de término (continua ativo).
+function limiteDeData(valor, fimDoDia) {
+  if (!valor) return null;
+  if (typeof valor === "string" && /^\d{4}-\d{2}-\d{2}$/.test(valor)) {
+    return new Date(`${valor}T${fimDoDia ? "23:59:59.999" : "00:00:00"}`).getTime();
+  }
+  const t = new Date(valor?.toDate ? valor.toDate() : valor).getTime();
+  return Number.isNaN(t) ? null : t;
+}
+
 function dataEstaNoIntervalo(data, inicio, fim) {
-  const d = new Date(data).getTime();
-  return d >= new Date(inicio).getTime() && d <= new Date(fim).getTime();
+  const d = limiteDeData(data, false);
+  if (d === null) return false;
+  const ini = limiteDeData(inicio, false);
+  const f = limiteDeData(fim, true);
+  return (ini === null || d >= ini) && (f === null || d <= f);
 }
 
 // ============================================================
@@ -699,4 +724,5 @@ export {
   MAX_PARADAS_POR_CAPITULO,
   limiteDeParadas,
   estaAbertoNoHorario,
+  dataEstaNoIntervalo,
 };
