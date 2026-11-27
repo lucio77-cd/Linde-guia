@@ -26,6 +26,7 @@ import { estaAbertoNoHorario, gerarCapituloDeFavoritos } from "../engine/motor-r
 import { lerSelos } from "../core/selos-local.js";
 import { salvarRotaManual } from "../core/rotas-manuais-local.js";
 import { desenharMapaCompleto } from "./mapa-rota.js";
+import { passeioStorage } from "../core/passeio-storage.js";
 
 const CATEGORIAS_LABEL = {
   gastronomia: "Gastronomia", historico: "História", natureza: "Natureza",
@@ -242,13 +243,13 @@ async function comecarAgora() {
 
     if (capitulo.idsDescartados && capitulo.idsDescartados.length > 0) {
       const n = capitulo.idsDescartados.length;
-      sessionStorage.setItem(
+      passeioStorage.setItem(
         "linde-guia:aviso-proxima-tela",
         `${n} ${n === 1 ? "parada não entrou" : "paradas não entraram"} na rota (fechado agora). Seguimos com o resto.`
       );
     }
 
-    sessionStorage.setItem("linde-guia:capitulo-atual", JSON.stringify(capitulo));
+    passeioStorage.setItem("linde-guia:capitulo-atual", JSON.stringify(capitulo));
     window.location.href = "minha-rota.html";
   } catch (erro) {
     console.error("[roteiro-manual] Erro ao montar rota:", erro);

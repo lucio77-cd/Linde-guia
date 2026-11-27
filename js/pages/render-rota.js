@@ -14,6 +14,7 @@ import { desenharMapaCompleto } from "./mapa-rota.js";
 import { gerarCapituloDeFavoritos } from "../engine/motor-rota.js";
 import { buscarPoisAtivos } from "../data/pois-data.js";
 import { salvarRotaManual } from "../core/rotas-manuais-local.js";
+import { passeioStorage } from "../core/passeio-storage.js";
 
 const CHAVE_SESSION_STORAGE = "linde-guia:capitulo-atual";
 
@@ -69,10 +70,10 @@ document.addEventListener("DOMContentLoaded", iniciarRenderRota);
 // nada numa rota nova sem relação nenhuma com ele.
 function mostrarAvisoSeHouver() {
   const CHAVE_AVISO = "linde-guia:aviso-proxima-tela";
-  const texto = sessionStorage.getItem(CHAVE_AVISO);
+  const texto = passeioStorage.getItem(CHAVE_AVISO);
   if (!texto) return;
 
-  sessionStorage.removeItem(CHAVE_AVISO);
+  passeioStorage.removeItem(CHAVE_AVISO);
 
   const el = document.getElementById("aviso-descartados");
   if (!el) return;
@@ -86,7 +87,7 @@ function mostrarAvisoSeHouver() {
 // ============================================================
 function lerRotaDoStorage() {
   try {
-    const bruto = sessionStorage.getItem(CHAVE_SESSION_STORAGE);
+    const bruto = passeioStorage.getItem(CHAVE_SESSION_STORAGE);
     if (!bruto) return null;
     return JSON.parse(bruto);
   } catch (erro) {
@@ -96,7 +97,7 @@ function lerRotaDoStorage() {
 }
 
 function salvarRotaNoStorage(rota) {
-  sessionStorage.setItem(CHAVE_SESSION_STORAGE, JSON.stringify(rota));
+  passeioStorage.setItem(CHAVE_SESSION_STORAGE, JSON.stringify(rota));
 }
 
 // ============================================================
@@ -242,7 +243,7 @@ function configurarBotaoIniciar(rota) {
   // onclick (e não addEventListener): esta função roda de novo a cada
   // capítulo novo e os listeners se acumulavam, disparando N vezes.
   botao.onclick = () => {
-    sessionStorage.setItem("linde-guia:parada-atual-index", "0");
+    passeioStorage.setItem("linde-guia:parada-atual-index", "0");
     mostrarEstado("vista-em-rota");
     // modo-em-rota.js escuta esse evento customizado pra desenhar o card inicial
     document.dispatchEvent(new CustomEvent("linde-guia:iniciar-em-rota", { detail: { rota } }));

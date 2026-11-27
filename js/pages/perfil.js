@@ -11,6 +11,7 @@ import { lerFavoritos, removerFavorito } from "../core/favoritos-local.js";
 import { lerRotasSalvas, removerRotaSalva } from "../core/rotas-manuais-local.js";
 import { buscarTodosPois } from "../data/pois-data.js";
 import { gerarCapituloDeFavoritos } from "../engine/motor-rota.js";
+import { passeioStorage } from "../core/passeio-storage.js";
 
 const ICONES_CATEGORIA = {
   gastronomia: "🥨",
@@ -163,13 +164,13 @@ async function comecarTourDosFavoritos() {
 
     if (capitulo.idsDescartados && capitulo.idsDescartados.length > 0) {
       const n = capitulo.idsDescartados.length;
-      sessionStorage.setItem(
+      passeioStorage.setItem(
         "linde-guia:aviso-proxima-tela",
         `${n} ${n === 1 ? "favorito não entrou" : "favoritos não entraram"} no tour (fechado agora ou removido). Seguimos com o resto.`
       );
     }
 
-    sessionStorage.setItem("linde-guia:capitulo-atual", JSON.stringify(capitulo));
+    passeioStorage.setItem("linde-guia:capitulo-atual", JSON.stringify(capitulo));
     window.location.href = "minha-rota.html";
   } catch (erro) {
     console.error("[perfil] Erro ao montar tour dos favoritos:", erro);
@@ -284,13 +285,13 @@ async function iniciarRotaSalva(rota, btn) {
 
     if (capitulo.idsDescartados && capitulo.idsDescartados.length > 0) {
       const n = capitulo.idsDescartados.length;
-      sessionStorage.setItem(
+      passeioStorage.setItem(
         "linde-guia:aviso-proxima-tela",
         `${n} ${n === 1 ? "parada não entrou" : "paradas não entraram"} nessa rota (fechado agora ou removido). Seguimos com o resto.`
       );
     }
 
-    sessionStorage.setItem("linde-guia:capitulo-atual", JSON.stringify(capitulo));
+    passeioStorage.setItem("linde-guia:capitulo-atual", JSON.stringify(capitulo));
     window.location.href = "minha-rota.html";
   } catch (erro) {
     console.error("[perfil] Erro ao iniciar rota salva:", erro);

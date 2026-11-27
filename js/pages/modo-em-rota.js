@@ -52,6 +52,7 @@ import { buscarPoisAtivos } from "../data/pois-data.js";
 import { buscarEventosAtivosNaData } from "../data/eventos-data.js";
 import { escaparHtml } from "../core/html-utils.js";
 import { criarMapaFocado } from "./mapa-rota.js";
+import { passeioStorage } from "../core/passeio-storage.js";
 
 const CHAVE_INDEX = "linde-guia:parada-atual-index";
 
@@ -61,18 +62,18 @@ const CHAVE_TOTAL_ANTERIOR = "linde-guia:passeio-total-anterior";
 const CHAVE_CONTINUANDO = "linde-guia:passeio-continuando";
 
 function lerNumeroDaSessao(chave) {
-  const n = Number(sessionStorage.getItem(chave));
+  const n = Number(passeioStorage.getItem(chave));
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
 function somarNaSessao(chave, quantidade) {
-  sessionStorage.setItem(chave, String(lerNumeroDaSessao(chave) + quantidade));
+  passeioStorage.setItem(chave, String(lerNumeroDaSessao(chave) + quantidade));
 }
 
 function reiniciarContagemDoPasseio() {
-  sessionStorage.removeItem(CHAVE_VISITADAS);
-  sessionStorage.removeItem(CHAVE_TOTAL_ANTERIOR);
-  sessionStorage.removeItem(CHAVE_CONTINUANDO);
+  passeioStorage.removeItem(CHAVE_VISITADAS);
+  passeioStorage.removeItem(CHAVE_TOTAL_ANTERIOR);
+  passeioStorage.removeItem(CHAVE_CONTINUANDO);
 }
 
 // Trava o registro de finalização contra clique duplo em "Não, obrigado".
@@ -81,8 +82,8 @@ let finalizacaoRegistrada = false;
 function iniciarModoEmRota() {
   document.addEventListener("linde-guia:iniciar-em-rota", (evento) => {
     // [Item 2] Se não veio de um "continuar", é um passeio novo: zera os contadores.
-    const continuando = sessionStorage.getItem(CHAVE_CONTINUANDO) === "1";
-    sessionStorage.removeItem(CHAVE_CONTINUANDO);
+    const continuando = passeioStorage.getItem(CHAVE_CONTINUANDO) === "1";
+    passeioStorage.removeItem(CHAVE_CONTINUANDO);
     if (!continuando) reiniciarContagemDoPasseio();
     finalizacaoRegistrada = false;
 
@@ -144,7 +145,7 @@ function avancarRota(acao) {
         // (refeicoesRestantes) se a pessoa disser "sim, continuar".
         salvarRotaNoStorage(rotaAtualizada);
         mostrarPerguntaContinuar(rotaAtualizada);
-        sessionStorage.removeItem(CHAVE_INDEX);
+        passeioStorage.removeItem(CHAVE_INDEX);
         return;
       }
 
@@ -260,7 +261,7 @@ function gerarProximoCapitulo() {
       // [Item 2] O capítulo anterior fecha aqui: soma as paradas dele ao total
       // do passeio e avisa que o próximo "Iniciar" é continuação (não zera).
       somarNaSessao(CHAVE_TOTAL_ANTERIOR, capituloAnterior.paradas.length);
-      sessionStorage.setItem(CHAVE_CONTINUANDO, "1");
+      passeioStorage.setItem(CHAVE_CONTINUANDO, "1");
 
       salvarRotaNoStorage(novoCapitulo);
       mostrarEstado("vista-resultado");
@@ -331,11 +332,11 @@ function distanciaKm(a, b) {
 // ESTADO DO PASSEIO (índice da parada atual, em sessionStorage)
 // ============================================================
 function obterIndiceAtual() {
-  return Number(sessionStorage.getItem(CHAVE_INDEX) || "0");
+  return Number(passeioStorage.getItem(CHAVE_INDEX) || "0");
 }
 
 function definirIndiceAtual(indice) {
-  sessionStorage.setItem(CHAVE_INDEX, String(indice));
+  passeioStorage.setItem(CHAVE_INDEX, String(indice));
 }
 
 // ============================================================
